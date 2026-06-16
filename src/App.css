@@ -1,0 +1,48 @@
+.App {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.App-content {
+  box-sizing: border-box;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+  text-align: left;
+}
+
+.App h1 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.App p {
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.App-actions {
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background-color: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.App-actions h2 {
+  margin-top: 0;
+}
+
+.App-actions ul {
+  padding-left: 1.25rem;
+}
+
+.App-actions li + li {
+  margin-top: 0.75rem;
+}
+
+.App code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
