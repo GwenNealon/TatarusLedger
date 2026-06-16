@@ -3,6 +3,9 @@
 This repository contains a generic React application scaffolded with Create
 React App and the TypeScript template.
 
+The repository name remains `TatarusLedger`, but the tracked application files
+now provide a generic starter rather than use-case-specific code.
+
 ## Getting started
 
 ```bash
