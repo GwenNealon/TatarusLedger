@@ -38,12 +38,12 @@ export async function fetchMarketData(
 ): Promise<MarketData[]> {
   if (itemIds.length === 0) return [];
 
-  const ids = itemIds.join(',');
-  const cacheKey = `universalis:market:${worldOrDc}:${ids}`;
+  const itemIdsParam = itemIds.join(',');
+  const cacheKey = `universalis:market:${worldOrDc}:${itemIdsParam}`;
   const cached = cache.get<MarketData[]>(cacheKey);
   if (cached !== null) return cached;
 
-  const url = `${BASE_URL}/${encodeURIComponent(worldOrDc)}/${ids}`;
+  const url = `${BASE_URL}/${encodeURIComponent(worldOrDc)}/${itemIdsParam}`;
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Universalis fetchMarketData failed: HTTP ${res.status}`);

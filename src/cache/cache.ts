@@ -15,7 +15,7 @@ export class MemoryStorage implements CacheStorage {
   private data: Map<string, string> = new Map();
 
   getItem(key: string): string | null {
-    return this.data.has(key) ? (this.data.get(key) as string) : null;
+    return this.data.has(key) ? this.data.get(key)! : null;
   }
 
   setItem(key: string, value: string): void {
