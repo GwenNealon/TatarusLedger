@@ -13,12 +13,11 @@ A client-side web application that helps **Final Fantasy XIV** players make smar
 
 ## 📖 Table of Contents
 
-- [Philosophy](#-philosophy)
-- [Features](#-features)
-- [Quickstart](#-quickstart)
-- [Usage](#-usage)
-- [Contact & Maintainers](#-contact--maintainers)
-- [License](#-license)
+- [Features](#features)
+- [Quickstart](#quickstart)
+- [Usage](#usage)
+- [Contact & Maintainers](#contact--maintainers)
+- [License](#license)
 
 ---
 
