@@ -4,29 +4,29 @@
 
 TatarusLedger is a **TypeScript + React** single-page web application that uses data from the [Universalis API](https://universalis.app/docs/index.html) to surface profitable crafting, gathering, and market board arbitrage opportunities in the MMORPG **Final Fantasy XIV**.
 
-The project is early-stage: the current `src/App.tsx` is a placeholder `<h1>` component. New features should be built inside the `tatarus-ledger/src/` directory.
+The project is early-stage: the current `src/App.tsx` is a placeholder `<h1>` component. New features should be built inside the `src/` directory.
 
 ---
 
 ## Repository Layout
 
 ```
-TatarusLedger/                   ← repo root (no application code here)
+TatarusLedger/                   ← repo root; ALL frontend code lives here
   README.md
-  package-lock.json              ← empty placeholder lockfile at root
-  tatarus-ledger/                ← ALL frontend code lives here
-    index.html
-    vite.config.ts
-    eslint.config.js
-    tsconfig.json / tsconfig.app.json / tsconfig.node.json
-    package.json
-    package-lock.json            ← real lockfile; install from this directory
-    src/
-      main.tsx                   ← React entry point
-      App.tsx                    ← root component (currently placeholder)
+  package.json
+  package-lock.json
+  index.html
+  vite.config.ts
+  eslint.config.js
+  tsconfig.json / tsconfig.app.json / tsconfig.node.json
+  public/
+    favicon.svg
+  src/
+    main.tsx                     ← React entry point
+    App.tsx                      ← root component (currently placeholder)
 ```
 
-**All `npm` commands must be run from `tatarus-ledger/`, not the repo root.**
+**All `npm` commands are run from the repo root.**
 
 ---
 
@@ -44,7 +44,7 @@ TatarusLedger/                   ← repo root (no application code here)
 
 ## Development Commands
 
-Run all commands from the `tatarus-ledger/` directory:
+Run all commands from the **repo root**:
 
 ```bash
 npm run dev        # start Vite dev server (hot module reload)
@@ -57,7 +57,7 @@ npm run preview    # serve the production build locally
 
 Before committing changes, always verify with:
 ```bash
-cd tatarus-ledger && npm run lint && npm run build
+npm run lint && npm run build
 ```
 
 ---
@@ -77,7 +77,7 @@ The TypeScript config (`tsconfig.app.json`) enforces strict checks. Key rules to
 
 ## ESLint Configuration
 
-ESLint config is in `tatarus-ledger/eslint.config.js` and applies to all `.ts` / `.tsx` files. Active rule sets:
+ESLint config is in `eslint.config.js` and applies to all `.ts` / `.tsx` files. Active rule sets:
 
 - `@eslint/js` recommended
 - `typescript-eslint` **strictTypeChecked** + **stylisticTypeChecked** – these are stricter than the default recommended presets. Type information is used for linting, so the tsconfig paths are wired in.
