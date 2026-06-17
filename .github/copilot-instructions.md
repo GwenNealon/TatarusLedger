@@ -23,7 +23,7 @@ TatarusLedger/                   ← repo root; ALL frontend code lives here
     favicon.svg
   src/
     main.tsx                     ← React entry point
-    App.tsx                      ← root component (currently placeholder)
+    App.tsx                      ← root component (official landing page)
 ```
 
 **All `npm` commands are run from the repo root.**
