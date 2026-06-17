@@ -9,6 +9,8 @@
 
 A client-side web application that helps **Final Fantasy XIV** players make smarter economic decisions by analyzing real-time market board data from the [Universalis API](https://universalis.app/).
 
+**🌐 Live site: [https://GwenNealon.github.io/TatarusLedger/](https://GwenNealon.github.io/TatarusLedger/)**
+
 ---
 
 ## 📖 Table of Contents
@@ -16,6 +18,7 @@ A client-side web application that helps **Final Fantasy XIV** players make smar
 - [Features](#features)
 - [Quickstart](#quickstart)
 - [Usage](#usage)
+- [Deployment](#deployment)
 - [Contact & Maintainers](#contact--maintainers)
 - [License](#license)
 
@@ -82,7 +85,7 @@ npm run test       # Run tests
 
 ## 💡 Usage
 
-Tataru's Ledger is currently in early development. The interface displays a placeholder heading while core features are being implemented.
+Tataru's Ledger is currently in early development. The interface displays a landing page while core features are being implemented.
 
 ### Market Data
 
@@ -96,6 +99,41 @@ Market data coverage includes:
 - Multi-item batch queries for efficient data retrieval
 
 Once the application is fully developed, you'll be able to search for items, view profit opportunities, analyze price trends, and filter results by various criteria directly in the web interface.
+
+---
+
+## 🚢 Deployment
+
+The official project website is deployed to GitHub Pages at:
+
+**[https://GwenNealon.github.io/TatarusLedger/](https://GwenNealon.github.io/TatarusLedger/)**
+
+Deployment is handled by `.github/workflows/pages.yml` and publishes on every push to `main` (or manual `workflow_dispatch`).
+
+### One-time repository setup
+
+1. Open **Settings → Pages**.
+2. Set **Build and deployment** source to **GitHub Actions**.
+
+### Update the website
+
+1. Update content in `src/`.
+2. Verify changes locally:
+   - `npm run format:check`
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+3. Merge/push to `main`.
+4. The **Deploy to GitHub Pages** workflow builds and publishes the updated site automatically.
+
+### Rollback
+
+If a deployment needs to be rolled back, revert the commit on `main` and push the revert commit. GitHub Pages will redeploy the previous stable content automatically through the same workflow.
+
+### Accessibility and responsiveness
+
+The public homepage uses semantic landmarks (`main`, headings, section labels), readable text contrast, and fluid layout sizing so it remains usable across desktop and mobile screens.
 
 ---
 
