@@ -1,6 +1,6 @@
 # TatarusLedger
 
-[![Download Git](https://img.shields.io/badge/Download-Git-green?logo=git)](https://learnxinyminutes.com/git/)
+[![Download](https://img.shields.io/badge/Download-green?logo=git)](https://learnxinyminutes.com/git/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
