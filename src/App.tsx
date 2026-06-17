@@ -23,14 +23,14 @@ export default function App() {
   return (
     <main style={pageStyles}>
       <article style={cardStyles}>
-        <h1>Tatarus Ledger</h1>
+        <h1>Tataru's Ledger</h1>
         <p>
           The official project website for tracking profitable crafting, gathering, and market board opportunities in Final Fantasy XIV.
         </p>
         <section aria-labelledby="project-status-heading">
           <h2 id="project-status-heading">Project status</h2>
           <p>
-            This GitHub Pages deployment is the canonical public site for TatarusLedger. Feature updates are published automatically from the main branch.
+            This GitHub Pages deployment is the canonical public site for Tataru's Ledger. Feature updates are published automatically from the main branch.
           </p>
         </section>
       </article>
