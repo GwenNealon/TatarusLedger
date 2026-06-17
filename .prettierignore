@@ -1,0 +1,15 @@
+# Build outputs
+dist
+dist-ssr
+coverage
+node_modules
+
+# Logs
+*.log
+
+# Lock files
+package-lock.json
+
+# Other
+.git
+.vscode
