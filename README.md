@@ -47,17 +47,20 @@ Future enhancements may include alerts for market opportunities, crafting recipe
 ### Installation
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/GwenNealon/TatarusLedger.git
    cd TatarusLedger
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Start the development server**:
+
    ```bash
    npm run dev
    ```
@@ -86,6 +89,7 @@ Tataru's Ledger is currently in early development. The interface displays a plac
 The application fetches real-time market board data from the [Universalis API](https://universalis.app/docs/index.html), a community-powered service that aggregates publicly available market information from Final Fantasy XIV. No authentication or FFXIV account is required to use Tataru's Ledger.
 
 Market data coverage includes:
+
 - All North America, Europe, Japan, and Oceania worlds
 - World-specific, data center-wide, and region-wide queries
 - Current listings and recent sale history
