@@ -32,13 +32,13 @@ TatarusLedger/                   ← repo root; ALL frontend code lives here
 
 ## Tech Stack
 
-| Layer | Tool / Version |
-|---|---|
-| UI framework | React 19 (StrictMode) |
-| Language | TypeScript ~6.0 |
-| Bundler | Vite 8 |
-| Compiler plugin | `babel-plugin-react-compiler` via `@rolldown/plugin-babel` |
-| Linter | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked) |
+| Layer           | Tool / Version                                                       |
+| --------------- | -------------------------------------------------------------------- |
+| UI framework    | React 19 (StrictMode)                                                |
+| Language        | TypeScript ~6.0                                                      |
+| Bundler         | Vite 8                                                               |
+| Compiler plugin | `babel-plugin-react-compiler` via `@rolldown/plugin-babel`           |
+| Linter          | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked) |
 
 ---
 
@@ -53,11 +53,12 @@ npm run lint       # ESLint over all .ts/.tsx files
 npm run preview    # serve the production build locally
 ```
 
-**There are no test scripts.** Validation is done via `lint` and `build`.
+**Validation is done via `format:check`, `lint`, `typecheck`, `test`, and `build`.**
 
 Before committing changes, always verify with:
+
 ```bash
-npm run lint && npm run build
+npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
 
 ---
@@ -85,6 +86,7 @@ ESLint config is in `eslint.config.js` and applies to all `.ts` / `.tsx` files. 
 - `eslint-plugin-react-refresh` (vite preset) – warns about non-component exports from `.tsx` files that would break HMR.
 
 Because `typescript-eslint` strict+stylistic is enabled, expect rules like:
+
 - Prefer `interface` over `type` aliases for object shapes.
 - No unnecessary type assertions.
 - Consistent type exports.
