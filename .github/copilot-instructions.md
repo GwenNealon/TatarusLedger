@@ -53,10 +53,9 @@ npm run lint       # ESLint over all .ts/.tsx files
 npm run preview    # serve the production build locally
 ```
 
-**There are no test scripts.** Validation is done via `lint` and `build`.
+**Validation is done via `format:check`, `lint`, `typecheck`, `test`, and `build`.**
 
 Before committing changes, always verify with:
-
 ```bash
 npm run lint && npm run build
 ```
