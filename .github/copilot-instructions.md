@@ -56,6 +56,7 @@ npm run preview    # serve the production build locally
 **Validation is done via `format:check`, `lint`, `typecheck`, `test`, and `build`.**
 
 Before committing changes, always verify with:
+
 ```bash
 npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
