@@ -57,7 +57,7 @@ npm run preview    # serve the production build locally
 
 Before committing changes, always verify with:
 ```bash
-npm run lint && npm run build
+npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
 
 ---
