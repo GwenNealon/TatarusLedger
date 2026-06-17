@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite)](https://vite.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-20%20%7C%2022%20%7C%2024-green?logo=node.js)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.22.1-green?logo=node.js)](https://nodejs.org/)
 
 A client-side web application that helps **Final Fantasy XIV** players make smarter economic decisions by analyzing real-time market board data from the [Universalis API](https://universalis.app/).
 
@@ -44,7 +44,7 @@ Future enhancements may include alerts for market opportunities, crafting recipe
 
 ### Prerequisites
 
-- **Node.js**: Version 20.19+, 22.12+, or 24.0+
+- **Node.js**: Version 22.22.1 or later
 - **npm**: Comes bundled with Node.js
 
 ### Installation
