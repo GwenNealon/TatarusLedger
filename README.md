@@ -1,4 +1,4 @@
-# TatarusLedger
+# Tataru's Ledger
 
 [![Download](https://img.shields.io/badge/Download-green)](https://learnxinyminutes.com/git/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -22,24 +22,9 @@ A client-side web application that helps **Final Fantasy XIV** players make smar
 
 ---
 
-## 💭 Philosophy
-
-Final Fantasy XIV's player-driven economy is complex and dynamic. With thousands of tradeable items across multiple worlds and data centers, finding profitable opportunities can be overwhelming. Whether you're a crafter trying to maximize your profit margins, a gatherer looking for high-demand materials, or a savvy merchant seeking cross-world arbitrage opportunities, sifting through market board listings manually is time-consuming and inefficient.
-
-**TatarusLedger** was created to solve this problem. By aggregating and analyzing market data from the community-powered Universalis API, TatarusLedger surfaces actionable insights that help you answer questions like:
-
-- *Which crafted items are currently profitable to make and sell?*
-- *What gathered materials are in high demand right now?*
-- *Are there price discrepancies between my world and others in my data center?*
-- *What are the historical price trends for this item?*
-
-The tool is designed with a **privacy-first** and **transparency-first** philosophy: all processing happens in your browser, no data is collected or stored on external servers, and the source code is open for anyone to review and contribute to. TatarusLedger empowers players with information while respecting their privacy and autonomy.
-
----
-
 ## ✨ Features
 
-TatarusLedger is currently in early development. Planned and implemented features include:
+Tataru's Ledger is currently in early development. Planned and implemented features include:
 
 - **Market Board Analysis**: Real-time listing and sale data from the Universalis API across all supported worlds, data centers, and regions
 - **Crafting Profit Calculator**: Calculate potential profit margins by comparing crafted item sale prices against material costs
@@ -95,11 +80,11 @@ npm run test       # Run tests
 
 ## 💡 Usage
 
-TatarusLedger is currently in early development. The interface displays a placeholder heading while core features are being implemented.
+Tataru's Ledger is currently in early development. The interface displays a placeholder heading while core features are being implemented.
 
 ### Market Data
 
-The application fetches real-time market board data from the [Universalis API](https://universalis.app/docs/index.html), a community-powered service that aggregates publicly available market information from Final Fantasy XIV. No authentication or FFXIV account is required to use TatarusLedger.
+The application fetches real-time market board data from the [Universalis API](https://universalis.app/docs/index.html), a community-powered service that aggregates publicly available market information from Final Fantasy XIV. No authentication or FFXIV account is required to use Tataru's Ledger.
 
 Market data coverage includes:
 - All North America, Europe, Japan, and Oceania worlds
@@ -124,7 +109,7 @@ For urgent security concerns, please open a private security advisory via GitHub
 
 ## 📜 License
 
-TatarusLedger is licensed under the [GNU General Public License v3.0](LICENSE).
+Tataru's Ledger is licensed under the [GNU General Public License v3.0](LICENSE).
 
 You are free to use, modify, and distribute this software under the terms of the GPL v3. See the [LICENSE](LICENSE) file for full details.
 
@@ -135,4 +120,4 @@ You are free to use, modify, and distribute this software under the terms of the
 FINAL FANTASY is a registered trademark of Square Enix Holdings Co., Ltd.  
 FINAL FANTASY XIV © SQUARE ENIX CO., LTD.
 
-TatarusLedger is a fan-made project and is not affiliated with, endorsed by, or sponsored by Square Enix.
+Tataru's Ledger is a fan-made project and is not affiliated with, endorsed by, or sponsored by Square Enix.
