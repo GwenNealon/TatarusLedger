@@ -13,7 +13,6 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'jsdom',
-    setupFiles: [],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
