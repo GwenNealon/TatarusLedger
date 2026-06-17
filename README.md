@@ -24,7 +24,7 @@ A client-side web application that helps **Final Fantasy XIV** players make smar
 
 ## ✨ Features
 
-Tataru's Ledger is currently in early development. Planned and implemented features include:
+Tataru's Ledger is currently in early development. Planned features include:
 
 - **Market Board Analysis**: Real-time listing and sale data from the Universalis API across all supported worlds, data centers, and regions
 - **Crafting Profit Calculator**: Calculate potential profit margins by comparing crafted item sale prices against material costs
