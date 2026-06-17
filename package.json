@@ -15,15 +15,11 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
-<<<<<<< HEAD
-    "preview": "vite preview",
-    "prepare": "husky"
-=======
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "preview": "vite preview"
->>>>>>> origin/develop
+    "preview": "vite preview",
+    "prepare": "husky"
   },
   "dependencies": {
     "react": "^19.2.6",
@@ -46,13 +42,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-<<<<<<< HEAD
     "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
     "lint-staged": "^17.0.7",
     "prettier": "^3.8.4",
-=======
-    "jsdom": "^29.1.1",
->>>>>>> origin/develop
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
