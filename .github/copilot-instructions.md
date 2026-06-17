@@ -1,10 +1,10 @@
-# Copilot Instructions for TatarusLedger
+# Copilot Instructions for Tataru's Ledger
 
 ## Project Overview
 
-TatarusLedger is a **TypeScript + React** single-page web application that uses data from the [Universalis API](https://universalis.app/docs/index.html) to surface profitable crafting, gathering, and market board arbitrage opportunities in the MMORPG **Final Fantasy XIV**.
+Tataru's Ledger is a **TypeScript + React** single-page web application that uses data from the [Universalis API](https://universalis.app/docs/index.html) to surface profitable crafting, gathering, and market board arbitrage opportunities in the MMORPG **Final Fantasy XIV**.
 
-The project is early-stage: the current `src/App.tsx` is a placeholder `<h1>` component. New features should be built inside the `src/` directory.
+The project is early-stage: the current `src/App.tsx` renders an official landing page while core features are built out inside the `src/` directory.
 
 ---
 
@@ -23,7 +23,7 @@ TatarusLedger/                   ← repo root; ALL frontend code lives here
     favicon.svg
   src/
     main.tsx                     ← React entry point
-    App.tsx                      ← root component (currently placeholder)
+    App.tsx                      ← root component (official landing page)
 ```
 
 **All `npm` commands are run from the repo root.**
