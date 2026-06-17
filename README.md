@@ -19,9 +19,11 @@ Deployment is handled by `.github/workflows/pages.yml` and publishes on every pu
 
 1. Update content in `src/`.
 2. Verify changes locally:
+   - `npm run format:check`
    - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
    - `npm run build`
-   - `npm test`
 3. Merge/push to `main`.
 4. The **Deploy to GitHub Pages** workflow builds and publishes the updated site automatically.
 
