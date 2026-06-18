@@ -147,6 +147,8 @@ const SINGLE_HISTORY_BODY = {
   entries: [RAW_SALE],
 }
 
+const EXPECTED_USER_AGENT = 'TatarusLedger/0.0.0 (nealon.gwen@gmail.com)'
+
 describe('fetchMarketBoard — rate-limit handling', () => {
   beforeEach(() => {
     vi.spyOn(globalThis, 'fetch')
@@ -198,6 +200,7 @@ describe('fetchMarketBoard — rate-limit handling', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
 
   it('throws RateLimitError after exhausting all retries', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(make429Response())
@@ -312,6 +315,13 @@ function capturedUrl(): string {
   return lastCall[0] as string
 }
 
+function capturedRequestInit(): RequestInit {
+  const calls = vi.mocked(globalThis.fetch).mock.calls
+  const lastCall = calls.at(-1)
+  if (lastCall === undefined) throw new Error('No fetch call was made')
+  return lastCall[1] ?? {}
+}
+
 describe('fetchMarketBoard — query parameter forwarding', () => {
   beforeEach(() => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -368,6 +378,16 @@ describe('fetchMarketBoard — query parameter forwarding', () => {
     expect(capturedUrl()).toContain('fields=')
     expect(capturedUrl()).toContain('pricePerUnit')
   })
+
+  it('sends the configured User-Agent header', async () => {
+    await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0 })
+
+    expect(capturedRequestInit()).toMatchObject({
+      headers: {
+        'User-Agent': EXPECTED_USER_AGENT,
+      },
+    })
+  })
 })
 
 describe('fetchSaleHistory — query parameter forwarding', () => {
@@ -422,5 +442,15 @@ describe('fetchSaleHistory — query parameter forwarding', () => {
     const url = capturedUrl()
     expect(url).toContain('minSalePrice=100')
     expect(url).toContain('maxSalePrice=50000')
+  })
+
+  it('sends the configured User-Agent header', async () => {
+    await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
+
+    expect(capturedRequestInit()).toMatchObject({
+      headers: {
+        'User-Agent': EXPECTED_USER_AGENT,
+      },
+    })
   })
 })

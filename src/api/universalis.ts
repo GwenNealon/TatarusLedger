@@ -13,6 +13,7 @@ import type {
 const BASE_URL = 'https://universalis.app/api/v2'
 const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_BASE_DELAY_MS = 1_000
+const USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
 
 export class UniversalisError extends Error {
   readonly statusCode: number | undefined
@@ -130,15 +131,22 @@ async function fetchWithRetry(
   maxRetries: number,
   baseDelayMs: number,
 ): Promise<Response> {
+  const requestInit: RequestInit = {
+    headers: {
+      'User-Agent': USER_AGENT,
+    },
+  }
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url)
+    const response = await fetch(url, requestInit)
 
     if (response.status === 429) {
       if (attempt >= maxRetries) {
         throw new RateLimitError()
       }
       const retryAfter = response.headers.get('Retry-After')
-      const retryAfterSeconds = retryAfter !== null ? Number(retryAfter) : Number.NaN
+      const retryAfterSeconds =
+        retryAfter !== null ? Number(retryAfter) : Number.NaN
       const delay =
         Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? retryAfterSeconds * 1_000
