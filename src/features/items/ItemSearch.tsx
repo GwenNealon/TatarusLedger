@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import type { NormalizedItem } from '../../data/types.ts'
+import { toIconUrl } from './iconUrl.ts'
 
 const SEARCH_DEBOUNCE_MS = 180
 
@@ -35,12 +36,6 @@ const itemButtonStyles: CSSProperties = {
   gap: '0.5rem',
   padding: '0.5rem',
   cursor: 'pointer',
-}
-
-function toIconUrl(iconId: number): string {
-  const iconName = String(iconId).padStart(6, '0')
-  const folder = `${iconName.slice(0, 3)}000`
-  return `https://xivapi.com/i/${folder}/${iconName}.png`
 }
 
 interface ItemSearchProps {

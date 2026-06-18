@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 
 import { fetchMarketBoard } from '../../api/universalis.ts'
 import type { NormalizedItem } from '../../data/types.ts'
+import { toIconUrl } from './iconUrl.ts'
 
 interface ItemMarketSummary {
   lowestPrice: number | null
@@ -46,12 +47,6 @@ const spinningIconStyles: CSSProperties = {
   display: 'inline-block',
   marginRight: '0.35rem',
   animation: 'spin 1s linear infinite',
-}
-
-function toIconUrl(iconId: number): string {
-  const iconName = String(iconId).padStart(6, '0')
-  const folder = `${iconName.slice(0, 3)}000`
-  return `https://xivapi.com/i/${folder}/${iconName}.png`
 }
 
 function getCacheKey(itemId: number): string {
@@ -305,8 +300,7 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         <dd>{selectedCache?.marketSummary.saleCount ?? '—'}</dd>
         <dt>Lowest observed price</dt>
         <dd>
-          {selectedCache?.marketSummary.lowestPrice === null ||
-          selectedCache === null
+          {selectedCache?.marketSummary.lowestPrice == null
             ? '—'
             : `${selectedCache.marketSummary.lowestPrice.toString()} gil`}
         </dd>

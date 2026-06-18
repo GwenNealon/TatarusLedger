@@ -245,6 +245,48 @@ describe('App', () => {
     expect(universalisCalls).toHaveLength(0)
   })
 
+  it('opens a routed item URL with trailing slash', async () => {
+    window.history.replaceState({}, '', '/TatarusLedger/5339/')
+
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          makeJsonResponse({
+            itemID: 5339,
+            listings: [{ pricePerUnit: 700 }],
+            recentHistory: [{ pricePerUnit: 680, timestamp: 1_700_000_100 }],
+          }),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup')
+    expect(container.textContent).toContain('700 gil')
+  })
+
+  it.each([
+    '/TatarusLedger/not-a-number',
+    '/TatarusLedger/-1',
+    '/TatarusLedger/5339/extra',
+  ])('ignores invalid routed URL %s', async (path) => {
+    window.history.replaceState({}, '', path)
+
+    setupFetchMock({})
+
+    const { container } = await renderApp()
+
+    expect(container.textContent).toContain(
+      'Select an item to open /TatarusLedger/{itemId}.',
+    )
+  })
+
   it('shows error indicator on refresh failure and supports retry', async () => {
     setupFetchMock({
       marketResponsesByItemId: {

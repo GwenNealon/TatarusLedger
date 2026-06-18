@@ -60,6 +60,14 @@ function buildItemPath(itemId: number): string {
   return `${APP_BASE_PATH}${itemId.toString()}`
 }
 
+function navigateToPath(
+  nextPath: string,
+  setPathname: (pathname: string) => void,
+): void {
+  window.history.pushState({}, '', nextPath)
+  setPathname(window.location.pathname)
+}
+
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
   const [items, setItems] = useState<NormalizedItem[]>([])
@@ -139,15 +147,14 @@ export default function App() {
         <ItemSearch
           items={items}
           onSelectItem={(item) => {
-            window.history.pushState({}, '', buildItemPath(item.id))
-            setPathname(window.location.pathname)
+            navigateToPath(buildItemPath(item.id), setPathname)
           }}
         />
 
         {selectedItem !== null ? (
           <ItemDetailPage key={selectedItem.id} item={selectedItem} />
         ) : selectedItemId !== null ? (
-          <p role="status">Item not found in the loaded index.</p>
+          <p role="alert">Item not found in the loaded index.</p>
         ) : (
           <p role="status">
             Select an item to open /TatarusLedger/{'{itemId}'}.

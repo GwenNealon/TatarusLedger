@@ -1,5 +1,10 @@
 import type { NormalizedItem } from '../../data/types.ts'
 
+const APP_BASE_PATH =
+  import.meta.env.BASE_URL === '/'
+    ? '/TatarusLedger/'
+    : import.meta.env.BASE_URL
+
 interface ItemsArtifactPayload {
   version: string
   items: NormalizedItem[]
@@ -33,11 +38,6 @@ function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
     payload.items.every((entry) => isNormalizedItem(entry))
   )
 }
-
-const APP_BASE_PATH =
-  import.meta.env.BASE_URL === '/'
-    ? '/TatarusLedger/'
-    : import.meta.env.BASE_URL
 
 export async function loadItemsIndex(): Promise<NormalizedItem[]> {
   const itemsUrl = `${APP_BASE_PATH}data/items.json`
