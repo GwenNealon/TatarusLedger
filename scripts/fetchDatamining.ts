@@ -2,9 +2,9 @@
  * Fetch and normalize item/recipe metadata from the xivapi/ffxiv-datamining
  * repository and write compact JSON artifacts to public/data/.
  *
- * Usage (requires Node.js >= 22.6):
- *   node --experimental-strip-types scripts/fetchDatamining.ts [version]
- *
+ * Usage (requires Node.js version compatible with package.json "engines"):
+ *   npm run data:fetch -- [version]
+ *   # or: node --experimental-strip-types scripts/fetchDatamining.ts [version]
  * The optional [version] argument is a patch string (e.g. "7.2") embedded in
  * the output artifacts so consumers can detect staleness.  Defaults to "unknown".
  *
