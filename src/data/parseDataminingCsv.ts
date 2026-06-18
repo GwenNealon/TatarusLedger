@@ -19,7 +19,7 @@ export function parseDataminingCsv(csvText: string): Record<string, string>[] {
     relax_column_count: true,
     // Preserve blank records so only truly empty data rows are skipped below.
     skip_empty_lines: false,
-  })
+  }) as string[][]
 
   if (records.length < 4) return []
   const columnNames = records[1]
