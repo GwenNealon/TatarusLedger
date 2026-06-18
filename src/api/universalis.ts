@@ -138,9 +138,10 @@ async function fetchWithRetry(
         throw new RateLimitError()
       }
       const retryAfter = response.headers.get('Retry-After')
+      const retryAfterSeconds = retryAfter !== null ? Number(retryAfter) : Number.NaN
       const delay =
-        retryAfter !== null
-          ? parseInt(retryAfter, 10) * 1_000
+        Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? retryAfterSeconds * 1_000
           : baseDelayMs * 2 ** attempt
       await sleep(delay)
       continue
