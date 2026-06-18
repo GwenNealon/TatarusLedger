@@ -40,6 +40,8 @@ TatarusLedger/                   ← repo root; ALL frontend code lives here
 | Compiler plugin | `babel-plugin-react-compiler` via `@rolldown/plugin-babel`           |
 | Linter          | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked) |
 
+When a feature can be implemented safely and clearly with a common, well-maintained dependency (for example runtime schema validation or standards-compliant parsing), prefer using that dependency over writing manual implementations.
+
 ---
 
 ## Development Commands

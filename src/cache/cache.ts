@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 /** A stored cache entry with data and freshness metadata. */
 export interface CacheEntry<T> {
   /** The cached payload. */
@@ -17,6 +19,12 @@ export interface FreshnessInfo {
   /** Whether the entry has exceeded its TTL. */
   isStale: boolean
 }
+
+const cacheEntrySchema = z.object({
+  data: z.unknown(),
+  fetchedAt: z.number(),
+  ttlMs: z.number(),
+})
 
 /**
  * Client-side cache backed by a {@link Storage} instance (e.g. `localStorage`)
@@ -64,7 +72,7 @@ export class Cache {
 
   /**
    * Retrieve the raw cache entry for `key`, or `null` if absent or
-   * unparseable.
+   * unparseable or has an invalid shape.
    *
    * Does **not** check staleness — use {@link isStale} for that.
    */
@@ -72,7 +80,14 @@ export class Cache {
     const raw = this.#storage.getItem(this.#storageKey(key))
     if (raw === null) return null
     try {
-      return JSON.parse(raw) as CacheEntry<T>
+      const parsedRaw: unknown = JSON.parse(raw)
+      const parsedEntry = cacheEntrySchema.safeParse(parsedRaw)
+      if (!parsedEntry.success) return null
+      return {
+        data: parsedEntry.data.data as T,
+        fetchedAt: parsedEntry.data.fetchedAt,
+        ttlMs: parsedEntry.data.ttlMs,
+      }
     } catch {
       return null
     }

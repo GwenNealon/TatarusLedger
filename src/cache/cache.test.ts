@@ -68,6 +68,24 @@ describe('Cache.set / Cache.get', () => {
     expect(cache.get('k')).toBeNull()
   })
 
+  it('returns null when the stored entry is missing required fields', () => {
+    const cache = makeCache()
+    localStorage.setItem(
+      'test:k',
+      JSON.stringify({ data: 1, fetchedAt: Date.now() }),
+    )
+    expect(cache.get('k')).toBeNull()
+  })
+
+  it('returns null when fetchedAt or ttlMs are not numbers', () => {
+    const cache = makeCache()
+    localStorage.setItem(
+      'test:k',
+      JSON.stringify({ data: 1, fetchedAt: 'bad', ttlMs: 1_000 }),
+    )
+    expect(cache.get('k')).toBeNull()
+  })
+
   it('namespaces keys by prefix so two caches do not collide', () => {
     const a = new Cache(localStorage, 'a:')
     const b = new Cache(localStorage, 'b:')
@@ -91,6 +109,15 @@ describe('Cache.isStale', () => {
   it('returns true for a missing key', () => {
     const cache = makeCache()
     expect(cache.isStale('missing')).toBe(true)
+  })
+
+  it('returns true for an entry with an invalid stored shape', () => {
+    const cache = makeCache()
+    localStorage.setItem(
+      'test:item',
+      JSON.stringify({ data: 1, fetchedAt: 'bad', ttlMs: 1_000 }),
+    )
+    expect(cache.isStale('item')).toBe(true)
   })
 
   it('returns false immediately after set (TTL has not elapsed)', () => {
@@ -155,6 +182,15 @@ describe('Cache.getFreshness', () => {
   it('returns null for a missing key', () => {
     const cache = makeCache()
     expect(cache.getFreshness('missing')).toBeNull()
+  })
+
+  it('returns null for an entry with an invalid stored shape', () => {
+    const cache = makeCache()
+    localStorage.setItem(
+      'test:k',
+      JSON.stringify({ data: 'x', fetchedAt: Date.now(), ttlMs: 'bad' }),
+    )
+    expect(cache.getFreshness('k')).toBeNull()
   })
 
   it('returns correct fetchedAt and expiresAt', () => {
