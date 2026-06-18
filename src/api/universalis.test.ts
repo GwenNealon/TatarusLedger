@@ -188,14 +188,16 @@ describe('fetchMarketBoard — rate-limit handling', () => {
       .mockResolvedValueOnce(makeOkResponse(SINGLE_MARKET_BODY))
 
     vi.useFakeTimers()
-    const promise = fetchMarketBoard('Balmung', [5])
-    await vi.runAllTimersAsync()
-    const result = await promise
-    vi.useRealTimers()
+    try {
+      const promise = fetchMarketBoard('Balmung', [5])
+      await vi.runAllTimersAsync()
+      const result = await promise
 
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
-    expect(result[0].itemId).toBe(5)
-  })
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+      expect(result[0].itemId).toBe(5)
+    } finally {
+      vi.useRealTimers()
+    }
 
   it('throws RateLimitError after exhausting all retries', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(make429Response())
