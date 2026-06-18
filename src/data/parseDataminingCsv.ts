@@ -17,6 +17,7 @@ export function parseDataminingCsv(csvText: string): Record<string, string>[] {
   const records = parse(csvText, {
     bom: true,
     relax_column_count: true,
+    // Preserve blank records so only truly empty data rows are skipped below.
     skip_empty_lines: false,
   })
 
@@ -27,6 +28,7 @@ export function parseDataminingCsv(csvText: string): Record<string, string>[] {
 
   for (let i = 3; i < records.length; i++) {
     const values = records[i]
+    // csv-parse emits an empty line as [''].
     if (values.length === 1 && values[0] === '') continue
 
     const row: Record<string, string> = {}
