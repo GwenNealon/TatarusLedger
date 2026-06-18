@@ -69,7 +69,7 @@ Future enhancements may include alerts for market opportunities, crafting recipe
    ```
 
 4. **Open your browser**:
-   Navigate to the local URL displayed in the terminal (typically `http://localhost:5173`).
+   Navigate to the local URL displayed in the terminal (typically `http://localhost:5173/TatarusLedger/`).
 
 ### Development Commands
 
