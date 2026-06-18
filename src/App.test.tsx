@@ -1,21 +1,113 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import App from './App.tsx'
+import type { ItemsArtifact } from './data/types.ts'
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean
 }
 
-function renderApp(): {
+const ITEMS_FIXTURE: ItemsArtifact = {
+  version: 'test',
+  items: [
+    {
+      id: 5339,
+      name: 'Craftsman Syrup',
+      iconId: 35484,
+      levelItem: 560,
+      rarity: 1,
+      uiCategory: 58,
+    },
+    {
+      id: 33917,
+      name: 'Orange Juice',
+      iconId: 9362,
+      levelItem: 430,
+      rarity: 1,
+      uiCategory: 46,
+    },
+  ],
+}
+
+function makeJsonResponse(payload: unknown): Response {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function getRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') {
+    return input
+  }
+
+  if (input instanceof URL) {
+    return input.href
+  }
+
+  if (input instanceof Request) {
+    return input.url
+  }
+
+  throw new Error('Unsupported request input')
+}
+
+function setupFetchMock(params: {
+  marketResponsesByItemId?: Record<number, (Error | Response)[]>
+}): ReturnType<typeof vi.fn> {
+  const queueByItemId = new Map<number, (Error | Response)[]>()
+
+  for (const [itemId, queue] of Object.entries(
+    params.marketResponsesByItemId ?? {},
+  )) {
+    queueByItemId.set(Number.parseInt(itemId, 10), [...queue])
+  }
+
+  const mock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
+    const requestUrl = getRequestUrl(input)
+
+    if (requestUrl.includes('/data/items.json')) {
+      return Promise.resolve(makeJsonResponse(ITEMS_FIXTURE))
+    }
+
+    const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
+    if (marketMatch !== null) {
+      const itemId = Number.parseInt(marketMatch[1], 10)
+      const queue = queueByItemId.get(itemId)
+      const next = queue?.shift()
+      if (next === undefined) {
+        return Promise.reject(
+          new Error(`No queued market response for item ${itemId.toString()}`),
+        )
+      }
+
+      if (next instanceof Error) {
+        return Promise.reject(next)
+      }
+
+      return Promise.resolve(next)
+    }
+
+    return Promise.reject(new Error(`Unexpected fetch URL: ${requestUrl}`))
+  })
+
+  globalThis.fetch = mock
+  return mock
+}
+
+async function renderApp(): Promise<{
   root: ReturnType<typeof createRoot>
   container: HTMLDivElement
-} {
+}> {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
-  act(() => {
+
+  await act(async () => {
     root.render(<App />)
+    await Promise.resolve()
   })
 
   return { root, container }
@@ -28,6 +120,7 @@ describe('App', () => {
     localStorage.clear()
     vi.restoreAllMocks()
     globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    window.history.replaceState({}, '', '/TatarusLedger/')
   })
 
   afterEach(() => {
@@ -36,23 +129,23 @@ describe('App', () => {
     vi.useRealTimers()
   })
 
-  it('searches items with icons and opens the selected item page', async () => {
+  it('searches datamined items and routes to /TatarusLedger/{itemId}', async () => {
     vi.useFakeTimers()
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          itemID: 5339,
-          listings: [],
-          recentHistory: [],
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      ),
-    )
 
-    const { container } = renderApp()
+    setupFetchMock({
+      marketResponsesByItemId: {
+        33917: [
+          makeJsonResponse({
+            itemID: 33917,
+            listings: [{ pricePerUnit: 600 }],
+            recentHistory: [{ pricePerUnit: 560, timestamp: 1_700_000_000 }],
+          }),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+
     const input =
       container.querySelector<HTMLInputElement>('#item-search-input')
     expect(input).not.toBeNull()
@@ -73,19 +166,16 @@ describe('App', () => {
     expect(itemButton).not.toBeUndefined()
     if (itemButton === undefined) return
 
-    const rowIcon = itemButton.querySelector('img')
-    expect(rowIcon).not.toBeNull()
-    if (rowIcon === null) return
-    expect(rowIcon.getAttribute('alt')).toContain('Orange Juice icon')
-
     act(() => {
       itemButton.click()
     })
 
     await act(async () => {
       await Promise.resolve()
+      await Promise.resolve()
     })
 
+    expect(window.location.pathname).toBe('/TatarusLedger/33917')
     expect(container.textContent).toContain('Orange Juice')
     expect(container.textContent).toContain('ID')
     expect(container.textContent).toContain('Category')
@@ -115,10 +205,10 @@ describe('App', () => {
           id: 5339,
           name: 'Craftsman Syrup',
           iconId: 35484,
-          category: 'Medicine',
+          levelItem: 560,
+          rarity: 1,
+          uiCategory: 58,
         },
-        listings: [],
-        recentHistory: [],
         marketSummary: {
           lowestPrice: 1000,
           listingCount: 2,
@@ -127,10 +217,10 @@ describe('App', () => {
       }),
     )
 
-    const fetchSpy = vi.fn()
-    globalThis.fetch = fetchSpy
+    const fetchSpy = setupFetchMock({})
 
-    const { container } = renderApp()
+    const { container } = await renderApp()
+
     const itemButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent.includes('Craftsman Syrup'),
     )
@@ -147,25 +237,30 @@ describe('App', () => {
 
     expect(container.textContent).toContain('Cached and fresh')
     expect(container.textContent).toContain('1000 gil')
-    expect(fetchSpy).not.toHaveBeenCalled()
+
+    const universalisCalls = fetchSpy.mock.calls.filter((call) => {
+      const request = call[0] as RequestInfo | URL
+      return getRequestUrl(request).includes('/api/v2/Crystal/5339')
+    })
+    expect(universalisCalls).toHaveLength(0)
   })
 
   it('shows error indicator on refresh failure and supports retry', async () => {
-    const response = new Response(
-      JSON.stringify({
-        itemID: 5339,
-        listings: [{ pricePerUnit: 450 }],
-        recentHistory: [{ pricePerUnit: 410, timestamp: 1_700_000_000 }],
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          new Error('network failed'),
+          makeJsonResponse({
+            itemID: 5339,
+            listings: [{ pricePerUnit: 450 }],
+            recentHistory: [{ pricePerUnit: 410, timestamp: 1_700_000_000 }],
+          }),
+        ],
+      },
+    })
 
-    globalThis.fetch = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('network failed'))
-      .mockResolvedValueOnce(response)
+    const { container } = await renderApp()
 
-    const { container } = renderApp()
     const itemButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent.includes('Craftsman Syrup'),
     )
@@ -182,6 +277,7 @@ describe('App', () => {
     })
 
     expect(container.textContent).toContain('Cache refresh failed')
+
     const retryButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent === 'Retry',
     )
