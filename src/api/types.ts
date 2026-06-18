@@ -56,7 +56,8 @@ export interface Listing {
   total: number
   tax: number
   retainerName: string
-  lastReviewTime: Date
+  /** Unix millisecond timestamp for backend-safe comparisons. */
+  lastReviewTime: number
 }
 
 export interface Sale {
@@ -65,7 +66,8 @@ export interface Sale {
   hq: boolean
   pricePerUnit: number
   quantity: number
-  timestamp: Date
+  /** Unix millisecond timestamp for backend-safe comparisons. */
+  timestamp: number
   buyerName: string
 }
 

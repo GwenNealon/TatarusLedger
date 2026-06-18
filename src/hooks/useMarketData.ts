@@ -121,6 +121,7 @@ export function useMarketData(
     setError(null)
 
     void fetchMarketBoard(worldDcRegion, Array.from(itemIdsRef.current))
+      .then((result) => {
         if (cancelled) return
         marketBoardCache.set(key, result, ttlMs)
         setFetchResult({ key, data: result })

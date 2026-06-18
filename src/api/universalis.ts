@@ -179,7 +179,7 @@ export function transformListing(raw: RawListing): Listing {
     total: raw.total,
     tax: raw.tax,
     retainerName: raw.retainerName,
-    lastReviewTime: new Date(raw.lastReviewTime * 1_000),
+    lastReviewTime: raw.lastReviewTime * 1_000,
   }
 }
 
@@ -190,7 +190,7 @@ export function transformSale(raw: RawSale): Sale {
     hq: raw.hq,
     pricePerUnit: raw.pricePerUnit,
     quantity: raw.quantity,
-    timestamp: new Date(raw.timestamp * 1_000),
+    timestamp: raw.timestamp * 1_000,
     buyerName: raw.buyerName,
   }
 }

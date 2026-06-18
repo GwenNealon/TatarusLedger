@@ -53,12 +53,12 @@ describe('transformListing', () => {
     expect(listing.retainerName).toBe('Tataru')
     expect(listing.worldId).toBe(73)
     expect(listing.worldName).toBe('Balmung')
-    expect(listing.lastReviewTime).toEqual(new Date(1_700_000_000 * 1_000))
+    expect(listing.lastReviewTime).toBe(1_700_000_000 * 1_000)
   })
 
-  it('converts unix timestamp to a Date', () => {
+  it('converts unix timestamp to milliseconds', () => {
     const listing = transformListing({ ...RAW_LISTING, lastReviewTime: 0 })
-    expect(listing.lastReviewTime).toEqual(new Date(0))
+    expect(listing.lastReviewTime).toBe(0)
   })
 
   it('sets worldName to undefined when absent', () => {
@@ -93,15 +93,15 @@ describe('transformSale', () => {
     expect(sale.hq).toBe(false)
     expect(sale.pricePerUnit).toBe(8_000)
     expect(sale.quantity).toBe(3)
-    expect(sale.timestamp).toEqual(new Date(1_700_000_200 * 1_000))
+    expect(sale.timestamp).toBe(1_700_000_200 * 1_000)
     expect(sale.buyerName).toBe('BuyerA')
     expect(sale.worldId).toBe(73)
     expect(sale.worldName).toBe('Balmung')
   })
 
-  it('converts unix timestamp to a Date', () => {
+  it('converts unix timestamp to milliseconds', () => {
     const sale = transformSale({ ...RAW_SALE, timestamp: 0 })
-    expect(sale.timestamp).toEqual(new Date(0))
+    expect(sale.timestamp).toBe(0)
   })
 
   it('sets worldName to undefined when absent', () => {
