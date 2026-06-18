@@ -1,0 +1,179 @@
+import type {
+  Listing,
+  MarketData,
+  RawHistoryResponse,
+  RawListing,
+  RawMarketResponse,
+  RawMultiHistoryResponse,
+  RawMultiMarketResponse,
+  RawSale,
+  Sale,
+} from './types.ts'
+
+const BASE_URL = 'https://universalis.app/api/v2'
+const DEFAULT_MAX_RETRIES = 3
+const DEFAULT_BASE_DELAY_MS = 1_000
+
+export class UniversalisError extends Error {
+  readonly statusCode: number | undefined
+
+  constructor(message: string, statusCode?: number) {
+    super(message)
+    this.name = 'UniversalisError'
+    this.statusCode = statusCode
+  }
+}
+
+export class RateLimitError extends UniversalisError {
+  constructor(message = 'Rate limit exceeded') {
+    super(message, 429)
+    this.name = 'RateLimitError'
+  }
+}
+
+/** Options for controlling retry behaviour on API calls. */
+export interface FetchOptions {
+  /** Maximum number of retry attempts on failure (default: 3). */
+  maxRetries?: number
+  /** Base delay in milliseconds for exponential backoff (default: 1000). */
+  baseDelayMs?: number
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+async function fetchWithRetry(
+  url: string,
+  maxRetries: number,
+  baseDelayMs: number,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url)
+
+    if (response.status === 429) {
+      if (attempt >= maxRetries) {
+        throw new RateLimitError()
+      }
+      const retryAfter = response.headers.get('Retry-After')
+      const delay =
+        retryAfter !== null
+          ? parseInt(retryAfter, 10) * 1_000
+          : baseDelayMs * 2 ** attempt
+      await sleep(delay)
+      continue
+    }
+
+    if (!response.ok) {
+      throw new UniversalisError(
+        `Universalis API returned ${response.status.toString()}`,
+        response.status,
+      )
+    }
+
+    return response
+  }
+
+  throw new RateLimitError()
+}
+
+export function transformListing(raw: RawListing): Listing {
+  return {
+    listingId: raw.listingID,
+    worldId: raw.worldID,
+    worldName: raw.worldName,
+    hq: raw.hq,
+    pricePerUnit: raw.pricePerUnit,
+    quantity: raw.quantity,
+    total: raw.total,
+    tax: raw.tax,
+    retainerName: raw.retainerName,
+    lastReviewTime: new Date(raw.lastReviewTime * 1_000),
+  }
+}
+
+export function transformSale(raw: RawSale): Sale {
+  return {
+    worldId: raw.worldID,
+    worldName: raw.worldName,
+    hq: raw.hq,
+    pricePerUnit: raw.pricePerUnit,
+    quantity: raw.quantity,
+    timestamp: new Date(raw.timestamp * 1_000),
+    buyerName: raw.buyerName,
+  }
+}
+
+/**
+ * Fetches current market board listings and recent sale history for one or
+ * more items from a world, data centre, or region.
+ */
+export async function fetchMarketBoard(
+  worldDcRegion: string,
+  itemIds: number[],
+  options: FetchOptions = {},
+): Promise<MarketData[]> {
+  const {
+    maxRetries = DEFAULT_MAX_RETRIES,
+    baseDelayMs = DEFAULT_BASE_DELAY_MS,
+  } = options
+  const url = `${BASE_URL}/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}`
+  const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
+  const raw: unknown = await response.json()
+
+  if (itemIds.length === 1) {
+    const data = raw as RawMarketResponse
+    return [
+      {
+        itemId: data.itemID,
+        listings: data.listings.map(transformListing),
+        sales: data.recentHistory.map(transformSale),
+      },
+    ]
+  }
+
+  const data = raw as RawMultiMarketResponse
+  return Object.values(data.items).map((item) => ({
+    itemId: item.itemID,
+    listings: item.listings.map(transformListing),
+    sales: item.recentHistory.map(transformSale),
+  }))
+}
+
+/**
+ * Fetches recent sale history only for one or more items from a world, data
+ * centre, or region.
+ */
+export async function fetchSaleHistory(
+  worldDcRegion: string,
+  itemIds: number[],
+  options: FetchOptions = {},
+): Promise<MarketData[]> {
+  const {
+    maxRetries = DEFAULT_MAX_RETRIES,
+    baseDelayMs = DEFAULT_BASE_DELAY_MS,
+  } = options
+  const url = `${BASE_URL}/history/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}`
+  const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
+  const raw: unknown = await response.json()
+
+  if (itemIds.length === 1) {
+    const data = raw as RawHistoryResponse
+    return [
+      {
+        itemId: data.itemID,
+        listings: [],
+        sales: data.entries.map(transformSale),
+      },
+    ]
+  }
+
+  const data = raw as RawMultiHistoryResponse
+  return Object.values(data.items).map((item) => ({
+    itemId: item.itemID,
+    listings: [],
+    sales: item.entries.map(transformSale),
+  }))
+}
