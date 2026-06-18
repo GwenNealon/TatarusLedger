@@ -111,11 +111,16 @@ export function useMarketData(
 
     let cancelled = false
 
+    if (itemIdsRef.current.length === 0) {
+      setIsLoading(false)
+      setError(new Error('useMarketData: itemIds must be non-empty'))
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
-    void fetchMarketBoard(worldDcRegion, itemIdsRef.current as number[])
-      .then((result) => {
+    void fetchMarketBoard(worldDcRegion, Array.from(itemIdsRef.current))
         if (cancelled) return
         marketBoardCache.set(key, result, ttlMs)
         setFetchResult({ key, data: result })
