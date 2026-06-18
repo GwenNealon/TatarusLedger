@@ -69,6 +69,16 @@ str,str
     expect(rows[0].Name).toBe('Hero"s Blade')
   })
 
+  it('handles embedded newlines inside quoted fields', () => {
+    const csv = `key,0,1
+#,Name,Description
+str,str,str
+1,Sword,"Line one
+Line two"`
+    const rows = parseDataminingCsv(csv)
+    expect(rows[0].Description).toBe('Line one\nLine two')
+  })
+
   it('fills missing columns with empty string when row has fewer fields', () => {
     const csv = `key,0,1,2
 #,A,B,C
@@ -89,5 +99,24 @@ str,str
 2,Shield`
     const rows = parseDataminingCsv(csv)
     expect(rows).toHaveLength(2)
+  })
+
+  it('parses CRLF files without adding carriage returns to keys', () => {
+    const csv = ['key,0,1', '#,Name,Rarity', 'str,str,str', '1,Sword,2'].join(
+      '\r\n',
+    )
+    const rows = parseDataminingCsv(csv)
+    expect(rows[0]).toHaveProperty('Rarity')
+    expect(rows[0]).not.toHaveProperty('Rarity\r')
+    expect(rows[0].Rarity).toBe('2')
+  })
+
+  it('preserves trailing whitespace in field values', () => {
+    const csv = `key,0
+#,Name
+str,str
+1,"Sword  "`
+    const rows = parseDataminingCsv(csv)
+    expect(rows[0].Name).toBe('Sword  ')
   })
 })

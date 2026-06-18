@@ -1,3 +1,5 @@
+import { parse } from 'csv-parse/sync'
+
 /**
  * Parses a CSV file from the xivapi/ffxiv-datamining repository.
  *
@@ -12,20 +14,20 @@
  * The first column is always stored under the key "#".
  */
 export function parseDataminingCsv(csvText: string): Record<string, string>[] {
-  const lines = csvText.split('\n')
+  const records = parse(csvText, {
+    bom: true,
+    relax_column_count: true,
+    skip_empty_lines: false,
+  })
 
-  if (lines.length < 4) return []
-
-  const columnNames = parseCsvRow(lines[1])
+  if (records.length < 4) return []
+  const columnNames = records[1]
 
   const results: Record<string, string>[] = []
 
-  for (let i = 3; i < lines.length; i++) {
-    const line = lines[i].trimEnd()
-    if (!line) continue
-
-    const values = parseCsvRow(line)
-    if (values.length === 0) continue
+  for (let i = 3; i < records.length; i++) {
+    const values = records[i]
+    if (values.length === 1 && values[0] === '') continue
 
     const row: Record<string, string> = {}
     for (let j = 0; j < columnNames.length; j++) {
@@ -35,49 +37,4 @@ export function parseDataminingCsv(csvText: string): Record<string, string>[] {
   }
 
   return results
-}
-
-/** Parses a single RFC 4180 CSV row into an array of field strings. */
-function parseCsvRow(line: string): string[] {
-  const fields: string[] = []
-  let i = 0
-
-  while (i < line.length) {
-    if (line[i] === '"') {
-      let value = ''
-      i++ // skip opening quote
-      while (i < line.length) {
-        if (line[i] === '"') {
-          if (line[i + 1] === '"') {
-            value += '"'
-            i += 2
-          } else {
-            i++ // skip closing quote
-            break
-          }
-        } else {
-          value += line[i]
-          i++
-        }
-      }
-      fields.push(value)
-      if (i < line.length && line[i] === ',') i++
-    } else {
-      const commaIdx = line.indexOf(',', i)
-      if (commaIdx === -1) {
-        fields.push(line.slice(i))
-        break
-      } else {
-        fields.push(line.slice(i, commaIdx))
-        i = commaIdx + 1
-      }
-    }
-  }
-
-  // A trailing comma means the final field is empty.
-  if (fields.length > 0 && line.endsWith(',')) {
-    fields.push('')
-  }
-
-  return fields
 }
