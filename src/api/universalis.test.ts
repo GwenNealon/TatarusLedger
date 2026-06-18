@@ -297,3 +297,128 @@ describe('fetchSaleHistory — rate-limit handling', () => {
     expect(item6?.sales).toHaveLength(1)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Query parameter forwarding
+// ---------------------------------------------------------------------------
+
+function capturedUrl(): string {
+  const calls = vi.mocked(globalThis.fetch).mock.calls
+  const lastCall = calls.at(-1)
+  if (lastCall === undefined) throw new Error('No fetch call was made')
+  // fetchWithRetry always passes a plain string URL as the first argument.
+  return lastCall[0] as string
+}
+
+describe('fetchMarketBoard — query parameter forwarding', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      makeOkResponse(SINGLE_MARKET_BODY),
+    )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('appends no query string when no API options are set', async () => {
+    await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0 })
+    expect(capturedUrl()).not.toContain('?')
+  })
+
+  it('forwards listings and entries', async () => {
+    await fetchMarketBoard('Balmung', [5], {
+      baseDelayMs: 0,
+      listings: 10,
+      entries: 20,
+    })
+    const url = capturedUrl()
+    expect(url).toContain('listings=10')
+    expect(url).toContain('entries=20')
+  })
+
+  it('forwards hq=true', async () => {
+    await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0, hq: true })
+    expect(capturedUrl()).toContain('hq=true')
+  })
+
+  it('forwards hq=false', async () => {
+    await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0, hq: false })
+    expect(capturedUrl()).toContain('hq=false')
+  })
+
+  it('forwards statsWithin and entriesWithin', async () => {
+    await fetchMarketBoard('Balmung', [5], {
+      baseDelayMs: 0,
+      statsWithin: 86_400_000,
+      entriesWithin: 3600,
+    })
+    const url = capturedUrl()
+    expect(url).toContain('statsWithin=86400000')
+    expect(url).toContain('entriesWithin=3600')
+  })
+
+  it('forwards fields', async () => {
+    await fetchMarketBoard('Balmung', [5], {
+      baseDelayMs: 0,
+      fields: 'listings.pricePerUnit,listings.quantity',
+    })
+    expect(capturedUrl()).toContain('fields=')
+    expect(capturedUrl()).toContain('pricePerUnit')
+  })
+})
+
+describe('fetchSaleHistory — query parameter forwarding', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      makeOkResponse(SINGLE_HISTORY_BODY),
+    )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('appends no query string when no API options are set', async () => {
+    await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
+    expect(capturedUrl()).not.toContain('?')
+  })
+
+  it('forwards entriesToReturn', async () => {
+    await fetchSaleHistory('Crystal', [5], {
+      baseDelayMs: 0,
+      entriesToReturn: 500,
+    })
+    expect(capturedUrl()).toContain('entriesToReturn=500')
+  })
+
+  it('forwards statsWithin and entriesWithin', async () => {
+    await fetchSaleHistory('Crystal', [5], {
+      baseDelayMs: 0,
+      statsWithin: 604_800_000,
+      entriesWithin: 604_800,
+    })
+    const url = capturedUrl()
+    expect(url).toContain('statsWithin=604800000')
+    expect(url).toContain('entriesWithin=604800')
+  })
+
+  it('forwards entriesUntil', async () => {
+    await fetchSaleHistory('Crystal', [5], {
+      baseDelayMs: 0,
+      entriesUntil: 1_700_000_000,
+    })
+    expect(capturedUrl()).toContain('entriesUntil=1700000000')
+  })
+
+  it('forwards minSalePrice and maxSalePrice', async () => {
+    await fetchSaleHistory('Crystal', [5], {
+      baseDelayMs: 0,
+      minSalePrice: 100,
+      maxSalePrice: 50_000,
+    })
+    const url = capturedUrl()
+    expect(url).toContain('minSalePrice=100')
+    expect(url).toContain('maxSalePrice=50000')
+  })
+})

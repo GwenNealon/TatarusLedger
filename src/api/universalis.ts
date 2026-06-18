@@ -39,6 +39,86 @@ export interface FetchOptions {
   baseDelayMs?: number
 }
 
+/**
+ * Query options for {@link fetchMarketBoard}.
+ *
+ * All query parameters map directly to the Universalis v2 API:
+ * `GET /api/v2/{worldDcRegion}/{itemIds}`
+ */
+export interface MarketBoardOptions extends FetchOptions {
+  /**
+   * Number of listings to return per item.
+   * By default all listings are returned.
+   */
+  listings?: number
+  /**
+   * Number of recent history entries to return per item.
+   * By default a maximum of 5 entries is returned.
+   */
+  entries?: number
+  /**
+   * Filter results by quality. `true` returns only HQ, `false` returns only
+   * NQ. Omit (or `undefined`) to return both.
+   */
+  hq?: boolean
+  /**
+   * The amount of time before now to calculate stats over, in milliseconds.
+   * Defaults to 604 800 000 (7 days).
+   */
+  statsWithin?: number
+  /**
+   * The amount of time before now to take entries within, in seconds.
+   * Negative values are ignored by the API.
+   */
+  entriesWithin?: number
+  /**
+   * A comma-separated list of fields to include in the response.
+   * When querying multiple items, prefix with `items.`
+   * (e.g. `"items.listings.pricePerUnit"`).
+   * Omit to receive all fields.
+   */
+  fields?: string
+}
+
+/**
+ * Query options for {@link fetchSaleHistory}.
+ *
+ * All query parameters map directly to the Universalis v2 API:
+ * `GET /api/v2/history/{worldDcRegion}/{itemIds}`
+ */
+export interface SaleHistoryOptions extends FetchOptions {
+  /**
+   * Number of sale history entries to return per item.
+   * Defaults to 1800; maximum is 99 999.
+   */
+  entriesToReturn?: number
+  /**
+   * The amount of time before now to calculate stats over, in milliseconds.
+   * Defaults to 604 800 000 (7 days).
+   */
+  statsWithin?: number
+  /**
+   * The amount of time before {@link entriesUntil} (or now) to take entries
+   * within, in seconds. Defaults to 604 800 (7 days). Negative values are
+   * ignored by the API.
+   */
+  entriesWithin?: number
+  /**
+   * UNIX timestamp in seconds. Only entries recorded before this time are
+   * returned. Defaults to the current time. Negative values are ignored by
+   * the API.
+   */
+  entriesUntil?: number
+  /**
+   * Inclusive minimum unit sale price of entries to return.
+   */
+  minSalePrice?: number
+  /**
+   * Inclusive maximum unit sale price of entries to return.
+   */
+  maxSalePrice?: number
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
@@ -113,13 +193,30 @@ export function transformSale(raw: RawSale): Sale {
 export async function fetchMarketBoard(
   worldDcRegion: string,
   itemIds: number[],
-  options: FetchOptions = {},
+  options: MarketBoardOptions = {},
 ): Promise<MarketData[]> {
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
     baseDelayMs = DEFAULT_BASE_DELAY_MS,
+    listings,
+    entries,
+    hq,
+    statsWithin,
+    entriesWithin,
+    fields,
   } = options
-  const url = `${BASE_URL}/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}`
+
+  const params = new URLSearchParams()
+  if (listings !== undefined) params.set('listings', String(listings))
+  if (entries !== undefined) params.set('entries', String(entries))
+  if (hq !== undefined) params.set('hq', String(hq))
+  if (statsWithin !== undefined) params.set('statsWithin', String(statsWithin))
+  if (entriesWithin !== undefined)
+    params.set('entriesWithin', String(entriesWithin))
+  if (fields !== undefined) params.set('fields', fields)
+
+  const query = params.size > 0 ? `?${params.toString()}` : ''
+  const url = `${BASE_URL}/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}${query}`
   const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
   const raw: unknown = await response.json()
 
@@ -149,13 +246,34 @@ export async function fetchMarketBoard(
 export async function fetchSaleHistory(
   worldDcRegion: string,
   itemIds: number[],
-  options: FetchOptions = {},
+  options: SaleHistoryOptions = {},
 ): Promise<MarketData[]> {
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
     baseDelayMs = DEFAULT_BASE_DELAY_MS,
+    entriesToReturn,
+    statsWithin,
+    entriesWithin,
+    entriesUntil,
+    minSalePrice,
+    maxSalePrice,
   } = options
-  const url = `${BASE_URL}/history/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}`
+
+  const params = new URLSearchParams()
+  if (entriesToReturn !== undefined)
+    params.set('entriesToReturn', String(entriesToReturn))
+  if (statsWithin !== undefined) params.set('statsWithin', String(statsWithin))
+  if (entriesWithin !== undefined)
+    params.set('entriesWithin', String(entriesWithin))
+  if (entriesUntil !== undefined)
+    params.set('entriesUntil', String(entriesUntil))
+  if (minSalePrice !== undefined)
+    params.set('minSalePrice', String(minSalePrice))
+  if (maxSalePrice !== undefined)
+    params.set('maxSalePrice', String(maxSalePrice))
+
+  const query = params.size > 0 ? `?${params.toString()}` : ''
+  const url = `${BASE_URL}/history/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}${query}`
   const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
   const raw: unknown = await response.json()
 
