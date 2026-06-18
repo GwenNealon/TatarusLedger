@@ -113,7 +113,7 @@ export function useMarketData(
 
     if (itemIdsRef.current.length === 0) {
       setIsLoading(false)
-      setError(new Error('useMarketData: itemIds must be non-empty'))
+      setError(new Error('useMarketData: at least one item ID is required'))
       return
     }
 
