@@ -147,7 +147,7 @@ const SINGLE_HISTORY_BODY = {
   entries: [RAW_SALE],
 }
 
-const EXPECTED_USER_AGENT = 'TatarusLedger/0.0.0 (nealon.gwen@gmail.com)'
+const EXPECTED_USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
 
 describe('fetchMarketBoard — rate-limit handling', () => {
   beforeEach(() => {
