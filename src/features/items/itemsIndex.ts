@@ -1,15 +1,24 @@
 import type { NormalizedItem } from '../../data/types.ts'
 
+const APP_BASE_PATH =
+  import.meta.env.BASE_URL === '/'
+    ? '/TatarusLedger/'
+    : import.meta.env.BASE_URL
 const XIVAPI_BASE = 'https://v2.xivapi.com/api'
 const PAGE_SIZE = 1_000
 
-interface XivApiRow {
+interface ItemsArtifactPayload {
+  version: string
+  items: NormalizedItem[]
+}
+
+interface XivApiItemEntry {
   row_id: number
   fields: Record<string, unknown>
 }
 
-interface XivApiSheetResponse {
-  rows: XivApiRow[]
+interface XivApiItemsPage {
+  rows: XivApiItemEntry[]
 }
 
 function isNormalizedItem(value: unknown): value is NormalizedItem {
@@ -28,13 +37,46 @@ function isNormalizedItem(value: unknown): value is NormalizedItem {
   )
 }
 
-function isXivApiSheetResponse(value: unknown): value is XivApiSheetResponse {
+function isXivApiItemsPage(value: unknown): value is XivApiItemsPage {
   if (typeof value !== 'object' || value === null) {
     return false
   }
 
   const payload = value as Record<string, unknown>
   return Array.isArray(payload.rows)
+}
+
+function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const payload = value as Record<string, unknown>
+  return (
+    typeof payload.version === 'string' &&
+    Array.isArray(payload.items) &&
+    payload.items.every((entry) => isNormalizedItem(entry))
+  )
+}
+
+export async function loadCachedItemsIndex(): Promise<NormalizedItem[]> {
+  const itemsUrl = `${APP_BASE_PATH}data/items.json`
+  const response = await fetch(itemsUrl)
+  if (!response.ok) {
+    return []
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    return []
+  }
+
+  const payload: unknown = await response.json()
+  if (!isItemsArtifactPayload(payload)) {
+    return []
+  }
+
+  return payload.items
 }
 
 export async function loadItemsIndex(): Promise<NormalizedItem[]> {
@@ -61,31 +103,31 @@ export async function loadItemsIndex(): Promise<NormalizedItem[]> {
     }
 
     const payload: unknown = await response.json()
-    if (!isXivApiSheetResponse(payload)) {
+    if (!isXivApiItemsPage(payload)) {
       throw new Error('Invalid item index payload')
     }
 
-    const pageRows = payload.rows
-    if (pageRows.length === 0) {
+    const pageEntries = payload.rows
+    if (pageEntries.length === 0) {
       break
     }
 
-    for (const row of pageRows) {
-      const name = row.fields.Name
-      if (typeof name !== 'string' || name === '' || row.row_id === 0) {
+    for (const entry of pageEntries) {
+      const name = entry.fields.Name
+      if (typeof name !== 'string' || name === '' || entry.row_id === 0) {
         continue
       }
-      if (row.fields.IsUntradable === true) {
+      if (entry.fields.IsUntradable === true) {
         continue
       }
 
       const item: NormalizedItem = {
-        id: row.row_id,
+        id: entry.row_id,
         name,
-        iconId: Number(row.fields['Icon@as(raw)']) || 0,
-        levelItem: Number(row.fields['LevelItem@as(raw)']) || 0,
-        rarity: Number(row.fields.Rarity) || 1,
-        uiCategory: Number(row.fields['ItemUICategory@as(raw)']) || 0,
+        iconId: Number(entry.fields['Icon@as(raw)']) || 0,
+        levelItem: Number(entry.fields['LevelItem@as(raw)']) || 0,
+        rarity: Number(entry.fields.Rarity) || 1,
+        uiCategory: Number(entry.fields['ItemUICategory@as(raw)']) || 0,
       }
       if (!isNormalizedItem(item)) {
         continue
@@ -93,7 +135,7 @@ export async function loadItemsIndex(): Promise<NormalizedItem[]> {
       items.push(item)
     }
 
-    const nextAfter = pageRows[pageRows.length - 1].row_id
+    const nextAfter = pageEntries[pageEntries.length - 1].row_id
     if (after !== undefined && nextAfter <= after) {
       break
     }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { loadItemsIndex } from './itemsIndex.ts'
+import { loadCachedItemsIndex, loadItemsIndex } from './itemsIndex.ts'
 
 describe('loadItemsIndex', () => {
   const originalFetch = globalThis.fetch
@@ -10,7 +10,7 @@ describe('loadItemsIndex', () => {
     vi.restoreAllMocks()
   })
 
-  it('loads tradable items from xivapi and filters untradable rows', async () => {
+  it('loads tradable items from xivapi and filters untradable entries', async () => {
     const fetchMock = vi.fn<typeof fetch>((input) => {
       const requestUrl =
         typeof input === 'string'
@@ -73,5 +73,43 @@ describe('loadItemsIndex', () => {
       },
     ])
     expect(fetchMock.mock.calls[0]?.[0]).toBeInstanceOf(URL)
+  })
+
+  it('loads cached items artifact when available', async () => {
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            version: 'test',
+            items: [
+              {
+                id: 33917,
+                name: 'Orange Juice',
+                iconId: 9362,
+                levelItem: 430,
+                rarity: 1,
+                uiCategory: 46,
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      ),
+    )
+    globalThis.fetch = fetchMock
+
+    await expect(loadCachedItemsIndex()).resolves.toEqual([
+      {
+        id: 33917,
+        name: 'Orange Juice',
+        iconId: 9362,
+        levelItem: 430,
+        rarity: 1,
+        uiCategory: 46,
+      },
+    ])
   })
 })

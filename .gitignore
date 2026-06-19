@@ -15,6 +15,9 @@ dist-ssr
 # Test coverage
 coverage
 
+# Generated datamining artifacts (run `npm run data:fetch` to regenerate)
+public/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

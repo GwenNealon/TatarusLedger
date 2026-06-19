@@ -134,7 +134,7 @@ function getResourceLinks(
       href: `https://universalis.app/market/${item.id.toString()}`,
     },
     {
-      label: 'saddlebagexchange',
+      label: 'Saddlebag Exchange',
       href: `https://saddlebagexchange.com/queries/item-data/${item.id.toString()}`,
     },
     {

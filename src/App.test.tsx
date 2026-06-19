@@ -102,6 +102,15 @@ function setupFetchMock(params: {
   const mock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
     const requestUrl = getRequestUrl(input)
 
+    if (requestUrl.includes('/data/items.json')) {
+      return Promise.resolve(
+        makeJsonResponse({
+          version: 'test',
+          items: ITEMS_FIXTURE,
+        }),
+      )
+    }
+
     if (requestUrl.includes('/sheet/Item')) {
       const parsed = new URL(requestUrl)
       if (parsed.searchParams.has('after')) {

@@ -4,7 +4,10 @@ import type { CSSProperties } from 'react'
 import type { NormalizedItem } from './data/types.ts'
 import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
-import { loadItemsIndex } from './features/items/itemsIndex.ts'
+import {
+  loadCachedItemsIndex,
+  loadItemsIndex,
+} from './features/items/itemsIndex.ts'
 
 const pageStyles: CSSProperties = {
   minHeight: '100vh',
@@ -88,6 +91,23 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
+    let hasCachedItems = false
+    let hasLiveItems = false
+
+    void loadCachedItemsIndex()
+      .then((cachedItems) => {
+        if (cancelled || hasLiveItems || cachedItems.length === 0) {
+          return
+        }
+
+        hasCachedItems = true
+        setItems(cachedItems)
+        setLoadingError(null)
+        setIsLoadingItems(false)
+      })
+      .catch(() => {
+        // Ignore cache read failures and keep going with live fetch.
+      })
 
     void loadItemsIndex()
       .then((nextItems) => {
@@ -95,23 +115,24 @@ export default function App() {
           return
         }
 
+        hasLiveItems = true
         setItems(nextItems)
         setLoadingError(null)
+        setIsLoadingItems(false)
       })
       .catch((error: unknown) => {
         if (cancelled) {
           return
         }
 
-        setLoadingError(
-          error instanceof Error ? error.message : 'Unable to load item index',
-        )
-      })
-      .finally(() => {
-        if (cancelled) {
+        if (hasCachedItems) {
+          setIsLoadingItems(false)
           return
         }
 
+        setLoadingError(
+          error instanceof Error ? error.message : 'Unable to load item index',
+        )
         setIsLoadingItems(false)
       })
 
@@ -139,21 +160,21 @@ export default function App() {
           FFXIV item resources.
         </p>
 
-        {isLoadingItems ? (
-          <p aria-live="polite">Loading items from XIVAPI…</p>
+        {loadingError === null ? (
+          <p aria-live="polite">
+            {isLoadingItems ? 'Checking for item updates…' : 'Items updated.'}
+          </p>
         ) : null}
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
 
-        {!isLoadingItems ? (
-          <ItemSearch
-            items={items}
-            onSelectItem={(item) => {
-              navigateToPath(buildItemPath(item.id), setPathname)
-            }}
-          />
-        ) : null}
+        <ItemSearch
+          items={items}
+          onSelectItem={(item) => {
+            navigateToPath(buildItemPath(item.id), setPathname)
+          }}
+        />
 
         {selectedItem !== null ? (
           <ItemDetailPage key={selectedItem.id} item={selectedItem} />
