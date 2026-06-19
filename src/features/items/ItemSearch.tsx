@@ -5,6 +5,7 @@ import type { NormalizedItem } from '../../data/types.ts'
 import { toIconUrl } from './iconUrl.ts'
 
 const SEARCH_DEBOUNCE_MS = 180
+const MAX_RESULTS = 50
 
 const searchInputStyles: CSSProperties = {
   width: '100%',
@@ -47,6 +48,7 @@ export function ItemSearch(props: ItemSearchProps) {
   const { items, onSelectItem } = props
   const [queryInput, setQueryInput] = useState('')
   const [query, setQuery] = useState('')
+  const [showAllResults, setShowAllResults] = useState(false)
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -58,12 +60,36 @@ export function ItemSearch(props: ItemSearchProps) {
     }
   }, [queryInput])
 
-  const filteredItems = useMemo(() => {
-      return []
+  const { filteredItems, hasMoreResults } = useMemo(() => {
+    if (query.length === 0) {
+      return {
+        filteredItems: [],
+        hasMoreResults: false,
+      }
+    }
 
     const lowered = query.toLowerCase()
-    return items.filter((item) => item.name.toLowerCase().includes(lowered))
-  }, [items, query])
+    const matches: NormalizedItem[] = []
+    let hasMoreResults = false
+
+    for (const item of items) {
+      if (!item.name.toLowerCase().includes(lowered)) {
+        continue
+      }
+
+      if (!showAllResults && matches.length >= MAX_RESULTS) {
+        hasMoreResults = true
+        break
+      }
+
+      matches.push(item)
+    }
+
+    return {
+      filteredItems: matches,
+      hasMoreResults,
+    }
+  }, [items, query, showAllResults])
 
   return (
     <section aria-labelledby="item-search-heading">
@@ -77,6 +103,7 @@ export function ItemSearch(props: ItemSearchProps) {
         value={queryInput}
         onChange={(event) => {
           setQueryInput(event.target.value)
+          setShowAllResults(false)
         }}
         placeholder="Type an item name"
       />
@@ -102,6 +129,19 @@ export function ItemSearch(props: ItemSearchProps) {
             </button>
           </li>
         ))}
+        {hasMoreResults ? (
+          <li style={{ padding: '0.5rem' }}>
+            <button
+              type="button"
+              style={{ width: '100%' }}
+              onClick={() => {
+                setShowAllResults(true)
+              }}
+            >
+              Load remaining entries
+            </button>
+          </li>
+        ) : null}
       </ul>
     </section>
   )

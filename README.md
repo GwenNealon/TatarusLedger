@@ -62,19 +62,13 @@ Future enhancements may include alerts for market opportunities, crafting recipe
    npm install
    ```
 
-3. **Generate the local item index** (required once, or whenever you refresh datamining data):
-
-   ```bash
-   npm run data:fetch
-   ```
-
-4. **Start the development server**:
+3. **Start the development server**:
 
    ```bash
    npm run dev
    ```
 
-5. **Open your browser**:
+4. **Open your browser**:
    Navigate to the local URL displayed in the terminal (typically `http://localhost:5173/TatarusLedger/`).
 
 ### Development Commands

@@ -139,17 +139,21 @@ export default function App() {
           FFXIV item resources.
         </p>
 
-        {isLoadingItems ? <p aria-live="polite">Loading item index…</p> : null}
+        {isLoadingItems ? (
+          <p aria-live="polite">Loading items from XIVAPI…</p>
+        ) : null}
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
 
-        <ItemSearch
-          items={items}
-          onSelectItem={(item) => {
-            navigateToPath(buildItemPath(item.id), setPathname)
-          }}
-        />
+        {!isLoadingItems ? (
+          <ItemSearch
+            items={items}
+            onSelectItem={(item) => {
+              navigateToPath(buildItemPath(item.id), setPathname)
+            }}
+          />
+        ) : null}
 
         {selectedItem !== null ? (
           <ItemDetailPage key={selectedItem.id} item={selectedItem} />

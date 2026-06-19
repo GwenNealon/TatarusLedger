@@ -24,17 +24,3 @@ export interface NormalizedRecipe {
   recipeLevelTable: number
   ingredients: NormalizedIngredient[]
 }
-
-/** Compact JSON artifact written to public/data/items.json. */
-export interface ItemsArtifact {
-  /** Patch version string (e.g. "7.2") recorded at generation time. */
-  version: string
-  items: NormalizedItem[]
-}
-
-/** Compact JSON artifact written to public/data/recipes.json. */
-export interface RecipesArtifact {
-  /** Patch version string (e.g. "7.2") recorded at generation time. */
-  version: string
-  recipes: NormalizedRecipe[]
-}

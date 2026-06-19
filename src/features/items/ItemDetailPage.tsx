@@ -60,7 +60,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function readCache(itemId: number): ItemCacheEntry | null {
   let raw: string | null
   try {
-    raw = localStorage.getItem(getCacheKey(itemId))
+    raw = window.localStorage.getItem(getCacheKey(itemId))
   } catch {
     return null
   }
@@ -117,7 +117,7 @@ function readCache(itemId: number): ItemCacheEntry | null {
 }
 
 function writeCache(entry: ItemCacheEntry): void {
-  localStorage.setItem(getCacheKey(entry.item.id), JSON.stringify(entry))
+  window.localStorage.setItem(getCacheKey(entry.item.id), JSON.stringify(entry))
 }
 
 function isFresh(entry: ItemCacheEntry): boolean {

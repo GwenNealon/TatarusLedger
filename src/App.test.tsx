@@ -3,33 +3,30 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App.tsx'
-import type { ItemsArtifact } from './data/types.ts'
+import type { NormalizedItem } from './data/types.ts'
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean
 }
 
-const ITEMS_FIXTURE: ItemsArtifact = {
-  version: 'test',
-  items: [
-    {
-      id: 5339,
-      name: 'Craftsman Syrup',
-      iconId: 35484,
-      levelItem: 560,
-      rarity: 1,
-      uiCategory: 58,
-    },
-    {
-      id: 33917,
-      name: 'Orange Juice',
-      iconId: 9362,
-      levelItem: 430,
-      rarity: 1,
-      uiCategory: 46,
-    },
-  ],
-}
+const ITEMS_FIXTURE: NormalizedItem[] = [
+  {
+    id: 5339,
+    name: 'Craftsman Syrup',
+    iconId: 35484,
+    levelItem: 560,
+    rarity: 1,
+    uiCategory: 58,
+  },
+  {
+    id: 33917,
+    name: 'Orange Juice',
+    iconId: 9362,
+    levelItem: 430,
+    rarity: 1,
+    uiCategory: 46,
+  },
+]
 
 function makeJsonResponse(payload: unknown): Response {
   return new Response(JSON.stringify(payload), {
@@ -43,15 +40,52 @@ function getRequestUrl(input: RequestInfo | URL): string {
     return input
   }
 
-  if (input instanceof URL) {
-    return input.href
+  const maybeUrl = input as { href?: unknown; url?: unknown }
+  if (typeof maybeUrl.href === 'string') {
+    return maybeUrl.href
   }
-
-  if (input instanceof Request) {
-    return input.url
+  if (typeof maybeUrl.url === 'string') {
+    return maybeUrl.url
   }
 
   throw new Error('Unsupported request input')
+}
+
+function createLocalStorageMock(): Storage {
+  const values = new Map<string, string>()
+
+  return {
+    get length() {
+      return values.size
+    },
+    clear() {
+      values.clear()
+    },
+    getItem(key: string) {
+      return values.get(key) ?? null
+    },
+    key(index: number) {
+      return [...values.keys()][index] ?? null
+    },
+    removeItem(key: string) {
+      values.delete(key)
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value)
+    },
+  }
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const valueDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    'value',
+  )
+  if (valueDescriptor?.set === undefined) {
+    throw new Error('Missing HTMLInputElement.value setter')
+  }
+  valueDescriptor.set.call(input, value)
+  input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
 function setupFetchMock(params: {
@@ -68,8 +102,27 @@ function setupFetchMock(params: {
   const mock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
     const requestUrl = getRequestUrl(input)
 
-    if (requestUrl.includes('/data/items.json')) {
-      return Promise.resolve(makeJsonResponse(ITEMS_FIXTURE))
+    if (requestUrl.includes('/sheet/Item')) {
+      const parsed = new URL(requestUrl)
+      if (parsed.searchParams.has('after')) {
+        return Promise.resolve(makeJsonResponse({ rows: [] }))
+      }
+
+      return Promise.resolve(
+        makeJsonResponse({
+          rows: ITEMS_FIXTURE.map((item) => ({
+            row_id: item.id,
+            fields: {
+              Name: item.name,
+              'Icon@as(raw)': item.iconId,
+              'LevelItem@as(raw)': item.levelItem,
+              Rarity: item.rarity,
+              'ItemUICategory@as(raw)': item.uiCategory,
+              IsUntradable: false,
+            },
+          })),
+        }),
+      )
     }
 
     const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
@@ -108,6 +161,8 @@ async function renderApp(): Promise<{
   await act(async () => {
     root.render(<App />)
     await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
   })
 
   return { root, container }
@@ -117,14 +172,20 @@ describe('App', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
-    localStorage.clear()
     vi.restoreAllMocks()
+    const storage = createLocalStorageMock()
+    vi.stubGlobal('localStorage', storage)
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      configurable: true,
+    })
     globalThis.IS_REACT_ACT_ENVIRONMENT = true
     window.history.replaceState({}, '', '/TatarusLedger/')
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
+    vi.unstubAllGlobals()
     document.body.innerHTML = ''
     vi.useRealTimers()
   })
@@ -152,12 +213,12 @@ describe('App', () => {
     if (input === null) return
 
     act(() => {
-      input.value = 'orange'
-      input.dispatchEvent(new Event('input', { bubbles: true }))
+      setInputValue(input, 'orange')
     })
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(200)
+      await vi.advanceTimersByTimeAsync(300)
+      await Promise.resolve()
     })
 
     const itemButton = Array.from(container.querySelectorAll('button')).find(
@@ -171,8 +232,7 @@ describe('App', () => {
     })
 
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(300)
     })
 
     expect(window.location.pathname).toBe('/TatarusLedger/33917')
@@ -194,10 +254,12 @@ describe('App', () => {
   })
 
   it('shows cached indicator when local cache is fresh', async () => {
+    vi.useFakeTimers()
+
     const now = Date.now()
     vi.spyOn(Date, 'now').mockReturnValue(now)
 
-    localStorage.setItem(
+    window.localStorage.setItem(
       'item-cache-5339',
       JSON.stringify({
         fetchedAt: now,
@@ -220,6 +282,19 @@ describe('App', () => {
     const fetchSpy = setupFetchMock({})
 
     const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craftsman')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
 
     const itemButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent.includes('Craftsman Syrup'),
@@ -262,6 +337,20 @@ describe('App', () => {
 
     const { container } = await renderApp()
 
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craftsman')
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
     await act(async () => {
       await Promise.resolve()
       await Promise.resolve()
@@ -288,6 +377,8 @@ describe('App', () => {
   })
 
   it('shows error indicator on refresh failure and supports retry', async () => {
+    vi.useFakeTimers()
+
     setupFetchMock({
       marketResponsesByItemId: {
         5339: [
@@ -303,6 +394,19 @@ describe('App', () => {
 
     const { container } = await renderApp()
 
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craftsman')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
     const itemButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent.includes('Craftsman Syrup'),
     )
@@ -314,8 +418,7 @@ describe('App', () => {
     })
 
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(300)
     })
 
     expect(container.textContent).toContain('Cache refresh failed')
