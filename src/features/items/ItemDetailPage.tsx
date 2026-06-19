@@ -150,7 +150,6 @@ function getResourceLinks(
 
 async function refreshItem(item: NormalizedItem): Promise<ItemCacheEntry> {
   const [marketData] = await fetchMarketBoard('Crystal', [item.id], {
-    baseDelayMs: 0,
     listings: 10,
     entries: 10,
   })
