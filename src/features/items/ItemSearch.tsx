@@ -59,9 +59,7 @@ export function ItemSearch(props: ItemSearchProps) {
   }, [queryInput])
 
   const filteredItems = useMemo(() => {
-    if (query.length === 0) {
-      return items
-    }
+      return []
 
     const lowered = query.toLowerCase()
     return items.filter((item) => item.name.toLowerCase().includes(lowered))
