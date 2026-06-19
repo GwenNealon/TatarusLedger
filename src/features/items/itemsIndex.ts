@@ -46,6 +46,13 @@ export async function loadItemsIndex(): Promise<NormalizedItem[]> {
     throw new Error(`Failed to load item index (${response.status.toString()})`)
   }
 
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      'Item index missing. Run "npm run data:fetch" to generate public/data/items.json.',
+    )
+  }
+
   const payload: unknown = await response.json()
   if (!isItemsArtifactPayload(payload)) {
     throw new Error('Invalid item index payload')

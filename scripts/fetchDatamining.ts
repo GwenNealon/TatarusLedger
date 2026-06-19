@@ -23,7 +23,8 @@ import { normalizeRecipes } from '../src/data/normalizeRecipes.ts'
 import type { ItemsArtifact, RecipesArtifact } from '../src/data/types.ts'
 
 const DATAMINING_BASE =
-  'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv'
+  'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en'
+const UNIVERSALIS_MARKETABLE_URL = 'https://universalis.app/api/v2/marketable'
 
 async function fetchCsv(name: string): Promise<string> {
   const url = `${DATAMINING_BASE}/${name}`
@@ -37,25 +38,52 @@ async function fetchCsv(name: string): Promise<string> {
   return response.text()
 }
 
+async function fetchMarketableItemIds(): Promise<Set<number>> {
+  console.log(`Fetching ${UNIVERSALIS_MARKETABLE_URL} …`)
+  const response = await fetch(UNIVERSALIS_MARKETABLE_URL)
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch ${UNIVERSALIS_MARKETABLE_URL}: HTTP ${response.status.toString()}`,
+    )
+  }
+
+  const payload: unknown = await response.json()
+  if (
+    !Array.isArray(payload) ||
+    !payload.every((value) => Number.isSafeInteger(value) && value > 0)
+  ) {
+    throw new Error('Invalid marketable item index payload')
+  }
+
+  return new Set(payload)
+}
+
 async function run(): Promise<void> {
   const version = process.argv[2] ?? 'unknown'
 
-  const [itemCsv, recipeCsv] = await Promise.all([
+  const [itemCsv, recipeCsv, marketableItemIds] = await Promise.all([
     fetchCsv('Item.csv'),
     fetchCsv('Recipe.csv'),
+    fetchMarketableItemIds(),
   ])
 
   const itemRows = parseDataminingCsv(itemCsv)
   const recipeRows = parseDataminingCsv(recipeCsv)
+  const marketableItems = normalizeItems(itemRows).filter((item) =>
+    marketableItemIds.has(item.id),
+  )
+  const marketableRecipes = normalizeRecipes(recipeRows).filter((recipe) =>
+    marketableItemIds.has(recipe.resultItemId),
+  )
 
   const itemsArtifact: ItemsArtifact = {
     version,
-    items: normalizeItems(itemRows),
+    items: marketableItems,
   }
 
   const recipesArtifact: RecipesArtifact = {
     version,
-    recipes: normalizeRecipes(recipeRows),
+    recipes: marketableRecipes,
   }
 
   const outDir = join(
