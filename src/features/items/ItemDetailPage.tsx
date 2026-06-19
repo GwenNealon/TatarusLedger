@@ -219,13 +219,10 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [retrySignal, setRetrySignal] = useState(0)
 
-  const selectedCache = useMemo(() => {
-    if (latestEntry !== null && latestEntry.item.id === item.id) {
-      return latestEntry
-    }
-
-    return readCache(item.id)
-  }, [item.id, latestEntry])
+  const selectedCache =
+    latestEntry !== null && latestEntry.item.id === item.id
+      ? latestEntry
+      : readCache(item.id)
 
   const needsRefresh = selectedCache === null || !isFresh(selectedCache)
 
