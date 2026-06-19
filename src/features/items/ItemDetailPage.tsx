@@ -117,7 +117,14 @@ function readCache(itemId: number): ItemCacheEntry | null {
 }
 
 function writeCache(entry: ItemCacheEntry): void {
-  window.localStorage.setItem(getCacheKey(entry.item.id), JSON.stringify(entry))
+  try {
+    window.localStorage.setItem(
+      getCacheKey(entry.item.id),
+      JSON.stringify(entry),
+    )
+  } catch {
+    // Ignore cache write failures (quota/privacy mode); keep showing in-memory data.
+  }
 }
 
 function isFresh(entry: ItemCacheEntry): boolean {
