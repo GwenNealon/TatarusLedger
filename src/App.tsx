@@ -141,15 +141,12 @@ export default function App() {
     }
   }, [])
 
-  const selectedItemId = useMemo(() => parseRoutedItemId(pathname), [pathname])
+  const selectedItemId = parseRoutedItemId(pathname)
 
-  const selectedItem = useMemo(() => {
-    if (selectedItemId === null) {
-      return null
-    }
-
-    return items.find((item) => item.id === selectedItemId) ?? null
-  }, [items, selectedItemId])
+  const selectedItem =
+    selectedItemId === null
+      ? null
+      : (items.find((item) => item.id === selectedItemId) ?? null)
 
   return (
     <main style={pageStyles}>
