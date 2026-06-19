@@ -157,7 +157,12 @@ export default function App() {
           FFXIV item resources.
         </p>
 
-            {isLoadingItems ? 'Checking for item updates…' : 'Item index loaded.'}
+        {loadingError === null ? (
+          <p aria-live="polite">
+            {isLoadingItems
+              ? 'Checking for item updates…'
+              : 'Item index loaded.'}
+          </p>
         ) : null}
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
