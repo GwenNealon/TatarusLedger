@@ -37,13 +37,28 @@ function isNormalizedItem(value: unknown): value is NormalizedItem {
   )
 }
 
+function isXivApiItemEntry(value: unknown): value is XivApiItemEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const entry = value as Record<string, unknown>
+  return (
+    typeof entry.row_id === 'number' &&
+    typeof entry.fields === 'object' &&
+    entry.fields !== null
+  )
+}
+
 function isXivApiItemsPage(value: unknown): value is XivApiItemsPage {
   if (typeof value !== 'object' || value === null) {
     return false
   }
 
   const payload = value as Record<string, unknown>
-  return Array.isArray(payload.rows)
+  return (
+    Array.isArray(payload.rows) &&
+    payload.rows.every((row) => isXivApiItemEntry(row))
+  )
 }
 
 function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
