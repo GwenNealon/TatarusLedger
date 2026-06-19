@@ -39,9 +39,11 @@ async function fetchCsv(name: string): Promise<string> {
 }
 
 async function fetchMarketableItemIds(): Promise<Set<number>> {
-  console.log(`Fetching ${UNIVERSALIS_MARKETABLE_URL} …`)
-  const response = await fetch(UNIVERSALIS_MARKETABLE_URL)
-  if (!response.ok) {
+  const response = await fetch(UNIVERSALIS_MARKETABLE_URL, {
+    headers: {
+      'User-Agent': `TatarusLedger/${process.argv[2] ?? 'unknown'} (nealon.gwen@gmail.com)`,
+    },
+  })
     throw new Error(
       `Failed to fetch ${UNIVERSALIS_MARKETABLE_URL}: HTTP ${response.status.toString()}`,
     )
