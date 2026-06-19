@@ -317,7 +317,7 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
             key={link.label}
             href={link.href}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             style={{ marginRight: '0.75rem' }}
           >
             {link.label}
