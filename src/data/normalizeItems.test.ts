@@ -60,6 +60,22 @@ describe('normalizeItem', () => {
     expect(item?.levelItem).toBe(660)
     expect(item?.iconId).toBe(65498)
   })
+
+  it('supports modern Item.csv column names', () => {
+    const item = normalizeItem(
+      makeRow({
+        IconID: '',
+        'Level{Item}': '',
+        UICategory: '',
+        Icon: '65498',
+        LevelItem: '660',
+        ItemUICategory: '57',
+      }),
+    )
+    expect(item?.iconId).toBe(65498)
+    expect(item?.levelItem).toBe(660)
+    expect(item?.uiCategory).toBe(57)
+  })
 })
 
 describe('normalizeItems', () => {

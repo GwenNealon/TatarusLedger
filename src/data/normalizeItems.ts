@@ -15,13 +15,17 @@ export function normalizeItem(
   const name = row.Name
   if (!name) return null
 
+  const iconValue = row.IconID || row.Icon || '0'
+  const levelItemValue = row['Level{Item}'] || row.LevelItem || '0'
+  const uiCategoryValue = row.UICategory || row.ItemUICategory || '0'
+
   return {
     id,
     name,
-    iconId: parseInt(row.IconID || '0', 10),
-    levelItem: parseInt(row['Level{Item}'] || '0', 10),
+    iconId: parseInt(iconValue, 10),
+    levelItem: parseInt(levelItemValue, 10),
     rarity: parseInt(row.Rarity || '1', 10),
-    uiCategory: parseInt(row.UICategory || '0', 10),
+    uiCategory: parseInt(uiCategoryValue, 10),
   }
 }
 
