@@ -58,7 +58,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readCache(itemId: number): ItemCacheEntry | null {
-  const raw = localStorage.getItem(getCacheKey(itemId))
+  let raw: string | null
+  try {
+    raw = localStorage.getItem(getCacheKey(itemId))
+  } catch {
+    return null
+  }
   if (raw === null) {
     return null
   }
