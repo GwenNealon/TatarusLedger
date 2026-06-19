@@ -11,12 +11,14 @@ describe('loadItemsIndex', () => {
   })
 
   it('shows an actionable error when the items artifact is missing', async () => {
-    const fetchMock = vi.fn<typeof fetch>(() => {
-      return new Response('<!doctype html><html></html>', {
-        status: 200,
-        headers: { 'Content-Type': 'text/html' },
-      })
-    })
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response('<!doctype html><html></html>', {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+      ),
+    )
     globalThis.fetch = fetchMock
 
     await expect(loadItemsIndex()).rejects.toThrow(
