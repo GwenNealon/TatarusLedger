@@ -76,6 +76,8 @@ function createLocalStorageMock(): Storage {
   }
 }
 
+let lastRoot: ReturnType<typeof createRoot> | null = null
+
 function setInputValue(input: HTMLInputElement, value: string): void {
   const valueDescriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
@@ -166,6 +168,7 @@ async function renderApp(): Promise<{
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
+  lastRoot = root
 
   await act(async () => {
     root.render(<App />)
@@ -192,7 +195,15 @@ describe('App', () => {
     window.history.replaceState({}, '', '/TatarusLedger/')
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (lastRoot !== null) {
+      const root = lastRoot
+      lastRoot = null
+      await act(async () => {
+        root.unmount()
+        await Promise.resolve()
+      })
+    }
     globalThis.fetch = originalFetch
     vi.unstubAllGlobals()
     document.body.innerHTML = ''
