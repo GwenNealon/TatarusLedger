@@ -60,36 +60,25 @@ export function ItemSearch(props: ItemSearchProps) {
     }
   }, [queryInput])
 
-  const { filteredItems, hasMoreResults } = useMemo(() => {
-    if (query.length === 0) {
-      return {
-        filteredItems: [],
-        hasMoreResults: false,
-      }
-    }
+  const filteredItems: NormalizedItem[] = []
+  let hasMoreResults = false
 
+  if (query.length > 0) {
     const lowered = query.toLowerCase()
-    const matches: NormalizedItem[] = []
-    let hasMoreResults = false
 
     for (const item of items) {
       if (!item.name.toLowerCase().includes(lowered)) {
         continue
       }
 
-      if (!showAllResults && matches.length >= MAX_RESULTS) {
+      if (!showAllResults && filteredItems.length >= MAX_RESULTS) {
         hasMoreResults = true
         break
       }
 
-      matches.push(item)
+      filteredItems.push(item)
     }
-
-    return {
-      filteredItems: matches,
-      hasMoreResults,
-    }
-  }, [items, query, showAllResults])
+  }
 
   return (
     <section aria-labelledby="item-search-heading">
