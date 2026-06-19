@@ -121,12 +121,13 @@ export async function loadItemsIndex(): Promise<NormalizedItem[]> {
         continue
       }
 
+      const rarityValue = Number(entry.fields.Rarity)
       const item: NormalizedItem = {
         id: entry.row_id,
         name,
         iconId: Number(entry.fields['Icon@as(raw)']) || 0,
         levelItem: Number(entry.fields['LevelItem@as(raw)']) || 0,
-        rarity: Number(entry.fields.Rarity) || 1,
+        rarity: Number.isFinite(rarityValue) ? rarityValue : 1,
         uiCategory: Number(entry.fields['ItemUICategory@as(raw)']) || 0,
       }
       if (!isNormalizedItem(item)) {
