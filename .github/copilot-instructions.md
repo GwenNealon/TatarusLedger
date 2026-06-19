@@ -61,6 +61,20 @@ Before committing changes, always verify with:
 npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
 ```
 
+### PR Suggestion Quality Gate (Required)
+
+When preparing or suggesting PR-ready changes, Copilot must treat this as a hard gate:
+
+1. Run:
+   - `npm run format:check`
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+2. Only provide PR suggestions that pass all commands above.
+3. If any command fails, do **not** present the change as PR-ready. Fix the issue first, then re-run validation.
+4. In PR suggestions, clearly state that validation was run and passed.
+
 ---
 
 ## TypeScript Conventions
