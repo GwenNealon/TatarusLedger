@@ -44,6 +44,7 @@ async function fetchMarketableItemIds(): Promise<Set<number>> {
       'User-Agent': `TatarusLedger/${process.argv[2] ?? 'unknown'} (nealon.gwen@gmail.com)`,
     },
   })
+  if (!response.ok) {
     throw new Error(
       `Failed to fetch ${UNIVERSALIS_MARKETABLE_URL}: HTTP ${response.status.toString()}`,
     )
