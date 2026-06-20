@@ -36,12 +36,10 @@ const APP_BASE_PATH =
     : import.meta.env.BASE_URL
 const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
 
-function trimTrailingSlash(path: string): string {
-  return path.endsWith('/') ? path.slice(0, -1) : path
-}
-
 function parseRoutedItemId(pathname: string): number | null {
-  const base = trimTrailingSlash(APP_BASE_PATH)
+  const base = APP_BASE_PATH.endsWith('/')
+    ? APP_BASE_PATH.slice(0, -1)
+    : APP_BASE_PATH
 
   if (pathname !== base && !pathname.startsWith(`${base}/`)) {
     return null
@@ -58,18 +56,6 @@ function parseRoutedItemId(pathname: string): number | null {
   }
 
   return parsed
-}
-
-function buildItemPath(itemId: number): string {
-  return `${APP_BASE_PATH}${itemId.toString()}`
-}
-
-function formatLastUpdated(value: string): string {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-  return parsed.toLocaleString()
 }
 
 function navigateToPath(
@@ -196,7 +182,11 @@ export default function App() {
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
-        <p>{`Last updated (${lastUpdatedSource}): ${formatLastUpdated(lastUpdated)}`}</p>
+        <p>{`Last updated (${lastUpdatedSource}): ${
+          Number.isNaN(new Date(lastUpdated).getTime())
+            ? lastUpdated
+            : new Date(lastUpdated).toLocaleString()
+        }`}</p>
         <button
           type="button"
           onClick={() => {
@@ -213,7 +203,7 @@ export default function App() {
         <ItemSearch
           items={items}
           onSelectItem={(item) => {
-            navigateToPath(buildItemPath(item.id), setPathname)
+            navigateToPath(`${APP_BASE_PATH}${item.id.toString()}`, setPathname)
           }}
         />
 
