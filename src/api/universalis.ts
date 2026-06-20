@@ -168,33 +168,6 @@ async function fetchWithRetry(
   throw new RateLimitError()
 }
 
-export function transformListing(raw: RawListing): Listing {
-  return {
-    listingId: raw.listingID,
-    worldId: raw.worldID,
-    worldName: raw.worldName,
-    hq: raw.hq,
-    pricePerUnit: raw.pricePerUnit,
-    quantity: raw.quantity,
-    total: raw.total,
-    tax: raw.tax,
-    retainerName: raw.retainerName,
-    lastReviewTime: new Date(raw.lastReviewTime * 1_000),
-  }
-}
-
-export function transformSale(raw: RawSale): Sale {
-  return {
-    worldId: raw.worldID,
-    worldName: raw.worldName,
-    hq: raw.hq,
-    pricePerUnit: raw.pricePerUnit,
-    quantity: raw.quantity,
-    timestamp: new Date(raw.timestamp * 1_000),
-    buyerName: raw.buyerName,
-  }
-}
-
 /**
  * Fetches current market board listings and recent sale history for one or
  * more items from a world, data centre, or region.
@@ -234,8 +207,31 @@ export async function fetchMarketBoard(
     return [
       {
         itemId: data.itemID,
-        listings: data.listings.map(transformListing),
-        sales: data.recentHistory.map(transformSale),
+        listings: data.listings.map(
+          (listing: RawListing): Listing => ({
+            listingId: listing.listingID,
+            worldId: listing.worldID,
+            worldName: listing.worldName,
+            hq: listing.hq,
+            pricePerUnit: listing.pricePerUnit,
+            quantity: listing.quantity,
+            total: listing.total,
+            tax: listing.tax,
+            retainerName: listing.retainerName,
+            lastReviewTime: new Date(listing.lastReviewTime * 1_000),
+          }),
+        ),
+        sales: data.recentHistory.map(
+          (sale: RawSale): Sale => ({
+            worldId: sale.worldID,
+            worldName: sale.worldName,
+            hq: sale.hq,
+            pricePerUnit: sale.pricePerUnit,
+            quantity: sale.quantity,
+            timestamp: new Date(sale.timestamp * 1_000),
+            buyerName: sale.buyerName,
+          }),
+        ),
       },
     ]
   }
@@ -243,8 +239,31 @@ export async function fetchMarketBoard(
   const data = raw as RawMultiMarketResponse
   return Object.values(data.items).map((item) => ({
     itemId: item.itemID,
-    listings: item.listings.map(transformListing),
-    sales: item.recentHistory.map(transformSale),
+    listings: item.listings.map(
+      (listing: RawListing): Listing => ({
+        listingId: listing.listingID,
+        worldId: listing.worldID,
+        worldName: listing.worldName,
+        hq: listing.hq,
+        pricePerUnit: listing.pricePerUnit,
+        quantity: listing.quantity,
+        total: listing.total,
+        tax: listing.tax,
+        retainerName: listing.retainerName,
+        lastReviewTime: new Date(listing.lastReviewTime * 1_000),
+      }),
+    ),
+    sales: item.recentHistory.map(
+      (sale: RawSale): Sale => ({
+        worldId: sale.worldID,
+        worldName: sale.worldName,
+        hq: sale.hq,
+        pricePerUnit: sale.pricePerUnit,
+        quantity: sale.quantity,
+        timestamp: new Date(sale.timestamp * 1_000),
+        buyerName: sale.buyerName,
+      }),
+    ),
   }))
 }
 
@@ -292,7 +311,17 @@ export async function fetchSaleHistory(
       {
         itemId: data.itemID,
         listings: [],
-        sales: data.entries.map(transformSale),
+        sales: data.entries.map(
+          (sale: RawSale): Sale => ({
+            worldId: sale.worldID,
+            worldName: sale.worldName,
+            hq: sale.hq,
+            pricePerUnit: sale.pricePerUnit,
+            quantity: sale.quantity,
+            timestamp: new Date(sale.timestamp * 1_000),
+            buyerName: sale.buyerName,
+          }),
+        ),
       },
     ]
   }
@@ -301,6 +330,16 @@ export async function fetchSaleHistory(
   return Object.values(data.items).map((item) => ({
     itemId: item.itemID,
     listings: [],
-    sales: item.entries.map(transformSale),
+    sales: item.entries.map(
+      (sale: RawSale): Sale => ({
+        worldId: sale.worldID,
+        worldName: sale.worldName,
+        hq: sale.hq,
+        pricePerUnit: sale.pricePerUnit,
+        quantity: sale.quantity,
+        timestamp: new Date(sale.timestamp * 1_000),
+        buyerName: sale.buyerName,
+      }),
+    ),
   }))
 }

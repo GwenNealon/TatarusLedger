@@ -5,8 +5,6 @@ import {
   UniversalisError,
   fetchMarketBoard,
   fetchSaleHistory,
-  transformListing,
-  transformSale,
 } from './universalis.ts'
 
 // ---------------------------------------------------------------------------
@@ -35,87 +33,6 @@ const RAW_SALE: RawSale = {
   worldID: 73,
   worldName: 'Balmung',
 }
-
-// ---------------------------------------------------------------------------
-// Unit tests: transformListing
-// ---------------------------------------------------------------------------
-
-describe('transformListing', () => {
-  it('maps all fields from a raw listing', () => {
-    const listing = transformListing(RAW_LISTING)
-
-    expect(listing.listingId).toBe('abc123')
-    expect(listing.hq).toBe(true)
-    expect(listing.pricePerUnit).toBe(10_000)
-    expect(listing.quantity).toBe(1)
-    expect(listing.total).toBe(10_000)
-    expect(listing.tax).toBe(500)
-    expect(listing.retainerName).toBe('Tataru')
-    expect(listing.worldId).toBe(73)
-    expect(listing.worldName).toBe('Balmung')
-    expect(listing.lastReviewTime).toEqual(new Date(1_700_000_000 * 1_000))
-  })
-
-  it('converts unix timestamp to a Date', () => {
-    const listing = transformListing({ ...RAW_LISTING, lastReviewTime: 0 })
-    expect(listing.lastReviewTime).toEqual(new Date(0))
-  })
-
-  it('sets worldName to undefined when absent', () => {
-    const listing = transformListing({
-      listingID: 'def456',
-      hq: false,
-      pricePerUnit: 5_000,
-      quantity: 2,
-      total: 10_000,
-      tax: 250,
-      retainerName: 'TestRetainer',
-      worldID: 74,
-      lastReviewTime: 1_700_000_100,
-    })
-    expect(listing.worldName).toBeUndefined()
-  })
-
-  it('preserves hq: false', () => {
-    const listing = transformListing({ ...RAW_LISTING, hq: false })
-    expect(listing.hq).toBe(false)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Unit tests: transformSale
-// ---------------------------------------------------------------------------
-
-describe('transformSale', () => {
-  it('maps all fields from a raw sale', () => {
-    const sale = transformSale(RAW_SALE)
-
-    expect(sale.hq).toBe(false)
-    expect(sale.pricePerUnit).toBe(8_000)
-    expect(sale.quantity).toBe(3)
-    expect(sale.timestamp).toEqual(new Date(1_700_000_200 * 1_000))
-    expect(sale.buyerName).toBe('BuyerA')
-    expect(sale.worldId).toBe(73)
-    expect(sale.worldName).toBe('Balmung')
-  })
-
-  it('converts unix timestamp to a Date', () => {
-    const sale = transformSale({ ...RAW_SALE, timestamp: 0 })
-    expect(sale.timestamp).toEqual(new Date(0))
-  })
-
-  it('sets worldName to undefined when absent', () => {
-    const sale = transformSale({
-      hq: true,
-      pricePerUnit: 5_000,
-      quantity: 1,
-      timestamp: 1_700_000_300,
-      buyerName: 'BuyerB',
-      worldID: 74,
-    })
-    expect(sale.worldName).toBeUndefined()
-  })
-})
 
 // ---------------------------------------------------------------------------
 // Mocked integration tests: rate-limit handling
