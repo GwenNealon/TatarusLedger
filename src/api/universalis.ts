@@ -212,7 +212,11 @@ export function transformListing(raw: ListingView): Listing {
   }
 }
 
-export function transformSale(raw: MinimizedSaleView): Sale {
+export function transformSale(
+  raw:
+    | MinimizedSaleView
+    | components['schemas']['Universalis.Application.Views.V1.SaleView'],
+): Sale {
   return {
     worldId: raw.worldID ?? undefined,
     worldName: raw.worldName ?? undefined,
