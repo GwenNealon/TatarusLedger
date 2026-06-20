@@ -111,6 +111,30 @@ export default function App() {
         if (cancelled) {
           return
         }
+        if (cachedItems.length === 0) {
+          void loadItemsIndex()
+            .then((nextItems) => {
+              if (cancelled) {
+                return
+              }
+              setItems(nextItems)
+              setLoadingError(null)
+              setLastUpdated(new Date().toISOString())
+              setIsLoadingItems(false)
+            })
+            .catch((error: unknown) => {
+              if (cancelled) {
+                return
+              }
+              setLoadingError(
+                error instanceof Error
+                  ? error.message
+                  : 'Unable to load item index',
+              )
+              setIsLoadingItems(false)
+            })
+          return
+        }
         setItems(cachedItems)
         setLoadingError(null)
         setIsLoadingItems(false)
@@ -131,7 +155,7 @@ export default function App() {
     }
   }, [])
 
-  async function refreshItems(): Promise<void> {
+  async function refreshItemData(): Promise<void> {
     setIsRefreshingItems(true)
     setRefreshError(null)
 
@@ -169,20 +193,18 @@ export default function App() {
           FFXIV item resources.
         </p>
 
-        {loadingError === null ? (
-          <p aria-live="polite">
-            {isLoadingItems ? 'Loading item index…' : null}
-          </p>
+        {loadingError === null && isLoadingItems ? (
+          <p aria-live="polite">Loading item index…</p>
         ) : null}
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
-        <p>{`Last updated: ${formatLastUpdated(lastUpdated)}`}</p>
+        <p>{`Last updated (build/default): ${formatLastUpdated(lastUpdated)}`}</p>
         {patchVersion !== null ? <p>{`FFXIV patch: ${patchVersion}`}</p> : null}
         <button
           type="button"
           onClick={() => {
-            void refreshItems()
+            void refreshItemData()
           }}
           disabled={isRefreshingItems}
         >

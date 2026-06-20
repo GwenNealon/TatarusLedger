@@ -188,7 +188,9 @@ export async function loadItemsIndex(): Promise<NormalizedItem[]> {
   return items
 }
 
-function readPatchValue(fields: Record<string, unknown>): string | null {
+function extractPatchVersionFromFields(
+  fields: Record<string, unknown>,
+): string | null {
   const patchValue = fields.Version ?? fields.Name
   if (typeof patchValue !== 'string' || patchValue.trim() === '') {
     return null
@@ -197,10 +199,33 @@ function readPatchValue(fields: Record<string, unknown>): string | null {
   return patchValue
 }
 
+function parsePatchVersionNumbers(version: string): number[] {
+  const numericParts = version.match(/\d+/g)
+  if (numericParts === null) {
+    return []
+  }
+  return numericParts.map((part) => Number.parseInt(part, 10))
+}
+
+function comparePatchVersions(left: string, right: string): number {
+  const leftParts = parsePatchVersionNumbers(left)
+  const rightParts = parsePatchVersionNumbers(right)
+  const maxLength = Math.max(leftParts.length, rightParts.length)
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftPart = leftParts[index] ?? 0
+    const rightPart = rightParts[index] ?? 0
+    if (leftPart !== rightPart) {
+      return leftPart - rightPart
+    }
+  }
+
+  return 0
+}
+
 export async function loadLatestPatchVersion(): Promise<string | null> {
   const url = new URL(`${XIVAPI_BASE}/sheet/GamePatch`)
   url.searchParams.set('language', 'en')
-  url.searchParams.set('limit', '1')
+  url.searchParams.set('limit', '100')
   url.searchParams.set('fields', 'Version,Name')
 
   const response = await fetch(url)
@@ -213,12 +238,17 @@ export async function loadLatestPatchVersion(): Promise<string | null> {
     return null
   }
 
+  let latestPatchVersion: string | null = null
   for (const row of payload.rows) {
-    const patchValue = readPatchValue(row.fields)
-    if (patchValue !== null) {
-      return patchValue
+    const patchValue = extractPatchVersionFromFields(row.fields)
+    if (
+      patchValue !== null &&
+      (latestPatchVersion === null ||
+        comparePatchVersions(patchValue, latestPatchVersion) > 0)
+    ) {
+      latestPatchVersion = patchValue
     }
   }
 
-  return null
+  return latestPatchVersion
 }

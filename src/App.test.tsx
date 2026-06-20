@@ -360,7 +360,7 @@ describe('App', () => {
 
     const { container } = await renderApp()
 
-    expect(container.textContent).toContain('Last updated:')
+    expect(container.textContent).toContain('Last updated (build/default):')
     expect(container.textContent).toContain('Refresh Item Data')
 
     const refreshButton = Array.from(container.querySelectorAll('button')).find(
