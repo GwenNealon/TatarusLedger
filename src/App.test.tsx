@@ -92,6 +92,7 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 
 function setupFetchMock(params: {
   marketResponsesByItemId?: Record<number, (Error | Response)[]>
+  patchResponse?: Error | Response
 }): ReturnType<typeof vi.fn> {
   const queueByItemId = new Map<number, (Error | Response)[]>()
 
@@ -134,6 +135,16 @@ function setupFetchMock(params: {
           })),
         }),
       )
+    }
+
+    if (requestUrl.includes('/sheet/GamePatch')) {
+      if (params.patchResponse === undefined) {
+        return Promise.resolve(makeJsonResponse({ rows: [] }))
+      }
+      if (params.patchResponse instanceof Error) {
+        return Promise.reject(params.patchResponse)
+      }
+      return Promise.resolve(params.patchResponse)
     }
 
     const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
@@ -338,6 +349,38 @@ describe('App', () => {
       return getRequestUrl(request).includes('/api/v2/Crystal/5339')
     })
     expect(universalisCalls).toHaveLength(0)
+  })
+
+  it('refreshes item data and patch metadata on demand', async () => {
+    const fetchMock = setupFetchMock({
+      patchResponse: makeJsonResponse({
+        rows: [{ fields: { Version: '7.3' } }],
+      }),
+    })
+
+    const { container } = await renderApp()
+
+    expect(container.textContent).toContain('Last updated:')
+    expect(container.textContent).toContain('Refresh Item Data')
+
+    const refreshButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Refresh Item Data',
+    )
+    expect(refreshButton).not.toBeUndefined()
+    if (refreshButton === undefined) return
+
+    await act(async () => {
+      refreshButton.click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('FFXIV patch: 7.3')
+    const calledItemSheet = fetchMock.mock.calls.some((call) => {
+      const request = call[0] as RequestInfo | URL
+      return getRequestUrl(request).includes('/sheet/Item')
+    })
+    expect(calledItemSheet).toBe(true)
   })
 
   it('opens a routed item URL with trailing slash', async () => {

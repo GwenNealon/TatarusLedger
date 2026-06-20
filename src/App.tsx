@@ -6,6 +6,7 @@ import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
 import {
   loadCachedItemsIndex,
+  loadLatestPatchVersion,
   loadItemsIndex,
 } from './features/items/itemsIndex.ts'
 
@@ -34,6 +35,7 @@ const APP_BASE_PATH =
   import.meta.env.BASE_URL === '/'
     ? '/TatarusLedger/'
     : import.meta.env.BASE_URL
+const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
 
 function trimTrailingSlash(path: string): string {
   return path.endsWith('/') ? path.slice(0, -1) : path
@@ -63,6 +65,14 @@ function buildItemPath(itemId: number): string {
   return `${APP_BASE_PATH}${itemId.toString()}`
 }
 
+function formatLastUpdated(value: string): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return parsed.toLocaleString()
+}
+
 function navigateToPath(
   nextPath: string,
   setPathname: (pathname: string) => void,
@@ -76,6 +86,10 @@ export default function App() {
   const [items, setItems] = useState<NormalizedItem[]>([])
   const [loadingError, setLoadingError] = useState<string | null>(null)
   const [isLoadingItems, setIsLoadingItems] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState(BUILD_TIMESTAMP)
+  const [patchVersion, setPatchVersion] = useState<string | null>(null)
+  const [isRefreshingItems, setIsRefreshingItems] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -91,42 +105,18 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    let hasCachedItems = false
-    let hasLiveItems = false
 
     void loadCachedItemsIndex()
       .then((cachedItems) => {
-        if (cancelled || hasLiveItems || cachedItems.length === 0) {
-          return
-        }
-
-        hasCachedItems = true
-        setItems(cachedItems)
-        setLoadingError(null)
-        setIsLoadingItems(false)
-      })
-      .catch(() => {
-        // Ignore cache read failures and keep going with live fetch.
-      })
-
-    void loadItemsIndex()
-      .then((nextItems) => {
         if (cancelled) {
           return
         }
-
-        hasLiveItems = true
-        setItems(nextItems)
+        setItems(cachedItems)
         setLoadingError(null)
         setIsLoadingItems(false)
       })
       .catch((error: unknown) => {
         if (cancelled) {
-          return
-        }
-
-        if (hasCachedItems) {
-          setIsLoadingItems(false)
           return
         }
 
@@ -140,6 +130,28 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  async function refreshItems(): Promise<void> {
+    setIsRefreshingItems(true)
+    setRefreshError(null)
+
+    try {
+      const [nextItems, nextPatchVersion] = await Promise.all([
+        loadItemsIndex(),
+        loadLatestPatchVersion().catch(() => null),
+      ])
+      setItems(nextItems)
+      setPatchVersion(nextPatchVersion)
+      setLastUpdated(new Date().toISOString())
+      setLoadingError(null)
+    } catch (error: unknown) {
+      setRefreshError(
+        error instanceof Error ? error.message : 'Unable to refresh item index',
+      )
+    } finally {
+      setIsRefreshingItems(false)
+    }
+  }
 
   const selectedItemId = parseRoutedItemId(pathname)
 
@@ -159,13 +171,25 @@ export default function App() {
 
         {loadingError === null ? (
           <p aria-live="polite">
-            {isLoadingItems
-              ? 'Checking for item updates…'
-              : 'Item index loaded.'}
+            {isLoadingItems ? 'Loading item index…' : null}
           </p>
         ) : null}
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
+        ) : null}
+        <p>{`Last updated: ${formatLastUpdated(lastUpdated)}`}</p>
+        {patchVersion !== null ? <p>{`FFXIV patch: ${patchVersion}`}</p> : null}
+        <button
+          type="button"
+          onClick={() => {
+            void refreshItems()
+          }}
+          disabled={isRefreshingItems}
+        >
+          {isRefreshingItems ? 'Refreshing Item Data…' : 'Refresh Item Data'}
+        </button>
+        {refreshError !== null ? (
+          <p role="alert">{`Item data refresh failed: ${refreshError}`}</p>
         ) : null}
 
         <ItemSearch
