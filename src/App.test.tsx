@@ -28,54 +28,6 @@ const ITEMS_FIXTURE: NormalizedItem[] = [
   },
 ]
 
-function makeJsonResponse(payload: unknown): Response {
-  return new Response(JSON.stringify(payload), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
-function getRequestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') {
-    return input
-  }
-
-  const maybeUrl = input as { href?: unknown; url?: unknown }
-  if (typeof maybeUrl.href === 'string') {
-    return maybeUrl.href
-  }
-  if (typeof maybeUrl.url === 'string') {
-    return maybeUrl.url
-  }
-
-  throw new Error('Unsupported request input')
-}
-
-function createLocalStorageMock(): Storage {
-  const values = new Map<string, string>()
-
-  return {
-    get length() {
-      return values.size
-    },
-    clear() {
-      values.clear()
-    },
-    getItem(key: string) {
-      return values.get(key) ?? null
-    },
-    key(index: number) {
-      return [...values.keys()][index] ?? null
-    },
-    removeItem(key: string) {
-      values.delete(key)
-    },
-    setItem(key: string, value: string) {
-      values.set(key, value)
-    },
-  }
-}
-
 let lastRoot: ReturnType<typeof createRoot> | null = null
 
 function setInputValue(input: HTMLInputElement, value: string): void {
@@ -93,6 +45,12 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 function setupFetchMock(params: {
   marketResponsesByItemId?: Record<number, (Error | Response)[]>
 }): ReturnType<typeof vi.fn> {
+  const jsonResponse = (payload: unknown): Response =>
+    new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+
   const queueByItemId = new Map<number, (Error | Response)[]>()
 
   for (const [itemId, queue] of Object.entries(
@@ -102,11 +60,16 @@ function setupFetchMock(params: {
   }
 
   const mock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-    const requestUrl = getRequestUrl(input)
+    const requestUrl =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url
 
     if (requestUrl.includes('/data/items.json')) {
       return Promise.resolve(
-        makeJsonResponse({
+        jsonResponse({
           version: 'test',
           items: ITEMS_FIXTURE,
         }),
@@ -116,11 +79,11 @@ function setupFetchMock(params: {
     if (requestUrl.includes('/sheet/Item')) {
       const parsed = new URL(requestUrl)
       if (parsed.searchParams.has('after')) {
-        return Promise.resolve(makeJsonResponse({ rows: [] }))
+        return Promise.resolve(jsonResponse({ rows: [] }))
       }
 
       return Promise.resolve(
-        makeJsonResponse({
+        jsonResponse({
           rows: ITEMS_FIXTURE.map((item) => ({
             row_id: item.id,
             fields: {
@@ -185,7 +148,27 @@ describe('App', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    const storage = createLocalStorageMock()
+    const values = new Map<string, string>()
+    const storage: Storage = {
+      get length() {
+        return values.size
+      },
+      clear() {
+        values.clear()
+      },
+      getItem(key: string) {
+        return values.get(key) ?? null
+      },
+      key(index: number) {
+        return [...values.keys()][index] ?? null
+      },
+      removeItem(key: string) {
+        values.delete(key)
+      },
+      setItem(key: string, value: string) {
+        values.set(key, value)
+      },
+    }
     vi.stubGlobal('localStorage', storage)
     Object.defineProperty(window, 'localStorage', {
       value: storage,
@@ -216,11 +199,17 @@ describe('App', () => {
     setupFetchMock({
       marketResponsesByItemId: {
         33917: [
-          makeJsonResponse({
-            itemID: 33917,
-            listings: [{ pricePerUnit: 600 }],
-            recentHistory: [{ pricePerUnit: 560, timestamp: 1_700_000_000 }],
-          }),
+          new Response(
+            JSON.stringify({
+              itemID: 33917,
+              listings: [{ pricePerUnit: 600 }],
+              recentHistory: [{ pricePerUnit: 560, timestamp: 1_700_000_000 }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          ),
         ],
       },
     })
@@ -335,7 +324,13 @@ describe('App', () => {
 
     const universalisCalls = fetchSpy.mock.calls.filter((call) => {
       const request = call[0] as RequestInfo | URL
-      return getRequestUrl(request).includes('/api/v2/Crystal/5339')
+      const requestUrl =
+        typeof request === 'string'
+          ? request
+          : request instanceof URL
+            ? request.href
+            : request.url
+      return requestUrl.includes('/api/v2/Crystal/5339')
     })
     expect(universalisCalls).toHaveLength(0)
   })
@@ -362,7 +357,13 @@ describe('App', () => {
 
     const calledItemSheet = fetchMock.mock.calls.some((call) => {
       const request = call[0] as RequestInfo | URL
-      return getRequestUrl(request).includes('/sheet/Item')
+      const requestUrl =
+        typeof request === 'string'
+          ? request
+          : request instanceof URL
+            ? request.href
+            : request.url
+      return requestUrl.includes('/sheet/Item')
     })
     expect(calledItemSheet).toBe(true)
   })
@@ -373,11 +374,17 @@ describe('App', () => {
     setupFetchMock({
       marketResponsesByItemId: {
         5339: [
-          makeJsonResponse({
-            itemID: 5339,
-            listings: [{ pricePerUnit: 700 }],
-            recentHistory: [{ pricePerUnit: 680, timestamp: 1_700_000_100 }],
-          }),
+          new Response(
+            JSON.stringify({
+              itemID: 5339,
+              listings: [{ pricePerUnit: 700 }],
+              recentHistory: [{ pricePerUnit: 680, timestamp: 1_700_000_100 }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          ),
         ],
       },
     })
@@ -430,11 +437,17 @@ describe('App', () => {
       marketResponsesByItemId: {
         5339: [
           new Error('network failed'),
-          makeJsonResponse({
-            itemID: 5339,
-            listings: [{ pricePerUnit: 450 }],
-            recentHistory: [{ pricePerUnit: 410, timestamp: 1_700_000_000 }],
-          }),
+          new Response(
+            JSON.stringify({
+              itemID: 5339,
+              listings: [{ pricePerUnit: 450 }],
+              recentHistory: [{ pricePerUnit: 410, timestamp: 1_700_000_000 }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          ),
         ],
       },
     })
