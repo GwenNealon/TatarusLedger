@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import type { NormalizedItem } from '../../data/types.ts'
-import { toIconUrl } from './iconUrl.ts'
 
 const SEARCH_DEBOUNCE_MS = 180
 const MAX_RESULTS = 50
@@ -108,7 +107,7 @@ export function ItemSearch(props: ItemSearchProps) {
               }}
             >
               <img
-                src={toIconUrl(item.iconId)}
+                src={`https://xivapi.com/i/${String(item.iconId).padStart(6, '0').slice(0, 3)}000/${String(item.iconId).padStart(6, '0')}.png`}
                 alt={`${item.name} icon`}
                 width={24}
                 height={24}

@@ -4,7 +4,6 @@ import type { CSSProperties } from 'react'
 import { fetchMarketBoard } from '../../api/universalis.ts'
 import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
-import { toIconUrl } from './iconUrl.ts'
 
 interface ItemMarketSummary {
   lowestPrice: number | null
@@ -237,7 +236,7 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
       </style>
       <div style={itemHeaderStyles}>
         <img
-          src={toIconUrl(item.iconId)}
+          src={`https://xivapi.com/i/${String(item.iconId).padStart(6, '0').slice(0, 3)}000/${String(item.iconId).padStart(6, '0')}.png`}
           alt={`${item.name} icon`}
           style={iconStyles}
         />
