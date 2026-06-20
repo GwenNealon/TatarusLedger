@@ -175,7 +175,13 @@ async function fetchWithRetry(
 function hasItemsMap(value: unknown): value is {
   items?: Record<string, CurrentlyShownView | HistoryView> | null
 } {
-  return typeof value === 'object' && value !== null && 'items' in value
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'items' in value &&
+    (value.items == null ||
+      (typeof value.items === 'object' && !Array.isArray(value.items)))
+  )
 }
 
 export function transformListing(raw: ListingView): Listing {
