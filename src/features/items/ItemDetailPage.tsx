@@ -207,8 +207,10 @@ function CacheStatusIcon(props: { status: CacheStatus; onRetry: () => void }) {
   }
 
   return (
-    <span role="status" aria-live="polite" title={status.message}>
-      ⚠️ Cache refresh failed
+    <span>
+      <span role="status" aria-live="polite">
+        {`⚠️ Cache refresh failed: ${status.message}`}
+      </span>
       <button type="button" style={{ marginLeft: '0.5rem' }} onClick={onRetry}>
         Retry
       </button>
