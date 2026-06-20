@@ -86,6 +86,7 @@ export default function App() {
   const [loadingError, setLoadingError] = useState<string | null>(null)
   const [isLoadingItems, setIsLoadingItems] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(BUILD_TIMESTAMP)
+  const [lastUpdatedSource, setLastUpdatedSource] = useState('build artifact')
   const [isRefreshingItems, setIsRefreshingItems] = useState(false)
   const [refreshError, setRefreshError] = useState<string | null>(null)
 
@@ -118,6 +119,7 @@ export default function App() {
               setItems(nextItems)
               setLoadingError(null)
               setLastUpdated(new Date().toISOString())
+              setLastUpdatedSource('XIVAPI live')
               setIsLoadingItems(false)
             })
             .catch((error: unknown) => {
@@ -161,6 +163,7 @@ export default function App() {
       const nextItems = await loadItemsIndex()
       setItems(nextItems)
       setLastUpdated(new Date().toISOString())
+      setLastUpdatedSource('XIVAPI live')
       setLoadingError(null)
     } catch (error: unknown) {
       setRefreshError(
@@ -193,7 +196,7 @@ export default function App() {
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
-        <p>{`Last updated (build/default): ${formatLastUpdated(lastUpdated)}`}</p>
+        <p>{`Last updated (${lastUpdatedSource}): ${formatLastUpdated(lastUpdated)}`}</p>
         <button
           type="button"
           onClick={() => {
