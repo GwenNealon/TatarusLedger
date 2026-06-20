@@ -79,11 +79,15 @@ async function fetchLatestSwagger(): Promise<JsonValue> {
       }
 
       const message = error instanceof Error ? error.message : ''
+      const errorName =
+        typeof error === 'object' && error !== null && 'name' in error
+          ? String((error as { name: unknown }).name)
+          : ''
       const isRetryableHttpError = message.includes(
         'Transient fetch failure for Universalis swagger snapshot: HTTP',
       )
       const isRetryableNetworkError =
-        error instanceof TypeError || message.includes('timed out')
+        error instanceof TypeError || errorName === 'TimeoutError'
 
       if (!isRetryableHttpError && !isRetryableNetworkError) {
         throw error
