@@ -179,16 +179,13 @@ interface ItemDetailPageProps {
 
 export function ItemDetailPage(props: ItemDetailPageProps) {
   const { item } = props
-  const [latestEntry, setLatestEntry] = useState<ItemCacheEntry | null>(null)
+  const [latestEntry, setLatestEntry] = useState<ItemCacheEntry | null>(() =>
+    readCache(item.id),
+  )
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [retrySignal, setRetrySignal] = useState(0)
 
-  const selectedCache =
-    latestEntry !== null && latestEntry.item.id === item.id
-      ? latestEntry
-      : readCache(item.id)
-
-  const needsRefresh = selectedCache === null || !isFresh(selectedCache)
+  const needsRefresh = latestEntry === null || !isFresh(latestEntry)
 
   const cacheStatus: CacheStatus =
     refreshError !== null
@@ -198,8 +195,7 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         : { state: 'cached' }
 
   useEffect(() => {
-    const cachedEntry = readCache(item.id)
-    if (cachedEntry !== null && isFresh(cachedEntry)) {
+    if (!needsRefresh) {
       return
     }
 
@@ -227,7 +223,7 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
     return () => {
       cancelled = true
     }
-  }, [item, retrySignal])
+  }, [item, needsRefresh, retrySignal])
 
   return (
     <section aria-labelledby="item-detail-heading" style={styles.section}>
@@ -260,14 +256,14 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         <dt>Category</dt>
         <dd>{`UI Category ${item.uiCategory.toString()}`}</dd>
         <dt>Listings in latest refresh</dt>
-        <dd>{selectedCache?.marketSummary.listingCount ?? '—'}</dd>
+        <dd>{latestEntry?.marketSummary.listingCount ?? '—'}</dd>
         <dt>Sales in latest refresh</dt>
-        <dd>{selectedCache?.marketSummary.saleCount ?? '—'}</dd>
+        <dd>{latestEntry?.marketSummary.saleCount ?? '—'}</dd>
         <dt>Lowest observed price</dt>
         <dd>
-          {selectedCache?.marketSummary.lowestPrice == null
+          {latestEntry?.marketSummary.lowestPrice == null
             ? '—'
-            : `${selectedCache.marketSummary.lowestPrice.toString()} gil`}
+            : `${latestEntry.marketSummary.lowestPrice.toString()} gil`}
         </dd>
       </dl>
 
