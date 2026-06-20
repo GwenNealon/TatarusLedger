@@ -249,6 +249,25 @@ describe('fetchMarketBoard — rate-limit handling', () => {
     expect(item6?.listings).toHaveLength(1)
     expect(item6?.sales).toHaveLength(1)
   })
+
+  it('handles single requested item returned in multi-shape payload', async () => {
+    const multiShapeSingleItemBody = {
+      itemIDs: [5],
+      items: {
+        '5': { itemID: 5, listings: [RAW_LISTING], recentHistory: [RAW_SALE] },
+      },
+    }
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      makeOkResponse(multiShapeSingleItemBody),
+    )
+
+    const result = await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0 })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].itemId).toBe(5)
+    expect(result[0].listings).toHaveLength(1)
+    expect(result[0].sales).toHaveLength(1)
+  })
 })
 
 describe('fetchSaleHistory — rate-limit handling', () => {
