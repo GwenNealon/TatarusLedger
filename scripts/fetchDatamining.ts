@@ -7,10 +7,6 @@ interface XivApiItemEntry {
   fields: Record<string, unknown>
 }
 
-interface XivApiItemsPage {
-  rows: XivApiItemEntry[]
-}
-
 interface ItemArtifact {
   version: string
   items: {
@@ -61,15 +57,34 @@ async function fetchItems(): Promise<ItemArtifact['items']> {
     }
 
     const payload: unknown = await response.json()
-    if (
-      typeof payload !== 'object' ||
-      payload === null ||
-      !Array.isArray((payload as XivApiItemsPage).rows)
-    ) {
+    if (typeof payload !== 'object' || payload === null) {
       throw new Error('Invalid item payload from XIVAPI')
     }
 
-    const pageEntries = (payload as XivApiItemsPage).rows
+    const rows = (payload as Record<string, unknown>).rows
+    if (!Array.isArray(rows)) {
+      throw new Error('Invalid item payload from XIVAPI')
+    }
+
+    const pageEntries: XivApiItemEntry[] = []
+    for (const row of rows) {
+      if (typeof row !== 'object' || row === null) {
+        continue
+      }
+      const entry = row as Record<string, unknown>
+      if (typeof entry.row_id !== 'number') {
+        continue
+      }
+      if (typeof entry.fields !== 'object' || entry.fields === null) {
+        continue
+      }
+
+      pageEntries.push({
+        row_id: entry.row_id,
+        fields: entry.fields as Record<string, unknown>,
+      })
+    }
+
     if (pageEntries.length === 0) {
       break
     }
