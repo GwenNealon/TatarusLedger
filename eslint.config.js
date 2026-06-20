@@ -7,7 +7,11 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import prettierConfig from 'eslint-config-prettier'
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores([
+    'dist',
+    'coverage',
+    'src/api/universalis.swagger.v2.generated.ts',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

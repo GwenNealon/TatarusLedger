@@ -168,30 +168,36 @@ async function fetchWithRetry(
   throw new RateLimitError()
 }
 
+function hasItemsMap(value: unknown): value is {
+  items?: Record<string, RawMarketResponse | RawHistoryResponse> | null
+} {
+  return typeof value === 'object' && value !== null && 'items' in value
+}
+
 export function transformListing(raw: RawListing): Listing {
   return {
-    listingId: raw.listingID,
-    worldId: raw.worldID,
-    worldName: raw.worldName,
+    listingId: raw.listingID ?? undefined,
+    worldId: raw.worldID ?? undefined,
+    worldName: raw.worldName ?? undefined,
     hq: raw.hq,
     pricePerUnit: raw.pricePerUnit,
     quantity: raw.quantity,
     total: raw.total,
     tax: raw.tax,
-    retainerName: raw.retainerName,
+    retainerName: raw.retainerName ?? undefined,
     lastReviewTime: new Date(raw.lastReviewTime * 1_000),
   }
 }
 
 export function transformSale(raw: RawSale): Sale {
   return {
-    worldId: raw.worldID,
-    worldName: raw.worldName,
+    worldId: raw.worldID ?? undefined,
+    worldName: raw.worldName ?? undefined,
     hq: raw.hq,
     pricePerUnit: raw.pricePerUnit,
     quantity: raw.quantity,
     timestamp: new Date(raw.timestamp * 1_000),
-    buyerName: raw.buyerName,
+    buyerName: raw.buyerName ?? undefined,
   }
 }
 
@@ -229,23 +235,23 @@ export async function fetchMarketBoard(
   const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
   const raw: unknown = await response.json()
 
-  if (itemIds.length === 1) {
-    const data = raw as RawMarketResponse
-    return [
-      {
-        itemId: data.itemID,
-        listings: data.listings.map(transformListing),
-        sales: data.recentHistory.map(transformSale),
-      },
-    ]
+  if (hasItemsMap(raw)) {
+    const data = raw as RawMultiMarketResponse
+    return Object.values(data.items ?? {}).map((item) => ({
+      itemId: item.itemID,
+      listings: (item.listings ?? []).map(transformListing),
+      sales: (item.recentHistory ?? []).map(transformSale),
+    }))
   }
 
-  const data = raw as RawMultiMarketResponse
-  return Object.values(data.items).map((item) => ({
-    itemId: item.itemID,
-    listings: item.listings.map(transformListing),
-    sales: item.recentHistory.map(transformSale),
-  }))
+  const data = raw as RawMarketResponse
+  return [
+    {
+      itemId: data.itemID,
+      listings: (data.listings ?? []).map(transformListing),
+      sales: (data.recentHistory ?? []).map(transformSale),
+    },
+  ]
 }
 
 /**
@@ -286,21 +292,21 @@ export async function fetchSaleHistory(
   const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
   const raw: unknown = await response.json()
 
-  if (itemIds.length === 1) {
-    const data = raw as RawHistoryResponse
-    return [
-      {
-        itemId: data.itemID,
-        listings: [],
-        sales: data.entries.map(transformSale),
-      },
-    ]
+  if (hasItemsMap(raw)) {
+    const data = raw as RawMultiHistoryResponse
+    return Object.values(data.items ?? {}).map((item) => ({
+      itemId: item.itemID,
+      listings: [],
+      sales: (item.entries ?? []).map(transformSale),
+    }))
   }
 
-  const data = raw as RawMultiHistoryResponse
-  return Object.values(data.items).map((item) => ({
-    itemId: item.itemID,
-    listings: [],
-    sales: item.entries.map(transformSale),
-  }))
+  const data = raw as RawHistoryResponse
+  return [
+    {
+      itemId: data.itemID,
+      listings: [],
+      sales: (data.entries ?? []).map(transformSale),
+    },
+  ]
 }

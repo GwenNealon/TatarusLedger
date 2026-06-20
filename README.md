@@ -82,6 +82,8 @@ Future enhancements may include alerts for market opportunities, crafting recipe
 ```bash
 npm run dev        # Start development server
 npm run data:fetch # Refresh cached item data from XIVAPI
+npm run api:spec:update # Refresh pinned Universalis spec snapshot + generated API types
+npm run api:spec:check  # Verify snapshot/types are up to date with Universalis swagger
 npm run build      # Build for production from checked-in data
 npm run build:with-data # Refresh cached data, then build
 npm run lint       # Run linter
