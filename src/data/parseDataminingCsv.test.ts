@@ -20,7 +20,7 @@ const SAMPLE_SINGLE_HEADER_ITEM_CSV = `#,Name,UICategory,IconID,Level{Item},Rari
 2,Bronze Shield,3,20001,1,1`
 
 describe('parseDataminingCsv', () => {
-  it('returns an empty array for text with fewer than 4 lines', () => {
+  it('returns an empty array for empty or invalid CSV text', () => {
     expect(parseDataminingCsv('')).toEqual([])
     expect(parseDataminingCsv('a\nb\nc')).toEqual([])
   })
