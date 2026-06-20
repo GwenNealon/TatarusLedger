@@ -32,8 +32,8 @@ export interface RawSale {
   pricePerUnit: SwaggerSale['pricePerUnit']
   quantity: SwaggerSale['quantity']
   timestamp: SwaggerSale['timestamp']
-  buyerName: SwaggerSale['buyerName']
-  worldID: SwaggerSale['worldID']
+  buyerName?: SwaggerSale['buyerName']
+  worldID?: SwaggerSale['worldID']
   worldName?: SwaggerSale['worldName']
 }
 
