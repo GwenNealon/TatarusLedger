@@ -62,20 +62,28 @@ Future enhancements may include alerts for market opportunities, crafting recipe
    npm install
    ```
 
-3. **Start the development server**:
+3. **Fetch the cached item index**:
+
+   ```bash
+   npm run data:fetch
+   ```
+
+4. **Start the development server**:
 
    ```bash
    npm run dev
    ```
 
-4. **Open your browser**:
+5. **Open your browser**:
    Navigate to the local URL displayed in the terminal (typically `http://localhost:5173/TatarusLedger/`).
 
 ### Development Commands
 
 ```bash
 npm run dev        # Start development server
-npm run build      # Build for production
+npm run data:fetch # Refresh cached item data from XIVAPI
+npm run build      # Build for production from checked-in data
+npm run build:with-data # Refresh cached data, then build
 npm run lint       # Run linter
 npm run typecheck  # Type check
 npm run test       # Run tests
@@ -125,7 +133,7 @@ Deployment is handled by `.github/workflows/pages.yml` and publishes on every pu
    - `npm run test`
    - `npm run build`
 3. Merge/push to `main`.
-4. The **Deploy to GitHub Pages** workflow builds and publishes the updated site automatically.
+4. The **Deploy to GitHub Pages** workflow refreshes cached data, builds, and publishes the updated site automatically.
 
 ### Rollback
 

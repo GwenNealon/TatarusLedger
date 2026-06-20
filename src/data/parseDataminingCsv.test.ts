@@ -15,8 +15,12 @@ int32,str,sbyte,str,sbyte,sbyte,sbyte,sbyte,str,str,ItemUICategory,uint16,uint8,
 1,Bronze Sword,0,Bronze Swords,0,0,0,0,A simple blade.,Bronze Sword,2,20000,1,1
 2,Bronze Shield,0,Bronze Shields,0,0,0,0,A simple shield.,Bronze Shield,3,20001,1,1`
 
+const SAMPLE_SINGLE_HEADER_ITEM_CSV = `#,Name,UICategory,IconID,Level{Item},Rarity
+1,Bronze Sword,2,20000,1,1
+2,Bronze Shield,3,20001,1,1`
+
 describe('parseDataminingCsv', () => {
-  it('returns an empty array for text with fewer than 4 lines', () => {
+  it('returns an empty array for empty or invalid CSV text', () => {
     expect(parseDataminingCsv('')).toEqual([])
     expect(parseDataminingCsv('a\nb\nc')).toEqual([])
   })
@@ -109,6 +113,23 @@ str,str
     expect(rows[0]).toHaveProperty('Rarity')
     expect(rows[0]).not.toHaveProperty('Rarity\r')
     expect(rows[0].Rarity).toBe('2')
+  })
+
+  it('parses single-header CSV format from current upstream paths', () => {
+    const rows = parseDataminingCsv(SAMPLE_SINGLE_HEADER_ITEM_CSV)
+    expect(rows).toHaveLength(2)
+    expect(rows[0]['#']).toBe('1')
+    expect(rows[0].Name).toBe('Bronze Sword')
+    expect(rows[1].IconID).toBe('20001')
+  })
+
+  it('parses single-header CSV format without a Name column', () => {
+    const csv = `#,ItemResult,AmountResult
+1,5056,1`
+    const rows = parseDataminingCsv(csv)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].ItemResult).toBe('5056')
+    expect(rows[0].AmountResult).toBe('1')
   })
 
   it('preserves trailing whitespace in field values', () => {

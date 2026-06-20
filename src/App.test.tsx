@@ -1,16 +1,491 @@
-import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import App from './App.tsx'
+import type { NormalizedItem } from './data/types.ts'
+
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean
+}
+
+const ITEMS_FIXTURE: NormalizedItem[] = [
+  {
+    id: 5339,
+    name: 'Craftsman Syrup',
+    iconId: 35484,
+    levelItem: 560,
+    rarity: 1,
+    uiCategory: 58,
+  },
+  {
+    id: 33917,
+    name: 'Orange Juice',
+    iconId: 9362,
+    levelItem: 430,
+    rarity: 1,
+    uiCategory: 46,
+  },
+]
+
+function makeJsonResponse(payload: unknown): Response {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function getRequestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') {
+    return input
+  }
+
+  const maybeUrl = input as { href?: unknown; url?: unknown }
+  if (typeof maybeUrl.href === 'string') {
+    return maybeUrl.href
+  }
+  if (typeof maybeUrl.url === 'string') {
+    return maybeUrl.url
+  }
+
+  throw new Error('Unsupported request input')
+}
+
+function createLocalStorageMock(): Storage {
+  const values = new Map<string, string>()
+
+  return {
+    get length() {
+      return values.size
+    },
+    clear() {
+      values.clear()
+    },
+    getItem(key: string) {
+      return values.get(key) ?? null
+    },
+    key(index: number) {
+      return [...values.keys()][index] ?? null
+    },
+    removeItem(key: string) {
+      values.delete(key)
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value)
+    },
+  }
+}
+
+let lastRoot: ReturnType<typeof createRoot> | null = null
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const valueDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    'value',
+  )
+  if (valueDescriptor?.set === undefined) {
+    throw new Error('Missing HTMLInputElement.value setter')
+  }
+  valueDescriptor.set.call(input, value)
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+function setupFetchMock(params: {
+  marketResponsesByItemId?: Record<number, (Error | Response)[]>
+}): ReturnType<typeof vi.fn> {
+  const queueByItemId = new Map<number, (Error | Response)[]>()
+
+  for (const [itemId, queue] of Object.entries(
+    params.marketResponsesByItemId ?? {},
+  )) {
+    queueByItemId.set(Number.parseInt(itemId, 10), [...queue])
+  }
+
+  const mock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
+    const requestUrl = getRequestUrl(input)
+
+    if (requestUrl.includes('/data/items.json')) {
+      return Promise.resolve(
+        makeJsonResponse({
+          version: 'test',
+          items: ITEMS_FIXTURE,
+        }),
+      )
+    }
+
+    if (requestUrl.includes('/sheet/Item')) {
+      const parsed = new URL(requestUrl)
+      if (parsed.searchParams.has('after')) {
+        return Promise.resolve(makeJsonResponse({ rows: [] }))
+      }
+
+      return Promise.resolve(
+        makeJsonResponse({
+          rows: ITEMS_FIXTURE.map((item) => ({
+            row_id: item.id,
+            fields: {
+              Name: item.name,
+              'Icon@as(raw)': item.iconId,
+              'LevelItem@as(raw)': item.levelItem,
+              Rarity: item.rarity,
+              'ItemUICategory@as(raw)': item.uiCategory,
+              IsUntradable: false,
+            },
+          })),
+        }),
+      )
+    }
+
+    const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
+    if (marketMatch !== null) {
+      const itemId = Number.parseInt(marketMatch[1], 10)
+      const queue = queueByItemId.get(itemId)
+      const next = queue?.shift()
+      if (next === undefined) {
+        return Promise.reject(
+          new Error(`No queued market response for item ${itemId.toString()}`),
+        )
+      }
+
+      if (next instanceof Error) {
+        return Promise.reject(next)
+      }
+
+      return Promise.resolve(next)
+    }
+
+    return Promise.reject(new Error(`Unexpected fetch URL: ${requestUrl}`))
+  })
+
+  globalThis.fetch = mock
+  return mock
+}
+
+async function renderApp(): Promise<{
+  root: ReturnType<typeof createRoot>
+  container: HTMLDivElement
+}> {
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  lastRoot = root
+
+  await act(async () => {
+    root.render(<App />)
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+
+  return { root, container }
+}
 
 describe('App', () => {
-  it('renders the official website heading and deployment messaging', () => {
-    const html = renderToStaticMarkup(<App />)
-    const div = document.createElement('div')
-    div.innerHTML = html
+  const originalFetch = globalThis.fetch
 
-    expect(div.textContent).toContain("Tataru's Ledger")
-    expect(html).toContain('official project website')
-    expect(html).toContain('GitHub Pages deployment')
-    expect(html).toContain('Project status')
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    const storage = createLocalStorageMock()
+    vi.stubGlobal('localStorage', storage)
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      configurable: true,
+    })
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    window.history.replaceState({}, '', '/TatarusLedger/')
+  })
+
+  afterEach(async () => {
+    if (lastRoot !== null) {
+      const root = lastRoot
+      lastRoot = null
+      await act(async () => {
+        root.unmount()
+        await Promise.resolve()
+      })
+    }
+    globalThis.fetch = originalFetch
+    vi.unstubAllGlobals()
+    document.body.innerHTML = ''
+    vi.useRealTimers()
+  })
+
+  it('searches datamined items and routes to /TatarusLedger/{itemId}', async () => {
+    vi.useFakeTimers()
+
+    setupFetchMock({
+      marketResponsesByItemId: {
+        33917: [
+          makeJsonResponse({
+            itemID: 33917,
+            listings: [{ pricePerUnit: 600 }],
+            recentHistory: [{ pricePerUnit: 560, timestamp: 1_700_000_000 }],
+          }),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'orange')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+      await Promise.resolve()
+    })
+
+    const itemButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent.includes('Orange Juice'),
+    )
+    expect(itemButton).not.toBeUndefined()
+    if (itemButton === undefined) return
+
+    act(() => {
+      itemButton.click()
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    expect(window.location.pathname).toBe('/TatarusLedger/33917')
+    expect(container.textContent).toContain('Orange Juice')
+    expect(container.textContent).toContain('ID')
+    expect(container.textContent).toContain('Category')
+    expect(container.innerHTML).toContain(
+      'https://universalis.app/market/33917',
+    )
+    expect(container.innerHTML).toContain(
+      'https://saddlebagexchange.com/queries/item-data/33917',
+    )
+    expect(container.innerHTML).toContain(
+      'https://ffxivteamcraft.com/db/en/item/33917/Orange%20Juice',
+    )
+    expect(container.innerHTML).toContain(
+      'https://www.garlandtools.org/db/#item/33917',
+    )
+  })
+
+  it('shows cached indicator when local cache is fresh', async () => {
+    vi.useFakeTimers()
+
+    const now = Date.now()
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+
+    window.localStorage.setItem(
+      'item-cache-5339',
+      JSON.stringify({
+        fetchedAt: now,
+        item: {
+          id: 5339,
+          name: 'Craftsman Syrup',
+          iconId: 35484,
+          levelItem: 560,
+          rarity: 1,
+          uiCategory: 58,
+        },
+        marketSummary: {
+          lowestPrice: 1000,
+          listingCount: 2,
+          saleCount: 3,
+        },
+      }),
+    )
+
+    const fetchSpy = setupFetchMock({})
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craftsman')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    const itemButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent.includes('Craftsman Syrup'),
+    )
+    expect(itemButton).not.toBeUndefined()
+    if (itemButton === undefined) return
+
+    act(() => {
+      itemButton.click()
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Cached and fresh')
+    expect(container.textContent).toContain('1000 gil')
+
+    const universalisCalls = fetchSpy.mock.calls.filter((call) => {
+      const request = call[0] as RequestInfo | URL
+      return getRequestUrl(request).includes('/api/v2/Crystal/5339')
+    })
+    expect(universalisCalls).toHaveLength(0)
+  })
+
+  it('refreshes item data on demand', async () => {
+    const fetchMock = setupFetchMock({})
+
+    const { container } = await renderApp()
+
+    expect(container.textContent).toContain('Last updated (build artifact):')
+    expect(container.textContent).toContain('Refresh Item Data')
+
+    const refreshButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Refresh Item Data',
+    )
+    expect(refreshButton).not.toBeUndefined()
+    if (refreshButton === undefined) return
+
+    await act(async () => {
+      refreshButton.click()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const calledItemSheet = fetchMock.mock.calls.some((call) => {
+      const request = call[0] as RequestInfo | URL
+      return getRequestUrl(request).includes('/sheet/Item')
+    })
+    expect(calledItemSheet).toBe(true)
+  })
+
+  it('opens a routed item URL with trailing slash', async () => {
+    window.history.replaceState({}, '', '/TatarusLedger/5339/')
+
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          makeJsonResponse({
+            itemID: 5339,
+            listings: [{ pricePerUnit: 700 }],
+            recentHistory: [{ pricePerUnit: 680, timestamp: 1_700_000_100 }],
+          }),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craftsman')
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup')
+    expect(container.textContent).toContain('700 gil')
+  })
+
+  it.each([
+    '/TatarusLedger/not-a-number',
+    '/TatarusLedger/-1',
+    '/TatarusLedger/5339/extra',
+  ])('ignores invalid routed URL %s', async (path) => {
+    window.history.replaceState({}, '', path)
+
+    setupFetchMock({})
+
+    const { container } = await renderApp()
+
+    expect(container.textContent).toContain(
+      'Select an item to open /TatarusLedger/{itemId}.',
+    )
+  })
+
+  it('shows error indicator on refresh failure and supports retry', async () => {
+    vi.useFakeTimers()
+
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          new Error('network failed'),
+          makeJsonResponse({
+            itemID: 5339,
+            listings: [{ pricePerUnit: 450 }],
+            recentHistory: [{ pricePerUnit: 410, timestamp: 1_700_000_000 }],
+          }),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craftsman')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    const itemButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent.includes('Craftsman Syrup'),
+    )
+    expect(itemButton).not.toBeUndefined()
+    if (itemButton === undefined) return
+
+    act(() => {
+      itemButton.click()
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    expect(container.textContent).toContain('Cache refresh failed')
+
+    const retryButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Retry',
+    )
+    expect(retryButton).not.toBeUndefined()
+    if (retryButton === undefined) return
+
+    act(() => {
+      retryButton.click()
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Cached and fresh')
+    expect(container.textContent).toContain('450 gil')
   })
 })

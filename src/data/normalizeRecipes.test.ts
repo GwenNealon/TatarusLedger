@@ -110,6 +110,31 @@ describe('normalizeRecipe', () => {
       expect(recipe?.craftType).toBe(type)
     }
   })
+
+  it('supports current upstream single-header field names', () => {
+    const recipe = normalizeRecipe({
+      '#': '9',
+      CraftType: '1',
+      RecipeLevelTable: '3',
+      ItemResult: '5056',
+      AmountResult: '2',
+      'Ingredient[0]': '5106',
+      'AmountIngredient[0]': '3',
+      'Ingredient[1]': '5107',
+      'AmountIngredient[1]': '1',
+    })
+    expect(recipe).toEqual({
+      id: 9,
+      resultItemId: 5056,
+      resultAmount: 2,
+      craftType: 1,
+      recipeLevelTable: 3,
+      ingredients: [
+        { itemId: 5106, amount: 3 },
+        { itemId: 5107, amount: 1 },
+      ],
+    })
+  })
 })
 
 describe('normalizeRecipes', () => {

@@ -1,18 +1,28 @@
-const pageStyles = {
+import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
+
+import type { NormalizedItem } from './data/types.ts'
+import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
+import { ItemSearch } from './features/items/ItemSearch.tsx'
+import {
+  loadCachedItemsIndex,
+  loadItemsIndex,
+} from './features/items/itemsIndex.ts'
+
+const pageStyles: CSSProperties = {
   minHeight: '100vh',
   margin: 0,
   padding: '2rem 1rem',
-  display: 'grid',
-  placeItems: 'center',
   backgroundColor: '#f8fafc',
   color: '#0f172a',
   fontFamily:
     'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
 }
 
-const cardStyles = {
+const cardStyles: CSSProperties = {
   width: '100%',
-  maxWidth: '48rem',
+  maxWidth: '64rem',
+  margin: '0 auto',
   borderRadius: '0.75rem',
   border: '1px solid #cbd5e1',
   backgroundColor: '#ffffff',
@@ -20,23 +30,202 @@ const cardStyles = {
   padding: '2rem',
 }
 
+const APP_BASE_PATH =
+  import.meta.env.BASE_URL === '/'
+    ? '/TatarusLedger/'
+    : import.meta.env.BASE_URL
+const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
+
+function trimTrailingSlash(path: string): string {
+  return path.endsWith('/') ? path.slice(0, -1) : path
+}
+
+function parseRoutedItemId(pathname: string): number | null {
+  const base = trimTrailingSlash(APP_BASE_PATH)
+
+  if (pathname !== base && !pathname.startsWith(`${base}/`)) {
+    return null
+  }
+
+  const rest = pathname.slice(base.length).replace(/^\/+|\/+$/g, '')
+  if (rest.length === 0 || rest.includes('/')) {
+    return null
+  }
+
+  const parsed = Number.parseInt(rest, 10)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
+}
+
+function buildItemPath(itemId: number): string {
+  return `${APP_BASE_PATH}${itemId.toString()}`
+}
+
+function formatLastUpdated(value: string): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return parsed.toLocaleString()
+}
+
+function navigateToPath(
+  nextPath: string,
+  setPathname: (pathname: string) => void,
+): void {
+  window.history.pushState({}, '', nextPath)
+  setPathname(window.location.pathname)
+}
+
 export default function App() {
+  const [pathname, setPathname] = useState(() => window.location.pathname)
+  const [items, setItems] = useState<NormalizedItem[]>([])
+  const [loadingError, setLoadingError] = useState<string | null>(null)
+  const [isLoadingItems, setIsLoadingItems] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState(BUILD_TIMESTAMP)
+  const [lastUpdatedSource, setLastUpdatedSource] = useState('build artifact')
+  const [isRefreshingItems, setIsRefreshingItems] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setPathname(window.location.pathname)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void loadCachedItemsIndex()
+      .then((cachedItems) => {
+        if (cancelled) {
+          return
+        }
+        if (cachedItems.length === 0) {
+          void loadItemsIndex()
+            .then((nextItems) => {
+              if (cancelled) {
+                return
+              }
+              setItems(nextItems)
+              setLoadingError(null)
+              setLastUpdated(new Date().toISOString())
+              setLastUpdatedSource('XIVAPI live')
+              setIsLoadingItems(false)
+            })
+            .catch((error: unknown) => {
+              if (cancelled) {
+                return
+              }
+              setLoadingError(
+                error instanceof Error
+                  ? error.message
+                  : 'Unable to load item index',
+              )
+              setIsLoadingItems(false)
+            })
+          return
+        }
+        setItems(cachedItems)
+        setLoadingError(null)
+        setIsLoadingItems(false)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
+
+        setLoadingError(
+          error instanceof Error ? error.message : 'Unable to load item index',
+        )
+        setIsLoadingItems(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function refreshItemData(): Promise<void> {
+    setIsRefreshingItems(true)
+    setRefreshError(null)
+
+    try {
+      const nextItems = await loadItemsIndex()
+      setItems(nextItems)
+      setLastUpdated(new Date().toISOString())
+      setLastUpdatedSource('XIVAPI live')
+      setLoadingError(null)
+    } catch (error: unknown) {
+      setRefreshError(
+        error instanceof Error ? error.message : 'Unable to refresh item index',
+      )
+    } finally {
+      setIsRefreshingItems(false)
+    }
+  }
+
+  const selectedItemId = parseRoutedItemId(pathname)
+
+  const selectedItem =
+    selectedItemId === null
+      ? null
+      : (items.find((item) => item.id === selectedItemId) ?? null)
+
   return (
     <main style={pageStyles}>
       <article style={cardStyles}>
-        <h1>Tataru's Ledger</h1>
+        <h1>Tataru&apos;s Ledger</h1>
         <p>
-          The official project website for tracking profitable crafting,
-          gathering, and market board opportunities in Final Fantasy XIV.
+          Search an item, open its details page, and quickly jump to popular
+          FFXIV item resources.
         </p>
-        <section aria-labelledby="project-status-heading">
-          <h2 id="project-status-heading">Project status</h2>
-          <p>
-            This GitHub Pages deployment is the canonical public site for
-            Tataru's Ledger. Feature updates are published automatically from
-            the main branch.
+
+        {loadingError === null && isLoadingItems ? (
+          <p aria-live="polite">Loading item index…</p>
+        ) : null}
+        {loadingError !== null ? (
+          <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
+        ) : null}
+        <p>{`Last updated (${lastUpdatedSource}): ${formatLastUpdated(lastUpdated)}`}</p>
+        <button
+          type="button"
+          onClick={() => {
+            void refreshItemData()
+          }}
+          disabled={isRefreshingItems}
+        >
+          {isRefreshingItems ? 'Refreshing Item Data…' : 'Refresh Item Data'}
+        </button>
+        {refreshError !== null ? (
+          <p role="alert">{`Item data refresh failed: ${refreshError}`}</p>
+        ) : null}
+
+        <ItemSearch
+          items={items}
+          onSelectItem={(item) => {
+            navigateToPath(buildItemPath(item.id), setPathname)
+          }}
+        />
+
+        {selectedItem !== null ? (
+          <ItemDetailPage key={selectedItem.id} item={selectedItem} />
+        ) : selectedItemId !== null ? (
+          <p role="alert">Item not found in the loaded index.</p>
+        ) : (
+          <p role="status">
+            Select an item to open /TatarusLedger/{'{itemId}'}.
           </p>
-        </section>
+        )}
       </article>
     </main>
   )

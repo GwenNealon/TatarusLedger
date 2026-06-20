@@ -32,6 +32,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Refresh cached data
+        run: |
+          for attempt in 1 2 3; do
+            npm run data:fetch && exit 0
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+          done
+
       - name: Build site
         run: npm run build
 
