@@ -53,6 +53,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+function isNumberOrNull(value: unknown): value is number | null {
+  return typeof value === 'number' || value === null
+}
+
+function isItemCacheEntry(value: unknown): value is ItemCacheEntry {
+  if (!isRecord(value) || typeof value.fetchedAt !== 'number') {
+    return false
+  }
+
+  const item = value.item
+  const marketSummary = value.marketSummary
+
+  return (
+    isRecord(item) &&
+    typeof item.id === 'number' &&
+    typeof item.name === 'string' &&
+    typeof item.iconId === 'number' &&
+    typeof item.levelItem === 'number' &&
+    typeof item.rarity === 'number' &&
+    typeof item.uiCategory === 'number' &&
+    isRecord(marketSummary) &&
+    typeof marketSummary.listingCount === 'number' &&
+    typeof marketSummary.saleCount === 'number' &&
+    isNumberOrNull(marketSummary.lowestPrice)
+  )
+}
+
 function readCache(itemId: number): ItemCacheEntry | null {
   let raw: string | null
   try {
@@ -66,50 +93,10 @@ function readCache(itemId: number): ItemCacheEntry | null {
 
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (!isRecord(parsed)) {
-      return null
-    }
-
-    const item = parsed.item
-    const marketSummary = parsed.marketSummary
-
-    if (
-      typeof parsed.fetchedAt === 'number' &&
-      isRecord(item) &&
-      typeof item.id === 'number' &&
-      typeof item.name === 'string' &&
-      typeof item.iconId === 'number' &&
-      typeof item.levelItem === 'number' &&
-      typeof item.rarity === 'number' &&
-      typeof item.uiCategory === 'number' &&
-      isRecord(marketSummary) &&
-      typeof marketSummary.listingCount === 'number' &&
-      typeof marketSummary.saleCount === 'number' &&
-      (typeof marketSummary.lowestPrice === 'number' ||
-        marketSummary.lowestPrice === null)
-    ) {
-      return {
-        fetchedAt: parsed.fetchedAt,
-        item: {
-          id: item.id,
-          name: item.name,
-          iconId: item.iconId,
-          levelItem: item.levelItem,
-          rarity: item.rarity,
-          uiCategory: item.uiCategory,
-        },
-        marketSummary: {
-          listingCount: marketSummary.listingCount,
-          saleCount: marketSummary.saleCount,
-          lowestPrice: marketSummary.lowestPrice,
-        },
-      }
-    }
+    return isItemCacheEntry(parsed) ? parsed : null
   } catch {
     return null
   }
-
-  return null
 }
 
 function writeCache(entry: ItemCacheEntry): void {
