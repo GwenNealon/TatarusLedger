@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +8,11 @@ import { spawn } from 'node:child_process'
 const UNIVERSALIS_SWAGGER_URL =
   'https://universalis.app/swagger/v2/swagger.json'
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const { version: APP_VERSION } = JSON.parse(
+  readFileSync(resolve(PROJECT_ROOT, 'package.json'), 'utf8'),
+) as { version: string }
+const USER_AGENT = `TatarusLedger/${APP_VERSION} (nealon.gwen@gmail.com)`
+const FETCH_TIMEOUT_MS = 30_000
 const SNAPSHOT_FILE_PATH = resolve(
   PROJECT_ROOT,
   'src',
@@ -45,7 +51,10 @@ function sortJson(value: JsonValue): JsonValue {
 }
 
 async function fetchLatestSwagger(): Promise<JsonValue> {
-  const response = await fetch(UNIVERSALIS_SWAGGER_URL)
+  const response = await fetch(UNIVERSALIS_SWAGGER_URL, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
   if (!response.ok) {
     throw new Error(
       `Failed to fetch Universalis swagger snapshot: HTTP ${response.status.toString()}`,
