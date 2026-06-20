@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RawListing, RawSale } from './types.ts'
 import {
   RateLimitError,
   UniversalisError,
@@ -9,6 +8,9 @@ import {
   transformSale,
 } from './universalis.ts'
 
+type RawListing = Parameters<typeof transformListing>[0]
+type RawSale = Parameters<typeof transformSale>[0]
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -16,10 +18,14 @@ import {
 const RAW_LISTING: RawListing = {
   listingID: 'abc123',
   hq: true,
+  isCrafted: true,
+  onMannequin: false,
   pricePerUnit: 10_000,
   quantity: 1,
   total: 10_000,
   tax: 500,
+  retainerCity: 1,
+  stainID: 0,
   retainerName: 'Tataru',
   worldID: 73,
   worldName: 'Balmung',
@@ -65,10 +71,14 @@ describe('transformListing', () => {
     const listing = transformListing({
       listingID: 'def456',
       hq: false,
+      isCrafted: true,
+      onMannequin: false,
       pricePerUnit: 5_000,
       quantity: 2,
       total: 10_000,
       tax: 250,
+      retainerCity: 1,
+      stainID: 0,
       retainerName: 'TestRetainer',
       worldID: 74,
       lastReviewTime: 1_700_000_100,
@@ -239,6 +249,25 @@ describe('fetchMarketBoard — rate-limit handling', () => {
     expect(item6?.listings).toHaveLength(1)
     expect(item6?.sales).toHaveLength(1)
   })
+
+  it('handles single requested item returned in multi-shape payload', async () => {
+    const multiShapeSingleItemBody = {
+      itemIDs: [5],
+      items: {
+        '5': { itemID: 5, listings: [RAW_LISTING], recentHistory: [RAW_SALE] },
+      },
+    }
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      makeOkResponse(multiShapeSingleItemBody),
+    )
+
+    const result = await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0 })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].itemId).toBe(5)
+    expect(result[0].listings).toHaveLength(1)
+    expect(result[0].sales).toHaveLength(1)
+  })
 })
 
 describe('fetchSaleHistory — rate-limit handling', () => {
@@ -300,6 +329,25 @@ describe('fetchSaleHistory — rate-limit handling', () => {
     expect(result).toHaveLength(2)
     const item6 = result.find((r) => r.itemId === 6)
     expect(item6?.sales).toHaveLength(1)
+  })
+
+  it('handles single requested item returned in multi-shape payload', async () => {
+    const multiShapeSingleItemBody = {
+      itemIDs: [5],
+      items: {
+        '5': { itemID: 5, entries: [RAW_SALE] },
+      },
+    }
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      makeOkResponse(multiShapeSingleItemBody),
+    )
+
+    const result = await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].itemId).toBe(5)
+    expect(result[0].listings).toHaveLength(0)
+    expect(result[0].sales).toHaveLength(1)
   })
 })
 

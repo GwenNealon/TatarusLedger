@@ -49,6 +49,8 @@ Run all commands from the **repo root**:
 ```bash
 npm run dev        # start Vite dev server (hot module reload)
 npm run build      # tsc -b && vite build  (full type-check + production bundle)
+npm run api:spec:update # refresh Universalis snapshot + regenerate API types
+npm run api:spec:check  # verify structural snapshot parity + generated types are current
 npm run lint       # ESLint over all .ts/.tsx files
 npm run preview    # serve the production build locally
 ```
@@ -74,6 +76,14 @@ When preparing or suggesting PR-ready changes, Copilot must treat this as a hard
 2. Only provide PR suggestions that pass all commands above.
 3. If any command fails, do **not** present the change as PR-ready. Fix the issue first, then re-run validation.
 4. In PR suggestions, clearly state that validation was run and passed.
+
+### PR Description Maintenance (Required)
+
+When working on a branch that already has an open pull request:
+
+1. Review the existing PR description before or while making changes.
+2. Update the PR description so it accurately reflects the latest scope, implementation details, and validation status.
+3. Ensure the PR description calls out any meaningful behavior changes, follow-up work, or known limitations introduced by the latest commit(s).
 
 ---
 
@@ -130,6 +140,10 @@ The app consumes the [Universalis REST API](https://universalis.app/docs/index.h
 - `GET /api/v2/data-centers` – list of all data centres and their worlds.
 
 Item names and metadata (not provided by Universalis) come from the community XIVAPI (`https://v2.xivapi.com/api/1/`) or the static Lodestone game data. Prefer fetching only what is needed; Universalis supports batching multiple item IDs in a single request (comma-separated).
+
+### Spec Snapshot Workflow
+
+See [README.md](../README.md#universalis-spec-workflow) for the canonical workflow and rationale.
 
 ---
 
