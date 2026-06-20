@@ -1,19 +1,26 @@
-import type {
-  Listing,
-  MarketData,
-  RawHistoryResponse,
-  RawListing,
-  RawMarketResponse,
-  RawMultiHistoryResponse,
-  RawMultiMarketResponse,
-  RawSale,
-  Sale,
-} from './types.ts'
+import pLimit from 'p-limit'
+import type { Listing, MarketData, Sale } from './types.ts'
+import type { components } from './universalis.swagger.v2.generated.ts'
+
+type ListingView =
+  components['schemas']['Universalis.Application.Views.V1.ListingView']
+type MinimizedSaleView =
+  components['schemas']['Universalis.Application.Views.V1.MinimizedSaleView']
+type CurrentlyShownView =
+  components['schemas']['Universalis.Application.Views.V1.CurrentlyShownView']
+type CurrentlyShownMultiViewV2 =
+  components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
+type HistoryView =
+  components['schemas']['Universalis.Application.Views.V1.HistoryView']
+type HistoryMultiViewV2 =
+  components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
 
 const BASE_URL = 'https://universalis.app/api/v2'
 const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_BASE_DELAY_MS = 1_000
+const MAX_CONCURRENT_API_REQUESTS = 4
 const USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
+const limitApiRequest = pLimit(MAX_CONCURRENT_API_REQUESTS)
 
 export class UniversalisError extends Error {
   readonly statusCode: number | undefined
@@ -138,7 +145,7 @@ async function fetchWithRetry(
   }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url, requestInit)
+    const response = await limitApiRequest(async () => fetch(url, requestInit))
 
     if (response.status === 429) {
       if (attempt >= maxRetries) {
@@ -168,6 +175,58 @@ async function fetchWithRetry(
   throw new RateLimitError()
 }
 
+function hasItemsMap(value: unknown): value is {
+  items?: Record<string, CurrentlyShownView | HistoryView> | null
+} {
+  if (typeof value !== 'object' || value === null) return false
+
+  // Single-item payloads always include itemID; multi-item payloads do not.
+  if (
+    'itemID' in value &&
+    typeof (value as { itemID?: unknown }).itemID === 'number'
+  ) {
+    return false
+  }
+
+  if (!('items' in value)) {
+    // Multi-item payloads may omit `items` when no results are returned.
+    return 'itemIDs' in value || 'unresolvedItems' in value
+  }
+
+  const items = (value as { items?: unknown }).items
+  return items == null || (typeof items === 'object' && !Array.isArray(items))
+}
+
+export function transformListing(raw: ListingView): Listing {
+  return {
+    listingId: raw.listingID ?? undefined,
+    worldId: raw.worldID ?? undefined,
+    worldName: raw.worldName ?? undefined,
+    hq: raw.hq,
+    pricePerUnit: raw.pricePerUnit,
+    quantity: raw.quantity,
+    total: raw.total,
+    tax: raw.tax,
+    retainerName: raw.retainerName ?? undefined,
+    lastReviewTime: new Date(raw.lastReviewTime * 1_000),
+  }
+}
+
+export function transformSale(
+  raw:
+    | MinimizedSaleView
+    | components['schemas']['Universalis.Application.Views.V1.SaleView'],
+): Sale {
+  return {
+    worldId: raw.worldID ?? undefined,
+    worldName: raw.worldName ?? undefined,
+    hq: raw.hq,
+    pricePerUnit: raw.pricePerUnit,
+    quantity: raw.quantity,
+    timestamp: new Date(raw.timestamp * 1_000),
+    buyerName: raw.buyerName ?? undefined,
+  }
+}
 /**
  * Fetches current market board listings and recent sale history for one or
  * more items from a world, data centre, or region.
@@ -202,69 +261,23 @@ export async function fetchMarketBoard(
   const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
   const raw: unknown = await response.json()
 
-  if (itemIds.length === 1) {
-    const data = raw as RawMarketResponse
-    return [
-      {
-        itemId: data.itemID,
-        listings: data.listings.map(
-          (listing: RawListing): Listing => ({
-            listingId: listing.listingID,
-            worldId: listing.worldID,
-            worldName: listing.worldName,
-            hq: listing.hq,
-            pricePerUnit: listing.pricePerUnit,
-            quantity: listing.quantity,
-            total: listing.total,
-            tax: listing.tax,
-            retainerName: listing.retainerName,
-            lastReviewTime: new Date(listing.lastReviewTime * 1_000),
-          }),
-        ),
-        sales: data.recentHistory.map(
-          (sale: RawSale): Sale => ({
-            worldId: sale.worldID,
-            worldName: sale.worldName,
-            hq: sale.hq,
-            pricePerUnit: sale.pricePerUnit,
-            quantity: sale.quantity,
-            timestamp: new Date(sale.timestamp * 1_000),
-            buyerName: sale.buyerName,
-          }),
-        ),
-      },
-    ]
+  if (hasItemsMap(raw)) {
+    const data = raw as CurrentlyShownMultiViewV2
+    return Object.values(data.items ?? {}).map((item) => ({
+      itemId: item.itemID,
+      listings: (item.listings ?? []).map(transformListing),
+      sales: (item.recentHistory ?? []).map(transformSale),
+    }))
   }
 
-  const data = raw as RawMultiMarketResponse
-  return Object.values(data.items).map((item) => ({
-    itemId: item.itemID,
-    listings: item.listings.map(
-      (listing: RawListing): Listing => ({
-        listingId: listing.listingID,
-        worldId: listing.worldID,
-        worldName: listing.worldName,
-        hq: listing.hq,
-        pricePerUnit: listing.pricePerUnit,
-        quantity: listing.quantity,
-        total: listing.total,
-        tax: listing.tax,
-        retainerName: listing.retainerName,
-        lastReviewTime: new Date(listing.lastReviewTime * 1_000),
-      }),
-    ),
-    sales: item.recentHistory.map(
-      (sale: RawSale): Sale => ({
-        worldId: sale.worldID,
-        worldName: sale.worldName,
-        hq: sale.hq,
-        pricePerUnit: sale.pricePerUnit,
-        quantity: sale.quantity,
-        timestamp: new Date(sale.timestamp * 1_000),
-        buyerName: sale.buyerName,
-      }),
-    ),
-  }))
+  const data = raw as CurrentlyShownView
+  return [
+    {
+      itemId: data.itemID,
+      listings: (data.listings ?? []).map(transformListing),
+      sales: (data.recentHistory ?? []).map(transformSale),
+    },
+  ]
 }
 
 /**
@@ -305,41 +318,21 @@ export async function fetchSaleHistory(
   const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
   const raw: unknown = await response.json()
 
-  if (itemIds.length === 1) {
-    const data = raw as RawHistoryResponse
-    return [
-      {
-        itemId: data.itemID,
-        listings: [],
-        sales: data.entries.map(
-          (sale: RawSale): Sale => ({
-            worldId: sale.worldID,
-            worldName: sale.worldName,
-            hq: sale.hq,
-            pricePerUnit: sale.pricePerUnit,
-            quantity: sale.quantity,
-            timestamp: new Date(sale.timestamp * 1_000),
-            buyerName: sale.buyerName,
-          }),
-        ),
-      },
-    ]
+  if (hasItemsMap(raw)) {
+    const data = raw as HistoryMultiViewV2
+    return Object.values(data.items ?? {}).map((item) => ({
+      itemId: item.itemID,
+      listings: [],
+      sales: (item.entries ?? []).map(transformSale),
+    }))
   }
 
-  const data = raw as RawMultiHistoryResponse
-  return Object.values(data.items).map((item) => ({
-    itemId: item.itemID,
-    listings: [],
-    sales: item.entries.map(
-      (sale: RawSale): Sale => ({
-        worldId: sale.worldID,
-        worldName: sale.worldName,
-        hq: sale.hq,
-        pricePerUnit: sale.pricePerUnit,
-        quantity: sale.quantity,
-        timestamp: new Date(sale.timestamp * 1_000),
-        buyerName: sale.buyerName,
-      }),
-    ),
-  }))
+  const data = raw as HistoryView
+  return [
+    {
+      itemId: data.itemID,
+      listings: [],
+      sales: (data.entries ?? []).map(transformSale),
+    },
+  ]
 }

@@ -82,12 +82,22 @@ Future enhancements may include alerts for market opportunities, crafting recipe
 ```bash
 npm run dev        # Start development server
 npm run data:fetch # Refresh cached item data from XIVAPI
+npm run api:spec:update # Refresh pinned Universalis spec snapshot + generated API types
+npm run api:spec:check  # Verify snapshot/types are up to date with Universalis swagger
 npm run build      # Build for production from checked-in data
 npm run build:with-data # Refresh cached data, then build
 npm run lint       # Run linter
 npm run typecheck  # Type check
 npm run test       # Run tests
 ```
+
+### Universalis Spec Workflow
+
+- `npm run api:spec:update` fetches the latest Universalis OpenAPI document, writes a deterministic snapshot to `src/api/universalis.swagger.v2.snapshot.json`, and regenerates `src/api/universalis.swagger.v2.generated.ts`.
+- Snapshot writes are deterministic (stable key ordering plus pretty JSON) to reduce noisy diffs.
+- `npm run api:spec:check` is format-insensitive for the snapshot: it compares canonicalized JSON structure, not whitespace or line wrapping.
+- CI still enforces that generated types are current by comparing `src/api/universalis.swagger.v2.generated.ts` to a freshly generated temporary output.
+- In short: `npm run api:spec:check` only fails when structure or generated API typings are stale, not because JSON was reformatted.
 
 ---
 
