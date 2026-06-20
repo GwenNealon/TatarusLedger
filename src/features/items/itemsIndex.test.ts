@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { loadCachedItemsIndex } from './itemsIndex.ts'
+import { loadCachedItemsIndex } from './cachedItemsIndex.ts'
 
 describe('loadCachedItemsIndex', () => {
   const originalFetch = globalThis.fetch

@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 import type { NormalizedItem } from './data/types.ts'
 import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
-import { loadCachedItemsIndex } from './features/items/itemsIndex.ts'
+import { loadCachedItemsIndex } from './features/items/cachedItemsIndex.ts'
 
 const pageStyles: CSSProperties = {
   minHeight: '100vh',
