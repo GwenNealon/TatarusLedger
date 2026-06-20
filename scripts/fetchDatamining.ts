@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { NormalizedItem } from '../src/data/types.ts'
 
 interface XivApiItemEntry {
   row_id: number
@@ -9,14 +10,7 @@ interface XivApiItemEntry {
 
 interface ItemArtifact {
   version: string
-  items: {
-    id: number
-    name: string
-    iconId: number
-    levelItem: number
-    rarity: number
-    uiCategory: number
-  }[]
+  items: NormalizedItem[]
 }
 
 const XIVAPI_BASE = 'https://v2.xivapi.com/api'
