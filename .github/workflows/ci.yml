@@ -26,6 +26,7 @@ jobs:
         run: npm ci
 
       - name: Validate Universalis API snapshot and generated types
+        timeout-minutes: 5
         run: npm run api:spec:check
 
       - name: Check formatting with Prettier
