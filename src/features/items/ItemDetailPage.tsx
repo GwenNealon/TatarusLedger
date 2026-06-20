@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import { fetchMarketBoard } from '../../api/universalis.ts'
+import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
 import { toIconUrl } from './iconUrl.ts'
 
@@ -49,34 +50,28 @@ const spinningIconStyles: CSSProperties = {
   animation: 'spin 1s linear infinite',
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isNumberOrNull(value: unknown): value is number | null {
-  return typeof value === 'number' || value === null
-}
-
 function isItemCacheEntry(value: unknown): value is ItemCacheEntry {
-  if (!isRecord(value) || typeof value.fetchedAt !== 'number') {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    typeof (value as Record<string, unknown>).fetchedAt !== 'number'
+  ) {
     return false
   }
 
-  const item = value.item
-  const marketSummary = value.marketSummary
+  const item = (value as Record<string, unknown>).item
+  const marketSummary = (value as Record<string, unknown>).marketSummary
 
   return (
-    isRecord(item) &&
-    typeof item.id === 'number' &&
-    typeof item.name === 'string' &&
-    typeof item.iconId === 'number' &&
-    typeof item.levelItem === 'number' &&
-    typeof item.rarity === 'number' &&
-    typeof item.uiCategory === 'number' &&
-    isRecord(marketSummary) &&
-    typeof marketSummary.listingCount === 'number' &&
-    typeof marketSummary.saleCount === 'number' &&
-    isNumberOrNull(marketSummary.lowestPrice)
+    isNormalizedItem(item) &&
+    typeof marketSummary === 'object' &&
+    marketSummary !== null &&
+    typeof (marketSummary as Record<string, unknown>).listingCount ===
+      'number' &&
+    typeof (marketSummary as Record<string, unknown>).saleCount === 'number' &&
+    (typeof (marketSummary as Record<string, unknown>).lowestPrice ===
+      'number' ||
+      (marketSummary as Record<string, unknown>).lowestPrice === null)
   )
 }
 

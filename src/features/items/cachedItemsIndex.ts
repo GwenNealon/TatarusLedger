@@ -1,3 +1,4 @@
+import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
 
 const APP_BASE_PATH =
@@ -8,22 +9,6 @@ const APP_BASE_PATH =
 interface ItemsArtifactPayload {
   version: string
   items: NormalizedItem[]
-}
-
-function isNormalizedItem(value: unknown): value is NormalizedItem {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const item = value as Record<string, unknown>
-  return (
-    typeof item.id === 'number' &&
-    typeof item.name === 'string' &&
-    typeof item.iconId === 'number' &&
-    typeof item.levelItem === 'number' &&
-    typeof item.rarity === 'number' &&
-    typeof item.uiCategory === 'number'
-  )
 }
 
 function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
