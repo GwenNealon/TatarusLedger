@@ -1,14 +1,18 @@
-import type {
-  Listing,
-  MarketData,
-  RawHistoryResponse,
-  RawListing,
-  RawMarketResponse,
-  RawMultiHistoryResponse,
-  RawMultiMarketResponse,
-  RawSale,
-  Sale,
-} from './types.ts'
+import type { Listing, MarketData, Sale } from './types.ts'
+import type { components } from './universalis.swagger.v2.generated.ts'
+
+type ListingView =
+  components['schemas']['Universalis.Application.Views.V1.ListingView']
+type MinimizedSaleView =
+  components['schemas']['Universalis.Application.Views.V1.MinimizedSaleView']
+type CurrentlyShownView =
+  components['schemas']['Universalis.Application.Views.V1.CurrentlyShownView']
+type CurrentlyShownMultiViewV2 =
+  components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
+type HistoryView =
+  components['schemas']['Universalis.Application.Views.V1.HistoryView']
+type HistoryMultiViewV2 =
+  components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
 
 const BASE_URL = 'https://universalis.app/api/v2'
 const DEFAULT_MAX_RETRIES = 3
@@ -169,12 +173,12 @@ async function fetchWithRetry(
 }
 
 function hasItemsMap(value: unknown): value is {
-  items?: Record<string, RawMarketResponse | RawHistoryResponse> | null
+  items?: Record<string, CurrentlyShownView | HistoryView> | null
 } {
   return typeof value === 'object' && value !== null && 'items' in value
 }
 
-export function transformListing(raw: RawListing): Listing {
+export function transformListing(raw: ListingView): Listing {
   return {
     listingId: raw.listingID ?? undefined,
     worldId: raw.worldID ?? undefined,
@@ -189,7 +193,7 @@ export function transformListing(raw: RawListing): Listing {
   }
 }
 
-export function transformSale(raw: RawSale): Sale {
+export function transformSale(raw: MinimizedSaleView): Sale {
   return {
     worldId: raw.worldID ?? undefined,
     worldName: raw.worldName ?? undefined,
@@ -236,7 +240,7 @@ export async function fetchMarketBoard(
   const raw: unknown = await response.json()
 
   if (hasItemsMap(raw)) {
-    const data = raw as RawMultiMarketResponse
+    const data = raw as CurrentlyShownMultiViewV2
     return Object.values(data.items ?? {}).map((item) => ({
       itemId: item.itemID,
       listings: (item.listings ?? []).map(transformListing),
@@ -244,7 +248,7 @@ export async function fetchMarketBoard(
     }))
   }
 
-  const data = raw as RawMarketResponse
+  const data = raw as CurrentlyShownView
   return [
     {
       itemId: data.itemID,
@@ -293,7 +297,7 @@ export async function fetchSaleHistory(
   const raw: unknown = await response.json()
 
   if (hasItemsMap(raw)) {
-    const data = raw as RawMultiHistoryResponse
+    const data = raw as HistoryMultiViewV2
     return Object.values(data.items ?? {}).map((item) => ({
       itemId: item.itemID,
       listings: [],
@@ -301,7 +305,7 @@ export async function fetchSaleHistory(
     }))
   }
 
-  const data = raw as RawHistoryResponse
+  const data = raw as HistoryView
   return [
     {
       itemId: data.itemID,

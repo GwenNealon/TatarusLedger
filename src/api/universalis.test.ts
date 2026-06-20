@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RawListing, RawSale } from './types.ts'
 import {
   RateLimitError,
   UniversalisError,
@@ -9,6 +8,9 @@ import {
   transformSale,
 } from './universalis.ts'
 
+type RawListing = Parameters<typeof transformListing>[0]
+type RawSale = Parameters<typeof transformSale>[0]
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -16,10 +18,14 @@ import {
 const RAW_LISTING: RawListing = {
   listingID: 'abc123',
   hq: true,
+  isCrafted: true,
+  onMannequin: false,
   pricePerUnit: 10_000,
   quantity: 1,
   total: 10_000,
   tax: 500,
+  retainerCity: 1,
+  stainID: 0,
   retainerName: 'Tataru',
   worldID: 73,
   worldName: 'Balmung',
@@ -65,10 +71,14 @@ describe('transformListing', () => {
     const listing = transformListing({
       listingID: 'def456',
       hq: false,
+      isCrafted: true,
+      onMannequin: false,
       pricePerUnit: 5_000,
       quantity: 2,
       total: 10_000,
       tax: 250,
+      retainerCity: 1,
+      stainID: 0,
       retainerName: 'TestRetainer',
       worldID: 74,
       lastReviewTime: 1_700_000_100,
