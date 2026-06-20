@@ -91,6 +91,14 @@ npm run typecheck  # Type check
 npm run test       # Run tests
 ```
 
+### Universalis Spec Workflow
+
+- `npm run api:spec:update` fetches the latest Universalis OpenAPI document, writes a deterministic snapshot to `src/api/universalis.swagger.v2.snapshot.json`, and regenerates `src/api/universalis.swagger.v2.generated.ts`.
+- Snapshot writes are deterministic (stable key ordering plus pretty JSON) to reduce noisy diffs.
+- `npm run api:spec:check` is format-insensitive for the snapshot: it compares canonicalized JSON structure, not whitespace or line wrapping.
+- CI still enforces that generated types are current by comparing `src/api/universalis.swagger.v2.generated.ts` to a freshly generated temporary output.
+- In short: `npm run api:spec:check` only fails when structure or generated API typings are stale, not because JSON was reformatted.
+
 ---
 
 ## 💡 Usage

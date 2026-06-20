@@ -4,258 +4,6 @@
  */
 
 export interface paths {
-  '/api/v2/data-centers': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Returns all data centers supported by the API. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V3.Game.DataCenter'][]
-            'application/json': components['schemas']['Universalis.Application.Views.V3.Game.DataCenter'][]
-            'text/json': components['schemas']['Universalis.Application.Views.V3.Game.DataCenter'][]
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/worlds': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Returns the IDs and names of all worlds supported by the API. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V3.Game.World'][]
-            'application/json': components['schemas']['Universalis.Application.Views.V3.Game.World'][]
-            'text/json': components['schemas']['Universalis.Application.Views.V3.Game.World'][]
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/aggregated/{worldDcRegion}/{itemIds}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Retrieves aggregated market board data for the given items.
-     *     Up to 100 item IDs can be comma-separated in order to retrieve data for multiple items at once.
-     *     AverageSalePrice and DailySaleVelocity are calculated based on sales of the last 4 days.
-     *     This API uses only cached values and is therefore strongly preferred over CurrentlyShown if individual sales/listings are not required.
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: {
-          'User-Agent'?: string
-          'CF-Connecting-IP'?: string
-        }
-        path: {
-          /** @description The item ID or comma-separated item IDs to retrieve data for. */
-          itemIds: string
-          /** @description The world, data center, or region to retrieve data for. This may be an ID or a name. Regions should be specified as Japan, Europe, North-America, Oceania, China, or 中国. */
-          worldDcRegion: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Data retrieved successfully. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData']
-            'application/json': components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData']
-            'text/json': components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData']
-          }
-        }
-        /** @description The parameters were invalid. */
-        400: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-          }
-        }
-        /**
-         * @description The world/DC or item requested is invalid. When requesting multiple items at once, an invalid item ID
-         *     will not trigger this. Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
-         */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/extra/content/{contentId}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Returns the content object associated with the provided content ID. Please note that this endpoint is largely untested,
-     *     and may return inconsistent data at times.
-     */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the content object to retrieve. */
-          contentId: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.ContentView']
-            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.ContentView']
-            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.ContentView']
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/extra/stats/least-recently-updated': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Get the least-recently updated items on the specified world or data center, along with the upload times for each item. */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The world to request data for. */
-          world?: string
-          /** @description The data center to request data for. */
-          dcName?: string
-          /** @description The number of entries to return (default 50, max 200). */
-          entries?: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
-            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
-            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
-          }
-        }
-        /** @description The world/DC requested is invalid. */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/api/v2/{worldDcRegion}/{itemIds}': {
     parameters: {
       query?: never
@@ -309,9 +57,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
             'application/json': components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
             'text/json': components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
+            'text/plain': components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
           }
         }
         /** @description The parameters were invalid. */
@@ -330,9 +78,446 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
             'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
             'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/aggregated/{worldDcRegion}/{itemIds}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Retrieves aggregated market board data for the given items.
+     *     Up to 100 item IDs can be comma-separated in order to retrieve data for multiple items at once.
+     *     AverageSalePrice and DailySaleVelocity are calculated based on sales of the last 4 days.
+     *     This API uses only cached values and is therefore strongly preferred over CurrentlyShown if individual sales/listings are not required.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: {
+          'User-Agent'?: string
+          'CF-Connecting-IP'?: string
+        }
+        path: {
+          /** @description The item ID or comma-separated item IDs to retrieve data for. */
+          itemIds: string
+          /** @description The world, data center, or region to retrieve data for. This may be an ID or a name. Regions should be specified as Japan, Europe, North-America, Oceania, China, or 中国. */
+          worldDcRegion: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Data retrieved successfully. */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData']
+            'text/json': components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData']
+            'text/plain': components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData']
+          }
+        }
+        /** @description The parameters were invalid. */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+        /**
+         * @description The world/DC or item requested is invalid. When requesting multiple items at once, an invalid item ID
+         *     will not trigger this. Instead, the returned list of unresolved item IDs will contain the invalid item ID or IDs.
+         */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/data-centers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Returns all data centers supported by the API. */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V3.Game.DataCenter'][]
+            'text/json': components['schemas']['Universalis.Application.Views.V3.Game.DataCenter'][]
+            'text/plain': components['schemas']['Universalis.Application.Views.V3.Game.DataCenter'][]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/content/{contentId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Returns the content object associated with the provided content ID. Please note that this endpoint is largely untested,
+     *     and may return inconsistent data at times.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description The ID of the content object to retrieve. */
+          contentId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.ContentView']
+            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.ContentView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.ContentView']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/stats/least-recently-updated': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get the least-recently updated items on the specified world or data center, along with the upload times for each item. */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The world to request data for. */
+          world?: string
+          /** @description The data center to request data for. */
+          dcName?: string
+          /** @description The number of entries to return (default 50, max 200). */
+          entries?: string
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
+            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
+          }
+        }
+        /** @description The world/DC requested is invalid. */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/stats/most-recently-updated': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get the most-recently updated items on the specified world or data center, along with the upload times for each item. */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The world to request data for. */
+          world?: string
+          /** @description The data center to request data for. */
+          dcName?: string
+          /** @description The number of entries to return (default 50, max 200). */
+          entries?: string
+        }
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
+            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
+          }
+        }
+        /** @description The world/DC requested is invalid. */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/stats/recently-updated': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Returns a list of some of the most recently updated items on the website. This endpoint
+     *     is a legacy endpoint and does not include any data on which worlds or data centers the updates happened on.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.RecentlyUpdatedItemsView']
+            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.RecentlyUpdatedItemsView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.RecentlyUpdatedItemsView']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/stats/upload-history': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Returns the number of uploads per day over the past 30 days. */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.UploadCountHistoryView']
+            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.UploadCountHistoryView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.UploadCountHistoryView']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/stats/uploader-upload-counts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Returns the total upload counts for each client application that uploads data to Universalis. */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.SourceUploadCountView'][]
+            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.SourceUploadCountView'][]
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.SourceUploadCountView'][]
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/extra/stats/world-upload-counts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Returns the world upload counts and proportions of the total uploads for each world. */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': {
+              [
+                key: string
+              ]: components['schemas']['Universalis.Application.Views.V1.Extra.Stats.WorldUploadCountView']
+            }
+            'text/json': {
+              [
+                key: string
+              ]: components['schemas']['Universalis.Application.Views.V1.Extra.Stats.WorldUploadCountView']
+            }
+            'text/plain': {
+              [
+                key: string
+              ]: components['schemas']['Universalis.Application.Views.V1.Extra.Stats.WorldUploadCountView']
+            }
           }
         }
       }
@@ -392,9 +577,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
             'application/json': components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
             'text/json': components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
+            'text/plain': components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
           }
         }
         /**
@@ -406,9 +591,99 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
             'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
             'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/lists/{listId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Retrieves a user list. */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description The ID of the list to retrieve. */
+          listId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Data retrieved successfully. */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Universalis.Application.Views.V2.UserListView']
+            'text/json': components['schemas']['Universalis.Application.Views.V2.UserListView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V2.UserListView']
+          }
+        }
+        /** @description The list requested does not exist. */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v2/marketable': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Returns the set of marketable item IDs. */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description Success */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': number[]
+            'text/json': number[]
+            'text/plain': number[]
           }
         }
       }
@@ -449,9 +724,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.TaxRatesView']
             'application/json': components['schemas']['Universalis.Application.Views.V1.TaxRatesView']
             'text/json': components['schemas']['Universalis.Application.Views.V1.TaxRatesView']
+            'text/plain': components['schemas']['Universalis.Application.Views.V1.TaxRatesView']
           }
         }
         /** @description The world requested is invalid. */
@@ -460,103 +735,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
             'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
             'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/marketable': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Returns the set of marketable item IDs. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': number[]
-            'application/json': number[]
-            'text/json': number[]
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/extra/stats/most-recently-updated': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Get the most-recently updated items on the specified world or data center, along with the upload times for each item. */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The world to request data for. */
-          world?: string
-          /** @description The data center to request data for. */
-          dcName?: string
-          /** @description The number of entries to return (default 50, max 200). */
-          entries?: string
-        }
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
-            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
-            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView']
-          }
-        }
-        /** @description The world/DC requested is invalid. */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
             'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
           }
         }
       }
@@ -569,17 +750,14 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/api/v2/extra/stats/recently-updated': {
+  '/api/v2/worlds': {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    /**
-     * Returns a list of some of the most recently updated items on the website. This endpoint
-     *     is a legacy endpoint and does not include any data on which worlds or data centers the updates happened on.
-     */
+    /** Returns the IDs and names of all worlds supported by the API. */
     get: {
       parameters: {
         query?: never
@@ -595,256 +773,10 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.RecentlyUpdatedItemsView']
-            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.RecentlyUpdatedItemsView']
-            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.RecentlyUpdatedItemsView']
+            'application/json': components['schemas']['Universalis.Application.Views.V3.Game.World'][]
+            'text/json': components['schemas']['Universalis.Application.Views.V3.Game.World'][]
+            'text/plain': components['schemas']['Universalis.Application.Views.V3.Game.World'][]
           }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/extra/stats/uploader-upload-counts': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Returns the total upload counts for each client application that uploads data to Universalis. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.SourceUploadCountView'][]
-            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.SourceUploadCountView'][]
-            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.SourceUploadCountView'][]
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/extra/stats/world-upload-counts': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Returns the world upload counts and proportions of the total uploads for each world. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': {
-              [
-                key: string
-              ]: components['schemas']['Universalis.Application.Views.V1.Extra.Stats.WorldUploadCountView']
-            }
-            'application/json': {
-              [
-                key: string
-              ]: components['schemas']['Universalis.Application.Views.V1.Extra.Stats.WorldUploadCountView']
-            }
-            'text/json': {
-              [
-                key: string
-              ]: components['schemas']['Universalis.Application.Views.V1.Extra.Stats.WorldUploadCountView']
-            }
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/extra/stats/upload-history': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Returns the number of uploads per day over the past 30 days. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.UploadCountHistoryView']
-            'application/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.UploadCountHistoryView']
-            'text/json': components['schemas']['Universalis.Application.Views.V1.Extra.Stats.UploadCountHistoryView']
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/lists/{listId}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Retrieves a user list. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path: {
-          /** @description The ID of the list to retrieve. */
-          listId: string
-        }
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Data retrieved successfully. */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Universalis.Application.Views.V2.UserListView']
-            'application/json': components['schemas']['Universalis.Application.Views.V2.UserListView']
-            'text/json': components['schemas']['Universalis.Application.Views.V2.UserListView']
-          }
-        }
-        /** @description The list requested does not exist. */
-        404: {
-          headers: {
-            [name: string]: unknown
-          }
-          content: {
-            'text/plain': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'application/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-            'text/json': components['schemas']['Microsoft.AspNetCore.Mvc.ProblemDetails']
-          }
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/ws': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Connect to the WebSocket endpoint of the API. Requires a valid WebSocket client. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
-        }
-      }
-    }
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/v2/ws-dev': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Connect to the WebSocket dev endpoint of the API. Requires a valid WebSocket client. */
-    get: {
-      parameters: {
-        query?: never
-        header?: never
-        path?: never
-        cookie?: never
-      }
-      requestBody?: never
-      responses: {
-        /** @description Success */
-        200: {
-          headers: {
-            [name: string]: unknown
-          }
-          content?: never
         }
       }
     }
@@ -861,26 +793,62 @@ export type webhooks = Record<string, never>
 export interface components {
   schemas: {
     'Microsoft.AspNetCore.Mvc.ProblemDetails': {
-      type?: string | null
-      title?: string | null
-      /** Format: int32 */
-      status?: number | null
       detail?: string | null
       instance?: string | null
+      /** Format: int32 */
+      status?: number | null
+      title?: string | null
+      type?: string | null
     } & {
       [key: string]: unknown
     }
     'Universalis.Application.Views.V1.CurrentlyShownView': {
       /**
+       * Format: float
+       * @description The average sale price.
+       */
+      averagePrice: number
+      /**
+       * Format: float
+       * @description The average HQ sale price.
+       */
+      averagePriceHQ: number
+      /**
+       * Format: float
+       * @description The average NQ sale price.
+       */
+      averagePriceNQ: number
+      /**
+       * Format: float
+       * @description The average listing price.
+       */
+      currentAveragePrice: number
+      /**
+       * Format: float
+       * @description The average HQ listing price.
+       */
+      currentAveragePriceHQ: number
+      /**
+       * Format: float
+       * @description The average NQ listing price.
+       */
+      currentAveragePriceNQ: number
+      /** @description The DC name, if applicable. */
+      dcName?: string | null
+      /** @description Whether this item has ever been updated. Useful for newly-released items. */
+      readonly hasData: boolean
+      /**
+       * Format: float
+       * @description The average number of HQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       *     This number will tend to be the same for every item, because the number of shown sales is the same and over the same period.
+       *     This statistic is more useful in historical queries.
+       */
+      hqSaleVelocity: number
+      /**
        * Format: int32
        * @description The item ID.
        */
       itemID: number
-      /**
-       * Format: int32
-       * @description The world ID, if applicable.
-       */
-      worldID?: number | null
       /**
        * Format: int64
        * @description The last upload time for this endpoint, in milliseconds since the UNIX epoch.
@@ -890,113 +858,6 @@ export interface components {
       listings?:
         | components['schemas']['Universalis.Application.Views.V1.ListingView'][]
         | null
-      /** @description The currently-shown sales. */
-      recentHistory?:
-        | components['schemas']['Universalis.Application.Views.V1.SaleView'][]
-        | null
-      /** @description The DC name, if applicable. */
-      dcName?: string | null
-      /** @description The region name, if applicable. */
-      regionName?: string | null
-      /**
-       * Format: float
-       * @description The average listing price.
-       */
-      currentAveragePrice: number
-      /**
-       * Format: float
-       * @description The average NQ listing price.
-       */
-      currentAveragePriceNQ: number
-      /**
-       * Format: float
-       * @description The average HQ listing price.
-       */
-      currentAveragePriceHQ: number
-      /**
-       * Format: float
-       * @description The average number of sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
-       *     This number will tend to be the same for every item, because the number of shown sales is the same and over the same period.
-       *     This statistic is more useful in historical queries.
-       */
-      regularSaleVelocity: number
-      /**
-       * Format: float
-       * @description The average number of NQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
-       *     This number will tend to be the same for every item, because the number of shown sales is the same and over the same period.
-       *     This statistic is more useful in historical queries.
-       */
-      nqSaleVelocity: number
-      /**
-       * Format: float
-       * @description The average number of HQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
-       *     This number will tend to be the same for every item, because the number of shown sales is the same and over the same period.
-       *     This statistic is more useful in historical queries.
-       */
-      hqSaleVelocity: number
-      /**
-       * Format: float
-       * @description The average sale price.
-       */
-      averagePrice: number
-      /**
-       * Format: float
-       * @description The average NQ sale price.
-       */
-      averagePriceNQ: number
-      /**
-       * Format: float
-       * @description The average HQ sale price.
-       */
-      averagePriceHQ: number
-      /**
-       * Format: int32
-       * @description The minimum listing price.
-       */
-      minPrice: number
-      /**
-       * Format: int32
-       * @description The minimum NQ listing price.
-       */
-      minPriceNQ: number
-      /**
-       * Format: int32
-       * @description The minimum HQ listing price.
-       */
-      minPriceHQ: number
-      /**
-       * Format: int32
-       * @description The maximum listing price.
-       */
-      maxPrice: number
-      /**
-       * Format: int32
-       * @description The maximum NQ listing price.
-       */
-      maxPriceNQ: number
-      /**
-       * Format: int32
-       * @description The maximum HQ listing price.
-       */
-      maxPriceHQ: number
-      /** @description A map of quantities to listing counts, representing the number of listings of each quantity. */
-      stackSizeHistogram?: {
-        [key: string]: number
-      } | null
-      /** @description A map of quantities to NQ listing counts, representing the number of listings of each quantity. */
-      stackSizeHistogramNQ?: {
-        [key: string]: number
-      } | null
-      /** @description A map of quantities to HQ listing counts, representing the number of listings of each quantity. */
-      stackSizeHistogramHQ?: {
-        [key: string]: number
-      } | null
-      /** @description The world name, if applicable. */
-      worldName?: string | null
-      /** @description The last upload times in milliseconds since epoch for each world in the response, if this is a DC request. */
-      worldUploadTimes?: {
-        [key: string]: number | null
-      } | null
       /**
        * Format: int32
        * @description The number of listings retrieved for the request. When using the "listings" limit parameter, this may be
@@ -1005,10 +866,72 @@ export interface components {
       listingsCount: number
       /**
        * Format: int32
+       * @description The maximum listing price.
+       */
+      maxPrice: number
+      /**
+       * Format: int32
+       * @description The maximum HQ listing price.
+       */
+      maxPriceHQ: number
+      /**
+       * Format: int32
+       * @description The maximum NQ listing price.
+       */
+      maxPriceNQ: number
+      /**
+       * Format: int32
+       * @description The minimum listing price.
+       */
+      minPrice: number
+      /**
+       * Format: int32
+       * @description The minimum HQ listing price.
+       */
+      minPriceHQ: number
+      /**
+       * Format: int32
+       * @description The minimum NQ listing price.
+       */
+      minPriceNQ: number
+      /**
+       * Format: float
+       * @description The average number of NQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       *     This number will tend to be the same for every item, because the number of shown sales is the same and over the same period.
+       *     This statistic is more useful in historical queries.
+       */
+      nqSaleVelocity: number
+      /** @description The currently-shown sales. */
+      recentHistory?:
+        | components['schemas']['Universalis.Application.Views.V1.SaleView'][]
+        | null
+      /**
+       * Format: int32
        * @description The number of sale entries retrieved for the request. When using the "entries" limit parameter, this may be
        *     different from the number of sale entries returned in an API response.
        */
       recentHistoryCount: number
+      /** @description The region name, if applicable. */
+      regionName?: string | null
+      /**
+       * Format: float
+       * @description The average number of sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       *     This number will tend to be the same for every item, because the number of shown sales is the same and over the same period.
+       *     This statistic is more useful in historical queries.
+       */
+      regularSaleVelocity: number
+      /** @description A map of quantities to listing counts, representing the number of listings of each quantity. */
+      stackSizeHistogram?: {
+        [key: string]: number
+      } | null
+      /** @description A map of quantities to HQ listing counts, representing the number of listings of each quantity. */
+      stackSizeHistogramHQ?: {
+        [key: string]: number
+      } | null
+      /** @description A map of quantities to NQ listing counts, representing the number of listings of each quantity. */
+      stackSizeHistogramNQ?: {
+        [key: string]: number
+      } | null
       /**
        * Format: int32
        * @description The number of items (not listings) up for sale.
@@ -1019,16 +942,25 @@ export interface components {
        * @description The number of items (not sale entries) sold over the retrieved sales.
        */
       unitsSold: number
-      /** @description Whether this item has ever been updated. Useful for newly-released items. */
-      readonly hasData: boolean
+      /**
+       * Format: int32
+       * @description The world ID, if applicable.
+       */
+      worldID?: number | null
+      /** @description The world name, if applicable. */
+      worldName?: string | null
+      /** @description The last upload times in milliseconds since epoch for each world in the response, if this is a DC request. */
+      worldUploadTimes?: {
+        [key: string]: number | null
+      } | null
     }
     'Universalis.Application.Views.V1.Extra.ContentView': {
+      /** @description The character name associated with this character object, if this is one. */
+      characterName?: string | null
       /** @description The content ID of the object. */
       contentID?: string | null
       /** @description The content type of this object. */
       contentType?: string | null
-      /** @description The character name associated with this character object, if this is one. */
-      characterName?: string | null
     }
     'Universalis.Application.Views.V1.Extra.Stats.MostRecentlyUpdatedItemsView': {
       /** @description A list of item upload information in timestamp-descending order. */
@@ -1085,65 +1017,81 @@ export interface components {
       proportion: number
     }
     'Universalis.Application.Views.V1.HistoryView': {
+      /** @description The DC name, if applicable. */
+      dcName?: string | null
+      /** @description The historical sales. */
+      entries?:
+        | components['schemas']['Universalis.Application.Views.V1.MinimizedSaleView'][]
+        | null
+      /**
+       * Format: float
+       * @description The average number of HQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       */
+      hqSaleVelocity: number
       /**
        * Format: int32
        * @description The item ID.
        */
       itemID: number
       /**
-       * Format: int32
-       * @description The world ID, if applicable.
-       */
-      worldID?: number | null
-      /**
        * Format: int64
        * @description The last upload time for this endpoint, in milliseconds since the UNIX epoch.
        */
       lastUploadTime: number
-      /** @description The historical sales. */
-      entries?:
-        | components['schemas']['Universalis.Application.Views.V1.MinimizedSaleView'][]
-        | null
-      /** @description The DC name, if applicable. */
-      dcName?: string | null
+      /**
+       * Format: float
+       * @description The average number of NQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       */
+      nqSaleVelocity: number
       /** @description The region name, if applicable. */
       regionName?: string | null
+      /**
+       * Format: float
+       * @description The average number of sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       */
+      regularSaleVelocity: number
       /** @description A map of quantities to sale counts, representing the number of sales of each quantity. */
       stackSizeHistogram?: {
-        [key: string]: number
-      } | null
-      /** @description A map of quantities to NQ sale counts, representing the number of sales of each quantity. */
-      stackSizeHistogramNQ?: {
         [key: string]: number
       } | null
       /** @description A map of quantities to HQ sale counts, representing the number of sales of each quantity. */
       stackSizeHistogramHQ?: {
         [key: string]: number
       } | null
+      /** @description A map of quantities to NQ sale counts, representing the number of sales of each quantity. */
+      stackSizeHistogramNQ?: {
+        [key: string]: number
+      } | null
       /**
-       * Format: float
-       * @description The average number of sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
+       * Format: int32
+       * @description The world ID, if applicable.
        */
-      regularSaleVelocity: number
-      /**
-       * Format: float
-       * @description The average number of NQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
-       */
-      nqSaleVelocity: number
-      /**
-       * Format: float
-       * @description The average number of HQ sales per day, over the past seven days (or the entirety of the shown sales, whichever comes first).
-       */
-      hqSaleVelocity: number
+      worldID?: number | null
       /** @description The world name, if applicable. */
       worldName?: string | null
     }
     'Universalis.Application.Views.V1.ListingView': {
+      /** @description A SHA256 hash of the creator's ID. */
+      creatorID?: string | null
+      /** @description The creator's character name. */
+      creatorName?: string | null
+      /** @description Whether or not the item is high-quality. */
+      hq: boolean
+      /** @description Whether or not the item is crafted. */
+      isCrafted: boolean
       /**
        * Format: int64
        * @description The time that this listing was posted, in seconds since the UNIX epoch.
        */
       lastReviewTime: number
+      /** @description The ID of this listing. */
+      listingID?: string | null
+      /** @description The materia on this item. */
+      materia?:
+        | components['schemas']['Universalis.Application.Views.V1.MateriaView'][]
+        | null
+      /** @description Whether or not the item is being sold on a mannequin. */
+      onMannequin: boolean
       /**
        * Format: int32
        * @description The price per unit sold.
@@ -1154,34 +1102,6 @@ export interface components {
        * @description The stack size sold.
        */
       quantity: number
-      /**
-       * Format: int32
-       * @description The ID of the dye on this item.
-       */
-      stainID: number
-      /** @description The world name, if applicable. */
-      worldName?: string | null
-      /**
-       * Format: int32
-       * @description The world ID, if applicable.
-       */
-      worldID?: number | null
-      /** @description The creator's character name. */
-      creatorName?: string | null
-      /** @description A SHA256 hash of the creator's ID. */
-      creatorID?: string | null
-      /** @description Whether or not the item is high-quality. */
-      hq: boolean
-      /** @description Whether or not the item is crafted. */
-      isCrafted: boolean
-      /** @description The ID of this listing. */
-      listingID?: string | null
-      /** @description The materia on this item. */
-      materia?:
-        | components['schemas']['Universalis.Application.Views.V1.MateriaView'][]
-        | null
-      /** @description Whether or not the item is being sold on a mannequin. */
-      onMannequin: boolean
       /**
        * Format: int32
        * @description The city ID of the retainer. This is a game ID; all possible values can be seen at
@@ -1204,108 +1124,115 @@ export interface components {
       sellerID?: string | null
       /**
        * Format: int32
-       * @description The total price.
+       * @description The ID of the dye on this item.
        */
-      total: number
+      stainID: number
       /**
        * Format: int32
        * @description The Gil sales tax (GST) to be added to the total price during purchase.
        */
       tax: number
-    }
-    'Universalis.Application.Views.V1.MateriaView': {
-      /**
-       * Format: int32
-       * @description The materia slot.
-       */
-      slotID: number
-      /**
-       * Format: int32
-       * @description The materia item ID.
-       */
-      materiaID: number
-    }
-    'Universalis.Application.Views.V1.MinimizedSaleView': {
-      /** @description Whether or not the item was high-quality. */
-      hq: boolean
-      /**
-       * Format: int32
-       * @description The price per unit sold.
-       */
-      pricePerUnit: number
-      /**
-       * Format: int32
-       * @description The stack size sold.
-       */
-      quantity: number
-      /** @description The buyer's character name. This may be null. */
-      buyerName?: string | null
-      /** @description Whether or not this was purchased from a mannequin. This may be null. */
-      onMannequin?: boolean | null
-      /**
-       * Format: int64
-       * @description The sale time, in seconds since the UNIX epoch.
-       */
-      timestamp: number
-      /** @description The world name, if applicable. */
-      worldName?: string | null
-      /**
-       * Format: int32
-       * @description The world ID, if applicable.
-       */
-      worldID?: number | null
-    }
-    'Universalis.Application.Views.V1.SaleView': {
-      /** @description Whether or not the item was high-quality. */
-      hq: boolean
-      /**
-       * Format: int32
-       * @description The price per unit sold.
-       */
-      pricePerUnit: number
-      /**
-       * Format: int32
-       * @description The stack size sold.
-       */
-      quantity: number
-      /**
-       * Format: int64
-       * @description The sale time, in seconds since the UNIX epoch.
-       */
-      timestamp: number
-      /** @description Whether or not this was purchased from a mannequin. This may be null. */
-      onMannequin?: boolean | null
-      /** @description The world name, if applicable. */
-      worldName?: string | null
-      /**
-       * Format: int32
-       * @description The world ID, if applicable.
-       */
-      worldID?: number | null
-      /** @description The buyer name. */
-      buyerName?: string | null
       /**
        * Format: int32
        * @description The total price.
        */
       total: number
+      /**
+       * Format: int32
+       * @description The world ID, if applicable.
+       */
+      worldID?: number | null
+      /** @description The world name, if applicable. */
+      worldName?: string | null
+    }
+    'Universalis.Application.Views.V1.MateriaView': {
+      /**
+       * Format: int32
+       * @description The materia item ID.
+       */
+      materiaID: number
+      /**
+       * Format: int32
+       * @description The materia slot.
+       */
+      slotID: number
+    }
+    'Universalis.Application.Views.V1.MinimizedSaleView': {
+      /** @description The buyer's character name. This may be null. */
+      buyerName?: string | null
+      /** @description Whether or not the item was high-quality. */
+      hq: boolean
+      /** @description Whether or not this was purchased from a mannequin. This may be null. */
+      onMannequin?: boolean | null
+      /**
+       * Format: int32
+       * @description The price per unit sold.
+       */
+      pricePerUnit: number
+      /**
+       * Format: int32
+       * @description The stack size sold.
+       */
+      quantity: number
+      /**
+       * Format: int64
+       * @description The sale time, in seconds since the UNIX epoch.
+       */
+      timestamp: number
+      /**
+       * Format: int32
+       * @description The world ID, if applicable.
+       */
+      worldID?: number | null
+      /** @description The world name, if applicable. */
+      worldName?: string | null
+    }
+    'Universalis.Application.Views.V1.SaleView': {
+      /** @description The buyer name. */
+      buyerName?: string | null
+      /** @description Whether or not the item was high-quality. */
+      hq: boolean
+      /** @description Whether or not this was purchased from a mannequin. This may be null. */
+      onMannequin?: boolean | null
+      /**
+       * Format: int32
+       * @description The price per unit sold.
+       */
+      pricePerUnit: number
+      /**
+       * Format: int32
+       * @description The stack size sold.
+       */
+      quantity: number
+      /**
+       * Format: int64
+       * @description The sale time, in seconds since the UNIX epoch.
+       */
+      timestamp: number
+      /**
+       * Format: int32
+       * @description The total price.
+       */
+      total: number
+      /**
+       * Format: int32
+       * @description The world ID, if applicable.
+       */
+      worldID?: number | null
+      /** @description The world name, if applicable. */
+      worldName?: string | null
     }
     'Universalis.Application.Views.V1.TaxRatesView': {
       /**
        * Format: int32
-       * @description The percent retainer tax in Limsa Lominsa.
+       * @description The percent retainer tax in the Crystarium.
        */
-      'Limsa Lominsa': number
+      Crystarium: number
       /**
        * Format: int32
        * @description The percent retainer tax in Gridania.
        */
       Gridania: number
-      /**
-       * Format: int32
-       * @description The percent retainer tax in Ul'dah.
-       */
-      "Ul'dah": number
       /**
        * Format: int32
        * @description The percent retainer tax in Ishgard.
@@ -1318,9 +1245,9 @@ export interface components {
       Kugane: number
       /**
        * Format: int32
-       * @description The percent retainer tax in the Crystarium.
+       * @description The percent retainer tax in Limsa Lominsa.
        */
-      Crystarium: number
+      'Limsa Lominsa': number
       /**
        * Format: int32
        * @description The percent retainer tax in Old Sharlayan.
@@ -1331,51 +1258,56 @@ export interface components {
        * @description The percent retainer tax in Tuliyollal.
        */
       Tuliyollal: number
+      /**
+       * Format: int32
+       * @description The percent retainer tax in Ul'dah.
+       */
+      "Ul'dah": number
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData': {
+      failedItems?: number[] | null
       results?:
         | components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.Result'][]
         | null
-      failedItems?: number[] | null
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.AggregatedResult': {
-      minListing: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing']
-      medianListing: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing']
-      recentPurchase: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase']
       averageSalePrice: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice']
       dailySaleVelocity: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity']
+      medianListing: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing']
+      minListing: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing']
+      recentPurchase: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase']
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice': {
-      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice.Entry']
       dc: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice.Entry']
       region: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice.Entry']
+      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice.Entry']
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.AverageSalePrice.Entry': {
       /** Format: double */
       price: number
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity': {
-      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity.Entry']
       dc: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity.Entry']
       region: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity.Entry']
+      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity.Entry']
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.DailySaleVelocity.Entry': {
       /** Format: double */
       quantity: number
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing': {
-      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing.Entry']
       dc: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing.Entry']
       region: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing.Entry']
+      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing.Entry']
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.MedianListing.Entry': {
       /** Format: int32 */
       price: number
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing': {
-      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing.Entry']
       dc: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing.Entry']
       region: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing.Entry']
+      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing.Entry']
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.MinListing.Entry': {
       /** Format: int32 */
@@ -1384,9 +1316,9 @@ export interface components {
       worldId?: number | null
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase': {
-      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase.Entry']
       dc: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase.Entry']
       region: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase.Entry']
+      world: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase.Entry']
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.RecentPurchase.Entry': {
       /** Format: int32 */
@@ -1397,21 +1329,23 @@ export interface components {
       worldId?: number | null
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.Result': {
+      hq: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AggregatedResult']
       /** Format: int32 */
       itemId: number
       nq: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AggregatedResult']
-      hq: components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.AggregatedResult']
       worldUploadTimes?:
         | components['schemas']['Universalis.Application.Views.V2.AggregatedMarketBoardData.WorldUploadTime'][]
         | null
     }
     'Universalis.Application.Views.V2.AggregatedMarketBoardData.WorldUploadTime': {
-      /** Format: int32 */
-      worldId: number
       /** Format: int64 */
       timestamp: number
+      /** Format: int32 */
+      worldId: number
     }
     'Universalis.Application.Views.V2.CurrentlyShownMultiViewV2': {
+      /** @description The name of the DC requested, if applicable. */
+      dcName?: string | null
       /** @description The item IDs that were requested. */
       itemIDs?: number[] | null
       /** @description The item data that was requested, keyed on the item ID. */
@@ -1420,21 +1354,21 @@ export interface components {
           key: string
         ]: components['schemas']['Universalis.Application.Views.V1.CurrentlyShownView']
       } | null
+      /** @description The name of the region requested, if applicable. */
+      regionName?: string | null
+      /** @description A list of IDs that could not be resolved to any item data. */
+      unresolvedItems?: number[] | null
       /**
        * Format: int32
        * @description The ID of the world requested, if applicable.
        */
       worldID?: number | null
-      /** @description The name of the DC requested, if applicable. */
-      dcName?: string | null
-      /** @description The name of the region requested, if applicable. */
-      regionName?: string | null
-      /** @description A list of IDs that could not be resolved to any item data. */
-      unresolvedItems?: number[] | null
       /** @description The name of the world requested, if applicable. */
       worldName?: string | null
     }
     'Universalis.Application.Views.V2.HistoryMultiViewV2': {
+      /** @description The name of the DC requested, if applicable. */
+      dcName?: string | null
       /** @description The item IDs that were requested. */
       itemIDs?: number[] | null
       /** @description The item data that was requested, keyed on the item ID. */
@@ -1443,31 +1377,29 @@ export interface components {
           key: string
         ]: components['schemas']['Universalis.Application.Views.V1.HistoryView']
       } | null
+      /** @description The name of the region requested, if applicable. */
+      regionName?: string | null
+      /** @description A list of IDs that could not be resolved to any item data. */
+      unresolvedItems?: number[] | null
       /**
        * Format: int32
        * @description The ID of the world requested, if applicable.
        */
       worldID?: number | null
-      /** @description The name of the DC requested, if applicable. */
-      dcName?: string | null
-      /** @description The name of the region requested, if applicable. */
-      regionName?: string | null
-      /** @description A list of IDs that could not be resolved to any item data. */
-      unresolvedItems?: number[] | null
       /** @description The name of the world requested, if applicable. */
       worldName?: string | null
     }
     'Universalis.Application.Views.V2.UserListView': {
-      /** @description The list's ID. */
-      id?: string | null
       /** @description The time that this list was created, in milliseconds since the UNIX epoch. */
       created?: string | null
-      /** @description The time that this list was updated, in milliseconds since the UNIX epoch. */
-      updated?: string | null
-      /** @description The name of this list. */
-      name?: string | null
+      /** @description The list's ID. */
+      id?: string | null
       /** @description The IDs of the list items. */
       itemIDs?: number[] | null
+      /** @description The name of this list. */
+      name?: string | null
+      /** @description The time that this list was updated, in milliseconds since the UNIX epoch. */
+      updated?: string | null
     }
     'Universalis.Application.Views.V3.Game.DataCenter': {
       name?: string | null
