@@ -49,10 +49,6 @@ const spinningIconStyles: CSSProperties = {
   animation: 'spin 1s linear infinite',
 }
 
-function getCacheKey(itemId: number): string {
-  return `item-cache-${itemId.toString()}`
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -60,7 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function readCache(itemId: number): ItemCacheEntry | null {
   let raw: string | null
   try {
-    raw = window.localStorage.getItem(getCacheKey(itemId))
+    raw = window.localStorage.getItem(`item-cache-${itemId.toString()}`)
   } catch {
     return null
   }
@@ -119,7 +115,7 @@ function readCache(itemId: number): ItemCacheEntry | null {
 function writeCache(entry: ItemCacheEntry): void {
   try {
     window.localStorage.setItem(
-      getCacheKey(entry.item.id),
+      `item-cache-${entry.item.id.toString()}`,
       JSON.stringify(entry),
     )
   } catch {
@@ -129,30 +125,6 @@ function writeCache(entry: ItemCacheEntry): void {
 
 function isFresh(entry: ItemCacheEntry): boolean {
   return Date.now() - entry.fetchedAt <= ITEM_CACHE_TTL_MS
-}
-
-function getResourceLinks(
-  item: NormalizedItem,
-): { label: string; href: string }[] {
-  const encodedName = encodeURIComponent(item.name)
-  return [
-    {
-      label: 'Universalis',
-      href: `https://universalis.app/market/${item.id.toString()}`,
-    },
-    {
-      label: 'Saddlebag Exchange',
-      href: `https://saddlebagexchange.com/queries/item-data/${item.id.toString()}`,
-    },
-    {
-      label: 'Teamcraft',
-      href: `https://ffxivteamcraft.com/db/en/item/${item.id.toString()}/${encodedName}`,
-    },
-    {
-      label: 'Garland Tools',
-      href: `https://www.garlandtools.org/db/#item/${item.id.toString()}`,
-    },
-  ]
 }
 
 async function refreshItem(item: NormalizedItem): Promise<ItemCacheEntry> {
@@ -317,7 +289,24 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
       </dl>
 
       <nav aria-label="External item resources">
-        {getResourceLinks(item).map((link) => (
+        {[
+          {
+            label: 'Universalis',
+            href: `https://universalis.app/market/${item.id.toString()}`,
+          },
+          {
+            label: 'Saddlebag Exchange',
+            href: `https://saddlebagexchange.com/queries/item-data/${item.id.toString()}`,
+          },
+          {
+            label: 'Teamcraft',
+            href: `https://ffxivteamcraft.com/db/en/item/${item.id.toString()}/${encodeURIComponent(item.name)}`,
+          },
+          {
+            label: 'Garland Tools',
+            href: `https://www.garlandtools.org/db/#item/${item.id.toString()}`,
+          },
+        ].map((link) => (
           <a
             key={link.label}
             href={link.href}
