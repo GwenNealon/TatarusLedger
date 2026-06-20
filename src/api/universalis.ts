@@ -178,13 +178,23 @@ async function fetchWithRetry(
 function hasItemsMap(value: unknown): value is {
   items?: Record<string, CurrentlyShownView | HistoryView> | null
 } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'items' in value &&
-    (value.items == null ||
-      (typeof value.items === 'object' && !Array.isArray(value.items)))
-  )
+  if (typeof value !== 'object' || value === null) return false
+
+  // Single-item payloads always include itemID; multi-item payloads do not.
+  if (
+    'itemID' in value &&
+    typeof (value as { itemID?: unknown }).itemID === 'number'
+  ) {
+    return false
+  }
+
+  if (!('items' in value)) {
+    // Multi-item payloads may omit `items` when no results are returned.
+    return 'itemIDs' in value || 'unresolvedItems' in value
+  }
+
+  const items = (value as { items?: unknown }).items
+  return items == null || (typeof items === 'object' && !Array.isArray(items))
 }
 
 export function transformListing(raw: ListingView): Listing {
