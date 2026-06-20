@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { fetchXivApiItems } from '../src/data/fetchXivApiItems.ts'
+import { fetchXivApiItems } from './fetchXivApiItems.ts'
 import type { NormalizedItem } from '../src/data/types.ts'
 
 interface ItemArtifact {

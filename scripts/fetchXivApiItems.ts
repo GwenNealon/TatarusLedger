@@ -1,4 +1,4 @@
-import type { NormalizedItem } from './types.ts'
+import type { NormalizedItem } from '../src/data/types.ts'
 
 const XIVAPI_BASE = 'https://v2.xivapi.com/api'
 const PAGE_SIZE = 1_000
@@ -12,7 +12,7 @@ interface XivApiItemsPage {
   rows: XivApiItemEntry[]
 }
 
-export interface FetchXivApiItemsOptions {
+interface FetchXivApiItemsOptions {
   fetchInit?: RequestInit
   baseUrl?: string
   pageSize?: number
@@ -118,9 +118,10 @@ export async function fetchXivApiItems(
     }
 
     const nextAfter = pageEntries[pageEntries.length - 1].row_id
-    if (after !== undefined && nextAfter <= after) {
+    if (!Number.isFinite(nextAfter) || nextAfter <= 0 || nextAfter === after) {
       break
     }
+
     after = nextAfter
   }
 
