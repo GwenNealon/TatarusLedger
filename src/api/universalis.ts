@@ -1,3 +1,4 @@
+import pLimit from 'p-limit'
 import type { Listing, MarketData, Sale } from './types.ts'
 import type { components } from './universalis.swagger.v2.generated.ts'
 
@@ -17,7 +18,9 @@ type HistoryMultiViewV2 =
 const BASE_URL = 'https://universalis.app/api/v2'
 const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_BASE_DELAY_MS = 1_000
+const MAX_CONCURRENT_API_REQUESTS = 4
 const USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
+const limitApiRequest = pLimit(MAX_CONCURRENT_API_REQUESTS)
 
 export class UniversalisError extends Error {
   readonly statusCode: number | undefined
@@ -142,7 +145,7 @@ async function fetchWithRetry(
   }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url, requestInit)
+    const response = await limitApiRequest(async () => fetch(url, requestInit))
 
     if (response.status === 429) {
       if (attempt >= maxRetries) {
