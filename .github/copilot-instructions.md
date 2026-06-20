@@ -77,6 +77,14 @@ When preparing or suggesting PR-ready changes, Copilot must treat this as a hard
 3. If any command fails, do **not** present the change as PR-ready. Fix the issue first, then re-run validation.
 4. In PR suggestions, clearly state that validation was run and passed.
 
+### PR Description Maintenance (Required)
+
+When working on a branch that already has an open pull request:
+
+1. Review the existing PR description before or while making changes.
+2. Update the PR description so it accurately reflects the latest scope, implementation details, and validation status.
+3. Ensure the PR description calls out any meaningful behavior changes, follow-up work, or known limitations introduced by the latest commit(s).
+
 ---
 
 ## TypeScript Conventions
