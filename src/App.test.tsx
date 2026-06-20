@@ -92,7 +92,6 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 
 function setupFetchMock(params: {
   marketResponsesByItemId?: Record<number, (Error | Response)[]>
-  patchResponse?: Error | Response
 }): ReturnType<typeof vi.fn> {
   const queueByItemId = new Map<number, (Error | Response)[]>()
 
@@ -135,16 +134,6 @@ function setupFetchMock(params: {
           })),
         }),
       )
-    }
-
-    if (requestUrl.includes('/sheet/GamePatch')) {
-      if (params.patchResponse === undefined) {
-        return Promise.resolve(makeJsonResponse({ rows: [] }))
-      }
-      if (params.patchResponse instanceof Error) {
-        return Promise.reject(params.patchResponse)
-      }
-      return Promise.resolve(params.patchResponse)
     }
 
     const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
@@ -351,12 +340,8 @@ describe('App', () => {
     expect(universalisCalls).toHaveLength(0)
   })
 
-  it('refreshes item data and patch metadata on demand', async () => {
-    const fetchMock = setupFetchMock({
-      patchResponse: makeJsonResponse({
-        rows: [{ fields: { Version: '7.3' } }],
-      }),
-    })
+  it('refreshes item data on demand', async () => {
+    const fetchMock = setupFetchMock({})
 
     const { container } = await renderApp()
 
@@ -375,7 +360,6 @@ describe('App', () => {
       await Promise.resolve()
     })
 
-    expect(container.textContent).toContain('FFXIV patch: 7.3')
     const calledItemSheet = fetchMock.mock.calls.some((call) => {
       const request = call[0] as RequestInfo | URL
       return getRequestUrl(request).includes('/sheet/Item')

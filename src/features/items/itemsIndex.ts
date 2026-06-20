@@ -21,14 +21,6 @@ interface XivApiItemsPage {
   rows: XivApiItemEntry[]
 }
 
-interface XivApiGamePatchEntry {
-  fields: Record<string, unknown>
-}
-
-interface XivApiGamePatchPage {
-  rows: XivApiGamePatchEntry[]
-}
-
 function isNormalizedItem(value: unknown): value is NormalizedItem {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -67,25 +59,6 @@ function isXivApiItemsPage(value: unknown): value is XivApiItemsPage {
     Array.isArray(payload.rows) &&
     payload.rows.every((row) => isXivApiItemEntry(row))
   )
-}
-
-function isXivApiGamePatchPage(value: unknown): value is XivApiGamePatchPage {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const payload = value as Record<string, unknown>
-  if (!Array.isArray(payload.rows)) {
-    return false
-  }
-
-  return payload.rows.every((row) => {
-    if (typeof row !== 'object' || row === null) {
-      return false
-    }
-    const entry = row as Record<string, unknown>
-    return typeof entry.fields === 'object' && entry.fields !== null
-  })
 }
 
 function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
@@ -186,69 +159,4 @@ export async function loadItemsIndex(): Promise<NormalizedItem[]> {
   }
 
   return items
-}
-
-function extractPatchVersionFromFields(
-  fields: Record<string, unknown>,
-): string | null {
-  const patchValue = fields.Version ?? fields.Name
-  if (typeof patchValue !== 'string' || patchValue.trim() === '') {
-    return null
-  }
-
-  return patchValue
-}
-
-function parsePatchVersionNumbers(version: string): number[] {
-  const numericParts = version.match(/\d+/g)
-  if (numericParts === null) {
-    return []
-  }
-  return numericParts.map((part) => Number.parseInt(part, 10))
-}
-
-function comparePatchVersions(left: string, right: string): number {
-  const leftParts = parsePatchVersionNumbers(left)
-  const rightParts = parsePatchVersionNumbers(right)
-  const maxLength = Math.max(leftParts.length, rightParts.length)
-  for (let index = 0; index < maxLength; index += 1) {
-    const leftPart = leftParts[index] ?? 0
-    const rightPart = rightParts[index] ?? 0
-    if (leftPart !== rightPart) {
-      return leftPart - rightPart
-    }
-  }
-
-  return 0
-}
-
-export async function loadLatestPatchVersion(): Promise<string | null> {
-  const url = new URL(`${XIVAPI_BASE}/sheet/GamePatch`)
-  url.searchParams.set('language', 'en')
-  url.searchParams.set('limit', '100')
-  url.searchParams.set('fields', 'Version,Name')
-
-  const response = await fetch(url)
-  if (!response.ok) {
-    return null
-  }
-
-  const payload: unknown = await response.json()
-  if (!isXivApiGamePatchPage(payload)) {
-    return null
-  }
-
-  let latestPatchVersion: string | null = null
-  for (const row of payload.rows) {
-    const patchValue = extractPatchVersionFromFields(row.fields)
-    if (
-      patchValue !== null &&
-      (latestPatchVersion === null ||
-        comparePatchVersions(patchValue, latestPatchVersion) > 0)
-    ) {
-      latestPatchVersion = patchValue
-    }
-  }
-
-  return latestPatchVersion
 }

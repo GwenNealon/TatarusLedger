@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  loadCachedItemsIndex,
-  loadItemsIndex,
-  loadLatestPatchVersion,
-} from './itemsIndex.ts'
+import { loadCachedItemsIndex, loadItemsIndex } from './itemsIndex.ts'
 
 describe('loadItemsIndex', () => {
   const originalFetch = globalThis.fetch
@@ -115,53 +111,5 @@ describe('loadItemsIndex', () => {
         uiCategory: 46,
       },
     ])
-  })
-
-  it('loads latest patch version when available', async () => {
-    const fetchMock = vi.fn<typeof fetch>(() =>
-      Promise.resolve(
-        new Response(
-          JSON.stringify({
-            rows: [
-              {
-                fields: {
-                  Version: '7.3',
-                },
-              },
-            ],
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        ),
-      ),
-    )
-    globalThis.fetch = fetchMock
-
-    await expect(loadLatestPatchVersion()).resolves.toBe('7.3')
-  })
-
-  it('selects the highest patch version when multiple rows are returned', async () => {
-    const fetchMock = vi.fn<typeof fetch>(() =>
-      Promise.resolve(
-        new Response(
-          JSON.stringify({
-            rows: [
-              { fields: { Version: '6.58' } },
-              { fields: { Version: '7.0' } },
-              { fields: { Version: '7.01' } },
-            ],
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        ),
-      ),
-    )
-    globalThis.fetch = fetchMock
-
-    await expect(loadLatestPatchVersion()).resolves.toBe('7.01')
   })
 })

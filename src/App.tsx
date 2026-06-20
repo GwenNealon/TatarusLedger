@@ -6,7 +6,6 @@ import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
 import {
   loadCachedItemsIndex,
-  loadLatestPatchVersion,
   loadItemsIndex,
 } from './features/items/itemsIndex.ts'
 
@@ -87,7 +86,6 @@ export default function App() {
   const [loadingError, setLoadingError] = useState<string | null>(null)
   const [isLoadingItems, setIsLoadingItems] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(BUILD_TIMESTAMP)
-  const [patchVersion, setPatchVersion] = useState<string | null>(null)
   const [isRefreshingItems, setIsRefreshingItems] = useState(false)
   const [refreshError, setRefreshError] = useState<string | null>(null)
 
@@ -160,12 +158,8 @@ export default function App() {
     setRefreshError(null)
 
     try {
-      const [nextItems, nextPatchVersion] = await Promise.all([
-        loadItemsIndex(),
-        loadLatestPatchVersion().catch(() => null),
-      ])
+      const nextItems = await loadItemsIndex()
       setItems(nextItems)
-      setPatchVersion(nextPatchVersion)
       setLastUpdated(new Date().toISOString())
       setLoadingError(null)
     } catch (error: unknown) {
@@ -200,7 +194,6 @@ export default function App() {
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
         <p>{`Last updated (build/default): ${formatLastUpdated(lastUpdated)}`}</p>
-        {patchVersion !== null ? <p>{`FFXIV patch: ${patchVersion}`}</p> : null}
         <button
           type="button"
           onClick={() => {
