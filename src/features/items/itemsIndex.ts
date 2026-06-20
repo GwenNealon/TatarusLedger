@@ -1,5 +1,4 @@
 import type { NormalizedItem } from '../../data/types.ts'
-import { fetchXivApiItems } from '../../data/fetchXivApiItems.ts'
 
 const APP_BASE_PATH =
   import.meta.env.BASE_URL === '/'
@@ -58,8 +57,4 @@ export async function loadCachedItemsIndex(): Promise<NormalizedItem[]> {
   }
 
   return payload.items
-}
-
-export async function loadItemsIndex(): Promise<NormalizedItem[]> {
-  return fetchXivApiItems()
 }
