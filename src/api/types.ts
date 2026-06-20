@@ -15,14 +15,14 @@ type SwaggerMultiHistoryResponse =
   components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
 
 export interface RawListing {
-  listingID: SwaggerListing['listingID']
+  listingID?: SwaggerListing['listingID']
   hq: SwaggerListing['hq']
   pricePerUnit: SwaggerListing['pricePerUnit']
   quantity: SwaggerListing['quantity']
   total: SwaggerListing['total']
   tax: SwaggerListing['tax']
-  retainerName: SwaggerListing['retainerName']
-  worldID: SwaggerListing['worldID']
+  retainerName?: SwaggerListing['retainerName']
+  worldID?: SwaggerListing['worldID']
   worldName?: SwaggerListing['worldName']
   lastReviewTime: SwaggerListing['lastReviewTime']
 }
