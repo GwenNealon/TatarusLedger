@@ -12,10 +12,8 @@ interface ItemArtifact {
 async function run(): Promise<void> {
   const version = process.argv[2] ?? 'unknown'
   const items = await fetchXivApiItems({
-    fetchInit: {
-      headers: {
-        'Accept-Encoding': 'identity',
-      },
+    headers: {
+      'Accept-Encoding': 'identity',
     },
   })
 

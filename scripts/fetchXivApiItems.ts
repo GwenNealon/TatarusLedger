@@ -12,42 +12,11 @@ interface XivApiItemsPage {
   rows: XivApiItemEntry[]
 }
 
-interface FetchXivApiItemsOptions {
-  fetchInit?: RequestInit
-  baseUrl?: string
-  pageSize?: number
-}
-
 function toSafeInt(value: unknown, fallback: number): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.trunc(value)
   }
   return fallback
-}
-
-function isXivApiItemEntry(value: unknown): value is XivApiItemEntry {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const entry = value as Record<string, unknown>
-  return (
-    typeof entry.row_id === 'number' &&
-    typeof entry.fields === 'object' &&
-    entry.fields !== null
-  )
-}
-
-function isXivApiItemsPage(value: unknown): value is XivApiItemsPage {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const payload = value as Record<string, unknown>
-  return (
-    Array.isArray(payload.rows) &&
-    payload.rows.every((row) => isXivApiItemEntry(row))
-  )
 }
 
 function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
@@ -74,17 +43,15 @@ function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
  * Fetches all tradable items from XIVAPI's Item sheet using cursor pagination.
  */
 export async function fetchXivApiItems(
-  options: FetchXivApiItemsOptions = {},
+  fetchInit?: RequestInit,
 ): Promise<NormalizedItem[]> {
-  const { fetchInit, baseUrl = XIVAPI_BASE, pageSize = PAGE_SIZE } = options
-
   const items: NormalizedItem[] = []
   let after: number | undefined
 
   for (;;) {
-    const url = new URL(`${baseUrl}/sheet/Item`)
+    const url = new URL(`${XIVAPI_BASE}/sheet/Item`)
     url.searchParams.set('language', 'en')
-    url.searchParams.set('limit', pageSize.toString())
+    url.searchParams.set('limit', PAGE_SIZE.toString())
     url.searchParams.set(
       'fields',
       'Name,Icon@as(raw),LevelItem@as(raw),Rarity,ItemUICategory@as(raw),IsUntradable',
@@ -100,11 +67,7 @@ export async function fetchXivApiItems(
       )
     }
 
-    const payload: unknown = await response.json()
-    if (!isXivApiItemsPage(payload)) {
-      throw new Error('Invalid item index payload')
-    }
-
+    const payload = (await response.json()) as XivApiItemsPage
     const pageEntries = payload.rows
     if (pageEntries.length === 0) {
       break
