@@ -21,5 +21,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "versionFromGitTags.ts"]
+  "include": [
+    "sharedViteConfig.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "versionFromGitTags.ts"
+  ]
 }
