@@ -37,21 +37,17 @@ export class RateLimitError extends UniversalisError {
   }
 }
 
-/** Options for controlling retry behaviour on API calls. */
-export interface FetchOptions {
-  /** Maximum number of retry attempts on failure (default: 3). */
-  maxRetries?: number
-  /** Base delay in milliseconds for exponential backoff (default: 1000). */
-  baseDelayMs?: number
-}
-
 /**
  * Query options for {@link fetchMarketBoard}.
  *
  * All query parameters map directly to the Universalis v2 API:
  * `GET /api/v2/{worldDcRegion}/{itemIds}`
  */
-export interface MarketBoardOptions extends FetchOptions {
+export interface MarketBoardOptions {
+  /** Maximum number of retry attempts on failure (default: 3). */
+  maxRetries?: number
+  /** Base delay in milliseconds for exponential backoff (default: 1000). */
+  baseDelayMs?: number
   /**
    * Number of listings to return per item.
    * By default all listings are returned.
