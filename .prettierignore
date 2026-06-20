@@ -13,3 +13,6 @@ package-lock.json
 # Other
 .git
 .vscode
+
+# Generated output
+**/*.generated.ts
