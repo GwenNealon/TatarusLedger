@@ -43,7 +43,7 @@ function trimTrailingSlash(path: string): string {
 function parseRoutedItemId(pathname: string): number | null {
   const base = trimTrailingSlash(APP_BASE_PATH)
 
-  if (!pathname.startsWith(base)) {
+  if (pathname !== base && !pathname.startsWith(`${base}/`)) {
     return null
   }
 
