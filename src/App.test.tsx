@@ -335,25 +335,13 @@ describe('App', () => {
     expect(universalisCalls).toHaveLength(0)
   })
 
-  it('refreshes item data on demand', async () => {
+  it('does not expose live refresh controls in artifact-only mode', async () => {
     const fetchMock = setupFetchMock({})
 
     const { container } = await renderApp()
 
     expect(container.textContent).toContain('Last updated (build artifact):')
-    expect(container.textContent).toContain('Refresh Item Data')
-
-    const refreshButton = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Refresh Item Data',
-    )
-    expect(refreshButton).not.toBeUndefined()
-    if (refreshButton === undefined) return
-
-    await act(async () => {
-      refreshButton.click()
-      await Promise.resolve()
-      await Promise.resolve()
-    })
+    expect(container.textContent).not.toContain('Refresh Item Data')
 
     const calledItemSheet = fetchMock.mock.calls.some((call) => {
       const request = call[0] as RequestInfo | URL
@@ -365,7 +353,7 @@ describe('App', () => {
             : request.url
       return requestUrl.includes('/sheet/Item')
     })
-    expect(calledItemSheet).toBe(true)
+    expect(calledItemSheet).toBe(false)
   })
 
   it('opens a routed item URL with trailing slash', async () => {

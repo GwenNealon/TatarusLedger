@@ -4,10 +4,7 @@ import type { CSSProperties } from 'react'
 import type { NormalizedItem } from './data/types.ts'
 import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
-import {
-  loadCachedItemsIndex,
-  loadItemsIndex,
-} from './features/items/itemsIndex.ts'
+import { loadCachedItemsIndex } from './features/items/itemsIndex.ts'
 
 const pageStyles: CSSProperties = {
   minHeight: '100vh',
@@ -68,13 +65,8 @@ function navigateToPath(
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
-  const [items, setItems] = useState<NormalizedItem[]>([])
+  const [items, setItems] = useState<NormalizedItem[] | null>(null)
   const [loadingError, setLoadingError] = useState<string | null>(null)
-  const [isLoadingItems, setIsLoadingItems] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState(BUILD_TIMESTAMP)
-  const [lastUpdatedSource, setLastUpdatedSource] = useState('build artifact')
-  const [isRefreshingItems, setIsRefreshingItems] = useState(false)
-  const [refreshError, setRefreshError] = useState<string | null>(null)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -97,33 +89,12 @@ export default function App() {
           return
         }
         if (cachedItems.length === 0) {
-          void loadItemsIndex()
-            .then((nextItems) => {
-              if (cancelled) {
-                return
-              }
-              setItems(nextItems)
-              setLoadingError(null)
-              setLastUpdated(new Date().toISOString())
-              setLastUpdatedSource('XIVAPI live')
-              setIsLoadingItems(false)
-            })
-            .catch((error: unknown) => {
-              if (cancelled) {
-                return
-              }
-              setLoadingError(
-                error instanceof Error
-                  ? error.message
-                  : 'Unable to load item index',
-              )
-              setIsLoadingItems(false)
-            })
+          setLoadingError('Checked-in item artifact is empty or unavailable')
           return
         }
+
         setItems(cachedItems)
         setLoadingError(null)
-        setIsLoadingItems(false)
       })
       .catch((error: unknown) => {
         if (cancelled) {
@@ -131,9 +102,10 @@ export default function App() {
         }
 
         setLoadingError(
-          error instanceof Error ? error.message : 'Unable to load item index',
+          error instanceof Error
+            ? error.message
+            : 'Unable to load checked-in item index',
         )
-        setIsLoadingItems(false)
       })
 
     return () => {
@@ -141,29 +113,10 @@ export default function App() {
     }
   }, [])
 
-  async function refreshItemData(): Promise<void> {
-    setIsRefreshingItems(true)
-    setRefreshError(null)
-
-    try {
-      const nextItems = await loadItemsIndex()
-      setItems(nextItems)
-      setLastUpdated(new Date().toISOString())
-      setLastUpdatedSource('XIVAPI live')
-      setLoadingError(null)
-    } catch (error: unknown) {
-      setRefreshError(
-        error instanceof Error ? error.message : 'Unable to refresh item index',
-      )
-    } finally {
-      setIsRefreshingItems(false)
-    }
-  }
-
   const selectedItemId = parseRoutedItemId(pathname)
 
   const selectedItem =
-    selectedItemId === null
+    selectedItemId === null || items === null
       ? null
       : (items.find((item) => item.id === selectedItemId) ?? null)
 
@@ -176,32 +129,20 @@ export default function App() {
           FFXIV item resources.
         </p>
 
-        {loadingError === null && isLoadingItems ? (
+        {loadingError === null && items === null ? (
           <p aria-live="polite">Loading item index…</p>
         ) : null}
         {loadingError !== null ? (
           <p role="alert">{`Item index failed to load: ${loadingError}`}</p>
         ) : null}
-        <p>{`Last updated (${lastUpdatedSource}): ${
-          Number.isNaN(new Date(lastUpdated).getTime())
-            ? lastUpdated
-            : new Date(lastUpdated).toLocaleString()
+        <p>{`Last updated (build artifact): ${
+          Number.isNaN(new Date(BUILD_TIMESTAMP).getTime())
+            ? BUILD_TIMESTAMP
+            : new Date(BUILD_TIMESTAMP).toLocaleString()
         }`}</p>
-        <button
-          type="button"
-          onClick={() => {
-            void refreshItemData()
-          }}
-          disabled={isRefreshingItems}
-        >
-          {isRefreshingItems ? 'Refreshing Item Data…' : 'Refresh Item Data'}
-        </button>
-        {refreshError !== null ? (
-          <p role="alert">{`Item data refresh failed: ${refreshError}`}</p>
-        ) : null}
 
         <ItemSearch
-          items={items}
+          items={items ?? []}
           onSelectItem={(item) => {
             navigateToPath(`${APP_BASE_PATH}${item.id.toString()}`, setPathname)
           }}
@@ -209,7 +150,7 @@ export default function App() {
 
         {selectedItem !== null ? (
           <ItemDetailPage key={selectedItem.id} item={selectedItem} />
-        ) : selectedItemId !== null ? (
+        ) : selectedItemId !== null && items !== null ? (
           <p role="alert">Item not found in the loaded index.</p>
         ) : (
           <p role="status">
