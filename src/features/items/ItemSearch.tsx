@@ -6,37 +6,38 @@ import type { NormalizedItem } from '../../data/types.ts'
 const SEARCH_DEBOUNCE_MS = 180
 const MAX_RESULTS = 50
 
-const searchInputStyles: CSSProperties = {
-  width: '100%',
-  maxWidth: '24rem',
-  border: '1px solid #94a3b8',
-  borderRadius: '0.5rem',
-  padding: '0.5rem 0.75rem',
-  fontSize: '1rem',
-}
-
-const itemListStyles: CSSProperties = {
-  listStyle: 'none',
-  margin: '0.75rem 0 0',
-  padding: 0,
-  maxWidth: '24rem',
-  maxHeight: '14rem',
-  overflowY: 'auto',
-  border: '1px solid #e2e8f0',
-  borderRadius: '0.5rem',
-}
-
-const itemButtonStyles: CSSProperties = {
-  width: '100%',
-  textAlign: 'left',
-  border: 0,
-  background: '#fff',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  padding: '0.5rem',
-  cursor: 'pointer',
-}
+const styles: Record<'searchInput' | 'itemList' | 'itemButton', CSSProperties> =
+  {
+    searchInput: {
+      width: '100%',
+      maxWidth: '24rem',
+      border: '1px solid #94a3b8',
+      borderRadius: '0.5rem',
+      padding: '0.5rem 0.75rem',
+      fontSize: '1rem',
+    },
+    itemList: {
+      listStyle: 'none',
+      margin: '0.75rem 0 0',
+      padding: 0,
+      maxWidth: '24rem',
+      maxHeight: '14rem',
+      overflowY: 'auto',
+      border: '1px solid #e2e8f0',
+      borderRadius: '0.5rem',
+    },
+    itemButton: {
+      width: '100%',
+      textAlign: 'left',
+      border: 0,
+      background: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      padding: '0.5rem',
+      cursor: 'pointer',
+    },
+  }
 
 interface ItemSearchProps {
   items: NormalizedItem[]
@@ -87,7 +88,7 @@ export function ItemSearch(props: ItemSearchProps) {
       <input
         id="item-search-input"
         type="search"
-        style={searchInputStyles}
+        style={styles.searchInput}
         value={queryInput}
         onChange={(event) => {
           setQueryInput(event.target.value)
@@ -96,12 +97,12 @@ export function ItemSearch(props: ItemSearchProps) {
         placeholder="Type an item name"
       />
 
-      <ul style={itemListStyles}>
+      <ul style={styles.itemList}>
         {filteredItems.map((item) => (
           <li key={item.id}>
             <button
               type="button"
-              style={itemButtonStyles}
+              style={styles.itemButton}
               onClick={() => {
                 onSelectItem(item)
               }}

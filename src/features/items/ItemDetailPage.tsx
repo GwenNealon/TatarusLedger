@@ -24,29 +24,31 @@ type CacheStatus =
 
 const ITEM_CACHE_TTL_MS = 5 * 60 * 1_000
 
-const sectionStyles: CSSProperties = {
-  marginTop: '1.5rem',
-  paddingTop: '1rem',
-  borderTop: '1px solid #e2e8f0',
-}
-
-const itemHeaderStyles: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.75rem',
-}
-
-const iconStyles: CSSProperties = {
-  width: '40px',
-  height: '40px',
-  borderRadius: '6px',
-  border: '1px solid #cbd5e1',
-}
-
-const spinningIconStyles: CSSProperties = {
-  display: 'inline-block',
-  marginRight: '0.35rem',
-  animation: 'spin 1s linear infinite',
+const styles: Record<
+  'section' | 'itemHeader' | 'icon' | 'spinningIcon',
+  CSSProperties
+> = {
+  section: {
+    marginTop: '1.5rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid #e2e8f0',
+  },
+  itemHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  icon: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+  },
+  spinningIcon: {
+    display: 'inline-block',
+    marginRight: '0.35rem',
+    animation: 'spin 1s linear infinite',
+  },
 }
 
 function isItemCacheEntry(value: unknown): value is ItemCacheEntry {
@@ -151,7 +153,7 @@ function CacheStatusIcon(props: { status: CacheStatus; onRetry: () => void }) {
   if (status.state === 'refreshing') {
     return (
       <span role="status" aria-live="polite" title="Refreshing cache">
-        <span aria-hidden="true" style={spinningIconStyles}>
+        <span aria-hidden="true" style={styles.spinningIcon}>
           ↻
         </span>
         Refreshing cache…
@@ -228,17 +230,17 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
   }, [item, retrySignal])
 
   return (
-    <section aria-labelledby="item-detail-heading" style={sectionStyles}>
+    <section aria-labelledby="item-detail-heading" style={styles.section}>
       <style>
         {
           '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
         }
       </style>
-      <div style={itemHeaderStyles}>
+      <div style={styles.itemHeader}>
         <img
           src={`https://xivapi.com/i/${String(item.iconId).padStart(6, '0').slice(0, 3)}000/${String(item.iconId).padStart(6, '0')}.png`}
           alt={`${item.name} icon`}
-          style={iconStyles}
+          style={styles.icon}
         />
         <h2 id="item-detail-heading" style={{ margin: 0 }}>
           {item.name}
