@@ -13,6 +13,8 @@ const { version: APP_VERSION } = JSON.parse(
 ) as { version: string }
 const USER_AGENT = `TatarusLedger/${APP_VERSION} (nealon.gwen@gmail.com)`
 const FETCH_TIMEOUT_MS = 30_000
+const MAX_FETCH_ATTEMPTS = 3
+const FETCH_BACKOFF_BASE_MS = 500
 const SNAPSHOT_FILE_PATH = resolve(
   PROJECT_ROOT,
   'src',
@@ -51,17 +53,50 @@ function sortJson(value: JsonValue): JsonValue {
 }
 
 async function fetchLatestSwagger(): Promise<JsonValue> {
-  const response = await fetch(UNIVERSALIS_SWAGGER_URL, {
-    headers: { 'User-Agent': USER_AGENT },
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  })
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch Universalis swagger snapshot: HTTP ${response.status.toString()}`,
-    )
+  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(UNIVERSALIS_SWAGGER_URL, {
+        headers: { 'User-Agent': USER_AGENT },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      })
+
+      if (!response.ok) {
+        if (response.status < 500 && response.status !== 429) {
+          throw new Error(
+            `Failed to fetch Universalis swagger snapshot: HTTP ${response.status.toString()}`,
+          )
+        }
+
+        throw new Error(
+          `Transient fetch failure for Universalis swagger snapshot: HTTP ${response.status.toString()}`,
+        )
+      }
+
+      return (await response.json()) as JsonValue
+    } catch (error) {
+      if (attempt >= MAX_FETCH_ATTEMPTS) {
+        throw error
+      }
+
+      const message = error instanceof Error ? error.message : ''
+      const isRetryableHttpError = message.includes(
+        'Transient fetch failure for Universalis swagger snapshot: HTTP',
+      )
+      const isRetryableNetworkError =
+        error instanceof TypeError || message.includes('timed out')
+
+      if (!isRetryableHttpError && !isRetryableNetworkError) {
+        throw error
+      }
+
+      const backoffMs = FETCH_BACKOFF_BASE_MS * 2 ** (attempt - 1)
+      await new Promise<void>((resolvePromise) => {
+        setTimeout(resolvePromise, backoffMs)
+      })
+    }
   }
 
-  return (await response.json()) as JsonValue
+  throw new Error('Unreachable')
 }
 
 async function readSnapshotSwagger(): Promise<JsonValue> {
