@@ -330,6 +330,25 @@ describe('fetchSaleHistory — rate-limit handling', () => {
     const item6 = result.find((r) => r.itemId === 6)
     expect(item6?.sales).toHaveLength(1)
   })
+
+  it('handles single requested item returned in multi-shape payload', async () => {
+    const multiShapeSingleItemBody = {
+      itemIDs: [5],
+      items: {
+        '5': { itemID: 5, entries: [RAW_SALE] },
+      },
+    }
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      makeOkResponse(multiShapeSingleItemBody),
+    )
+
+    const result = await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].itemId).toBe(5)
+    expect(result[0].listings).toHaveLength(0)
+    expect(result[0].sales).toHaveLength(1)
+  })
 })
 
 // ---------------------------------------------------------------------------
