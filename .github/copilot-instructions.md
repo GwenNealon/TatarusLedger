@@ -71,7 +71,7 @@ npm run typecheck
 npm run test
 ```
 
-### PR Suggestion Quality Gate (Required)
+### PR Suggestion Quality Gate
 
 When preparing or suggesting PR-ready changes, run all validation commands above in the local workspace where the change was made. If a command fails, attempt the following automated fixes and re-run validations:
 
@@ -82,15 +82,13 @@ When preparing or suggesting PR-ready changes, run all validation commands above
 
 If any command fails after the automated fix, report the exact failure output, do **not** describe the change as PR-ready, and stop. Do not attempt further automated fixes unless the user explicitly asks for them.
 
-### PR Description Maintenance (Required)
+### PR Description Maintenance
 
 When working on a branch that already has an open pull request:
 
 1. Review the existing PR description before or while making changes.
 2. Update the PR description so it accurately reflects the latest scope, implementation details, and validation status.
 3. Ensure the PR description calls out any meaningful behavior changes, follow-up work, or known limitations introduced by the latest commit(s).
-
----
 
 ## TypeScript Conventions
 
@@ -157,3 +155,9 @@ See the README section "Universalis Spec Workflow" for the canonical workflow an
 ## Errors and Workarounds
 
 _None recorded yet. Document here any recurring errors (e.g., API rate limits, TypeScript version quirks, Vite plugin incompatibilities) and how they were resolved, so future agents can skip the investigation step._
+
+---
+
+## Closing Conversations
+
+When concluding a conversation after making code changes, end with a suggested commit message in imperative mood that clearly describes what changed. Use conventional commit prefixes (e.g., `feat:`, `fix:`, `refactor:`, `docs:`, etc.).
