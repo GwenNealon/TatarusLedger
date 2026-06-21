@@ -28,35 +28,8 @@ const styles: Record<'page' | 'card', CSSProperties> = {
   },
 }
 
-const APP_BASE_PATH =
-  import.meta.env.BASE_URL === '/'
-    ? '/TatarusLedger/'
-    : import.meta.env.BASE_URL
+const APP_BASE_PATH = import.meta.env.BASE_URL
 const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
-
-function parseRoutedItemId(pathname: string): number | null {
-  const base = APP_BASE_PATH.replace(/\/+$/, '')
-  const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const match = new RegExp(`^${escapedBase}/(\\d+)/?$`).exec(pathname)
-  if (match === null) {
-    return null
-  }
-
-  const parsed = Number.parseInt(match[1], 10)
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    return null
-  }
-
-  return parsed
-}
-
-function navigateToPath(
-  nextPath: string,
-  setPathname: (pathname: string) => void,
-): void {
-  window.history.pushState({}, '', nextPath)
-  setPathname(window.location.pathname)
-}
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
@@ -108,7 +81,21 @@ export default function App() {
     }
   }, [])
 
-  const selectedItemId = parseRoutedItemId(pathname)
+  const selectedItemId = (() => {
+    const base = APP_BASE_PATH.replace(/\/+$/, '')
+    const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = new RegExp(`^${escapedBase}/(\\d+)/?$`).exec(pathname)
+    if (match === null) {
+      return null
+    }
+
+    const parsed = Number.parseInt(match[1], 10)
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      return null
+    }
+
+    return parsed
+  })()
 
   const selectedItem =
     selectedItemId === null || items === null
@@ -139,7 +126,12 @@ export default function App() {
         <ItemSearch
           items={items ?? []}
           onSelectItem={(item) => {
-            navigateToPath(`${APP_BASE_PATH}${item.id.toString()}`, setPathname)
+            window.history.pushState(
+              {},
+              '',
+              `${APP_BASE_PATH}${item.id.toString()}`,
+            )
+            setPathname(window.location.pathname)
           }}
         />
 
