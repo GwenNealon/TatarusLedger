@@ -20,6 +20,7 @@ import {
   resolveWatchItems,
   type UndercutItemState,
 } from './undercutTracker.ts'
+import { APP_BASE_PATH } from '../../constants.ts'
 
 interface UndercutTrackerPageProps {
   items: NormalizedItem[]
@@ -43,6 +44,12 @@ const styles: Record<
   | 'controls'
   | 'chip'
   | 'chips'
+  | 'tableWrap'
+  | 'table'
+  | 'tableCell'
+  | 'iconCell'
+  | 'icon'
+  | 'removeButton'
   | 'worldField'
   | 'worldSelect'
   | 'worldChevron',
@@ -90,6 +97,42 @@ const styles: Record<
     marginTop: '0.5rem',
     padding: 0,
     listStyle: 'none',
+  },
+  tableWrap: {
+    overflowX: 'auto',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    border: '1px solid #cbd5e1',
+    borderRadius: '0.5rem',
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  tableCell: {
+    borderBottom: '1px solid #e2e8f0',
+    padding: '0.5rem',
+    textAlign: 'left',
+    verticalAlign: 'middle',
+  },
+  iconCell: {
+    width: '2.5rem',
+    textAlign: 'center',
+  },
+  icon: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '4px',
+    verticalAlign: 'middle',
+  },
+  removeButton: {
+    border: '1px solid #cbd5e1',
+    borderRadius: '0.4rem',
+    background: '#fff',
+    cursor: 'pointer',
+    width: '1.8rem',
+    height: '1.8rem',
+    lineHeight: 1,
   },
   worldField: {
     position: 'relative',
@@ -140,6 +183,10 @@ function formatGil(value: number | null): string {
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp)
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
+}
+
+function formatQuantity(value: number): string {
+  return value.toLocaleString()
 }
 
 interface WatchContext {
@@ -240,6 +287,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     [resolvedItems.items],
   )
   const trackedItemIds = useMemo(() => new Set(itemIds), [itemIds])
+  const itemById = useMemo(
+    () => new Map(items.map((item) => [item.id, item])),
+    [items],
+  )
+  const itemStatesById = useMemo(
+    () => new Map(itemStates.map((state) => [state.itemId, state])),
+    [itemStates],
+  )
   const searchableItems = useMemo(
     () => items.filter((item) => !trackedItemIds.has(item.id)),
     [items, trackedItemIds],
@@ -268,11 +323,19 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const displayRefreshStatus = watchContext.hasInput
     ? refreshStatus
     : 'Add a world and items to start tracking'
-  const visibleItemStates = watchContext.hasInput ? itemStates : []
+  const visibleItemRows = watchContext.hasInput
+    ? resolvedItems.items.map((item) => ({
+        item,
+        state: itemStatesById.get(item.id) ?? null,
+      }))
+    : []
   const canDiscover =
     worldOptions.length > 0 &&
     selectedWorld.length > 0 &&
     retainerNames.length > 0
+  const itemBasePath = APP_BASE_PATH.endsWith('/')
+    ? APP_BASE_PATH
+    : `${APP_BASE_PATH}/`
 
   const addRetainerName = () => {
     const nextRetainer = retainerDraft.trim()
@@ -741,57 +804,85 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         <p role="alert">{`Could not resolve: ${resolvedItems.unresolvedTokens.join(', ')}`}</p>
       ) : null}
 
-      <ul style={styles.chips}>
-        {resolvedItems.items.map((item) => (
-          <li key={item.id} style={styles.chip}>
-            <span>{`${item.name} (${item.id.toString()})`}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setConfig((current) => ({
-                  ...current,
-                  itemInput: parseWatchTokens(current.itemInput)
-                    .filter((token) => token !== item.id.toString())
-                    .join('\n'),
-                }))
-              }}
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div style={styles.grid}>
-        {visibleItemStates.length === 0 ? (
+      <div style={styles.tableWrap}>
+        {visibleItemRows.length === 0 ? (
           <article style={styles.card}>
             <p style={{ margin: 0 }}>
               Add a world and at least one item to start tracking.
             </p>
           </article>
         ) : (
-          visibleItemStates.map((itemState) => (
-            <article key={itemState.itemId} style={styles.card}>
-              <h3 style={{ marginTop: 0 }}>{itemState.itemName}</h3>
-              <p style={styles.status}>
-                {itemState.undercut
-                  ? 'Undercut'
-                  : itemState.lowestOwnedPrice === null
-                    ? 'No owned listings found'
-                    : 'Most Competitive'}
-              </p>
-              <dl>
-                <dt>Lowest owned price</dt>
-                <dd>{formatGil(itemState.lowestOwnedPrice)}</dd>
-                <dt>Lowest competitor price</dt>
-                <dd>{formatGil(itemState.lowestCompetitorPrice)}</dd>
-                <dt>Listings checked</dt>
-                <dd>{itemState.listingCount}</dd>
-                <dt>Last sync</dt>
-                <dd>{formatDate(itemState.lastSyncedAt)}</dd>
-              </dl>
-            </article>
-          ))
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.tableCell} />
+                <th style={styles.tableCell} />
+                <th style={styles.tableCell}>Item Name</th>
+                <th style={styles.tableCell}>Quantity</th>
+                <th style={styles.tableCell}>Selling Price</th>
+                <th style={styles.tableCell}>Lowest Competitor Price</th>
+                <th style={styles.tableCell}>Last Synced</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleItemRows.map(({ item, state }) => {
+                const iconId = String(
+                  itemById.get(item.id)?.iconId ?? item.iconId,
+                ).padStart(6, '0')
+                const iconUrl = `https://xivapi.com/i/${iconId.slice(0, 3)}000/${iconId}.png`
+
+                return (
+                  <tr key={item.id}>
+                    <td style={styles.tableCell}>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${item.name}`}
+                        style={styles.removeButton}
+                        onClick={() => {
+                          setConfig((current) => ({
+                            ...current,
+                            itemInput: parseWatchTokens(current.itemInput)
+                              .filter((token) => token !== item.id.toString())
+                              .join('\n'),
+                          }))
+                        }}
+                      >
+                        X
+                      </button>
+                    </td>
+                    <td style={{ ...styles.tableCell, ...styles.iconCell }}>
+                      <img
+                        src={iconUrl}
+                        alt={`${item.name} icon`}
+                        width={24}
+                        height={24}
+                        style={styles.icon}
+                      />
+                    </td>
+                    <td style={styles.tableCell}>
+                      <a href={`${itemBasePath}${item.id.toString()}`}>
+                        {`${item.name} (${item.id.toString()})`}
+                      </a>
+                    </td>
+                    <td style={styles.tableCell}>
+                      {state?.lowestOwnedPrice != null
+                        ? formatQuantity(state.ownedQuantity)
+                        : '—'}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {formatGil(state?.lowestOwnedPrice ?? null)}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {formatGil(state?.lowestCompetitorPrice ?? null)}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {formatDate(state?.lastSyncedAt ?? Number.NaN)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 

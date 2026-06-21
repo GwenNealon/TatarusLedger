@@ -838,13 +838,15 @@ describe('App', () => {
 
     expect(container.textContent).toContain('Craftsman Syrup')
 
-    const itemChip = Array.from(container.querySelectorAll('li')).find((chip) =>
-      chip.textContent.includes('Craftsman Syrup (5339)'),
+    const tableRow = Array.from(container.querySelectorAll('tr')).find((row) =>
+      row.textContent.includes('Craftsman Syrup (5339)'),
     )
-    expect(itemChip).not.toBeUndefined()
-    if (itemChip === undefined) return
+    expect(tableRow).not.toBeUndefined()
+    if (tableRow === undefined) return
 
-    const removeButton = itemChip.querySelector('button')
+    const removeButton = tableRow.querySelector<HTMLButtonElement>(
+      'button[aria-label="Remove Craftsman Syrup"]',
+    )
     expect(removeButton).not.toBeNull()
     if (removeButton === null) return
 

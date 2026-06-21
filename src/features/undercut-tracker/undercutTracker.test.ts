@@ -88,6 +88,7 @@ describe('deriveItemState', () => {
     expect(state.undercut).toBe(true)
     expect(state.lowestOwnedPrice).toBe(1_000)
     expect(state.lowestCompetitorPrice).toBe(900)
+    expect(state.ownedQuantity).toBe(1)
   })
 
   it('stays competitive when owned listings are cheapest', () => {
