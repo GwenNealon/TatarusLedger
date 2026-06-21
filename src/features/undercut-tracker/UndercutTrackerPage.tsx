@@ -291,6 +291,20 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   }, [config])
 
   useEffect(() => {
+    if (typeof Notification === 'undefined') {
+      return
+    }
+
+    if (Notification.permission !== 'default') {
+      return
+    }
+
+    void Notification.requestPermission().then((result) => {
+      setPermission(result)
+    })
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
 
     void fetchWorlds()
@@ -602,21 +616,24 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         </ul>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => {
-          if (
-            typeof Notification !== 'undefined' &&
-            Notification.permission === 'default'
-          ) {
+      {typeof Notification !== 'undefined' && permission !== 'granted' ? (
+        <button
+          type="button"
+          disabled={permission !== 'default'}
+          onClick={() => {
+            if (Notification.permission !== 'default') {
+              setPermission(Notification.permission)
+              return
+            }
+
             void Notification.requestPermission().then((result) => {
               setPermission(result)
             })
-          }
-        }}
-      >
-        Enable browser alerts
-      </button>
+          }}
+        >
+          Enable browser alerts
+        </button>
+      ) : null}
 
       <button
         type="button"
