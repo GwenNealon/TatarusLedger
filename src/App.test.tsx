@@ -701,6 +701,41 @@ describe('App', () => {
     expect(container.textContent).toContain('Craftsman Syrup (5339)')
   })
 
+  it('filters already tracked items from undercut tracker search results', async () => {
+    vi.useFakeTimers()
+    setupFetchMock({})
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'craft')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+
+    const craftsmanSearchButton = Array.from(
+      container.querySelectorAll('button'),
+    ).find((button) => button.textContent.includes('Craftsman Syrup'))
+
+    expect(craftsmanSearchButton).toBeUndefined()
+  })
+
   it('clears item listing when removing the last tracked item', async () => {
     setupFetchMock({
       marketResponsesByItemId: {

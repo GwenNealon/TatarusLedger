@@ -239,6 +239,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     () => new Map(resolvedItems.items.map((item) => [item.id, item.name])),
     [resolvedItems.items],
   )
+  const trackedItemIds = useMemo(() => new Set(itemIds), [itemIds])
+  const searchableItems = useMemo(
+    () => items.filter((item) => !trackedItemIds.has(item.id)),
+    [items, trackedItemIds],
+  )
   const selectedWorld = worldOptions.includes(config.world)
     ? config.world
     : (worldOptions[0] ?? '')
@@ -721,7 +726,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       ) : null}
 
       <ItemSearch
-        items={items}
+        items={searchableItems}
         onSelectItem={(item) => {
           setConfig((current) => ({
             ...current,
