@@ -70,10 +70,10 @@ npm run test
 
 ### PR Suggestion Quality Gate (Required)
 
-When preparing or suggesting PR-ready changes, run all validation commands above in the local workspace where the change was made. If a command fails, attempt the following automated fixes and re-reun validations:
+When preparing or suggesting PR-ready changes, run all validation commands above in the local workspace where the change was made. If a command fails, attempt the following automated fixes and re-run validations:
 
 1. If `npm run format:check` fails, run `npm run format`, then re-run `npm run format:check`.
-2. If `npm run lint` fails, run `npm run lint --fix`, then re-run `npm run lint`.
+2. If `npm run lint` fails, run `npm run lint:fix`, then re-run `npm run lint`.
 3. If `npm run typecheck` fails, fix the type errors, then re-run `npm run typecheck`.
 4. If `npm run test` fails, fix the test errors, then re-run `npm run test`.
 
