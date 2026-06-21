@@ -90,7 +90,7 @@ describe('deriveItemState', () => {
     expect(state.lowestCompetitorPrice).toBe(900)
   })
 
-  it('stays clear when owned listings are cheapest', () => {
+  it('stays competitive when owned listings are cheapest', () => {
     const state = deriveItemState({
       marketData: makeMarketData([
         {

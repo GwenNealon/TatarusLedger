@@ -691,7 +691,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             <article key={itemState.itemId} style={styles.card}>
               <h3 style={{ marginTop: 0 }}>{itemState.itemName}</h3>
               <p style={styles.status}>
-                {itemState.undercut ? 'Undercut' : 'Clear'}
+                {itemState.undercut
+                  ? 'Undercut'
+                  : itemState.lowestOwnedPrice === null
+                    ? 'No owned listings found'
+                    : 'Most Competitive'}
               </p>
               <dl>
                 <dt>Lowest owned price</dt>
