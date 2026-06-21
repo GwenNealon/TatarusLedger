@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs'
-import react, { reactCompilerPreset } from '@vitejs/plugin-react'
-import babel from '@rolldown/plugin-babel'
+import react from '@vitejs/plugin-react'
 
 const packageJson = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
@@ -14,11 +13,6 @@ export function createSharedViteConfig() {
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
       'import.meta.env.VITE_BUILD_TIMESTAMP': JSON.stringify(buildTimestamp),
     },
-    plugins: [
-      react(),
-      babel({
-        presets: [reactCompilerPreset()],
-      }),
-    ],
+    plugins: [react()],
   }
 }
