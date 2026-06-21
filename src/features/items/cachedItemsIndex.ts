@@ -1,7 +1,6 @@
 import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
-
-const APP_BASE_PATH = import.meta.env.BASE_URL
+import { APP_BASE_PATH } from '../../constants.ts'
 
 interface ItemsArtifactPayload {
   version: string

@@ -5,6 +5,7 @@ import type { NormalizedItem } from './data/types.ts'
 import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
 import { loadCachedItemsIndex } from './features/items/cachedItemsIndex.ts'
+import { APP_BASE_PATH } from './constants.ts'
 
 const styles: Record<'page' | 'card', CSSProperties> = {
   page: {
@@ -28,10 +29,6 @@ const styles: Record<'page' | 'card', CSSProperties> = {
   },
 }
 
-const APP_BASE_PATH =
-  import.meta.env.BASE_URL === '/'
-    ? '/TatarusLedger/'
-    : import.meta.env.BASE_URL
 const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
 
 export default function App() {
