@@ -136,9 +136,17 @@ async function searchAndSelectItem(params: {
     setInputValue(input, query)
   })
 
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(waitMs)
-  })
+  if (vi.isFakeTimers()) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(waitMs)
+    })
+  } else {
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, waitMs)
+      })
+    })
+  }
 
   const itemButton = Array.from(container.querySelectorAll('button')).find(
     (button) => button.textContent.includes(itemName),
@@ -156,9 +164,39 @@ describe('App', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
+
+    if (typeof window.localStorage.setItem !== 'function') {
+      const values = new Map<string, string>()
+      const storage: Storage = {
+        get length() {
+          return values.size
+        },
+        clear() {
+          values.clear()
+        },
+        getItem(key: string) {
+          return values.get(key) ?? null
+        },
+        key(index: number) {
+          return [...values.keys()][index] ?? null
+        },
+        removeItem(key: string) {
+          values.delete(key)
+        },
+        setItem(key: string, value: string) {
+          values.set(key, value)
+        },
+      }
+      Object.defineProperty(window, 'localStorage', {
+        value: storage,
+        configurable: true,
+      })
+    }
+
     if (typeof window.localStorage.clear === 'function') {
       window.localStorage.clear()
     }
+
     globalThis.IS_REACT_ACT_ENVIRONMENT = true
     window.history.replaceState({}, '', '/TatarusLedger/')
   })
