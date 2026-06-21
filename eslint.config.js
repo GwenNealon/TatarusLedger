@@ -10,7 +10,8 @@ export default defineConfig([
   globalIgnores([
     'dist',
     'coverage',
-    'src/api/universalis.swagger.v2.generated.ts',
+    'src/api/universalis/universalis.swagger.v2.generated.ts',
+    'src/api/xivapi/xivapi.swagger.generated.ts',
   ]),
   {
     files: ['**/*.{ts,tsx}'],

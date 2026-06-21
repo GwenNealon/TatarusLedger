@@ -29,6 +29,10 @@ jobs:
         timeout-minutes: 5
         run: npm run api:spec:check
 
+      - name: Validate XIVAPI snapshot and generated types
+        timeout-minutes: 5
+        run: npm run api:xivapi:spec:check
+
       - name: Check formatting with Prettier
         run: npm run format:check
 
