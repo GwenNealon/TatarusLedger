@@ -632,7 +632,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
               const marketableItemIds = await fetchMarketableItemIds()
               const totalMarketableItems = marketableItemIds.length
               let checkedMarketableItems = 0
-              const discoveredTokens: string[] = []
+              const discoveredTokens = new Set<string>()
 
               for (
                 let index = 0;
@@ -653,30 +653,39 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   },
                 )
 
-                discoveredTokens.push(
-                  ...discoverOwnedItemTokens({
-                    marketData,
-                    retainerNames: watchContext.retainerNames,
-                  }),
-                )
-
                 checkedMarketableItems += batch.length
+
+                const newlyDiscoveredTokens = discoverOwnedItemTokens({
+                  marketData,
+                  retainerNames: watchContext.retainerNames,
+                }).filter((token) => !discoveredTokens.has(token))
+
+                if (newlyDiscoveredTokens.length > 0) {
+                  for (const token of newlyDiscoveredTokens) {
+                    discoveredTokens.add(token)
+                  }
+
+                  setConfig((current) => ({
+                    ...current,
+                    itemInput: appendUniqueTokens(
+                      current.itemInput,
+                      newlyDiscoveredTokens,
+                    ),
+                  }))
+                }
+
+                setDiscoverStatus(
+                  `Checked ${checkedMarketableItems.toString()} of ${totalMarketableItems.toString()} marketable items. Discovered ${discoveredTokens.size.toString()} item(s) so far.`,
+                )
               }
 
-              if (discoveredTokens.length === 0) {
+              if (discoveredTokens.size === 0) {
                 setDiscoverStatus('No listings matched your retainers')
                 return
               }
 
-              setConfig((current) => ({
-                ...current,
-                itemInput: appendUniqueTokens(
-                  current.itemInput,
-                  discoveredTokens,
-                ),
-              }))
               setDiscoverStatus(
-                `Discovered ${new Set(discoveredTokens).size.toString()} item(s)`,
+                `Discovered ${discoveredTokens.size.toString()} item(s)`,
               )
             } catch (error: unknown) {
               setDiscoverStatus(
