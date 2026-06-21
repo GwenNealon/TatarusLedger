@@ -7,7 +7,12 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import prettierConfig from 'eslint-config-prettier'
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores([
+    'dist',
+    'coverage',
+    'src/api/universalis/universalis.swagger.v2.generated.ts',
+    'src/api/xivapi/xivapi.swagger.generated.ts',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -21,7 +26,11 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: [
+          './tsconfig.node.json',
+          './tsconfig.app.json',
+          './tsconfig.scripts.json',
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
     },

@@ -1,0 +1,1194 @@
+{
+  "components": {
+    "schemas": {
+      "AssetQuery": {
+        "description": "Query parameters accepted by the asset endpoint.",
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/SchemaFormat",
+            "description": "Format that the asset should be converted into.",
+            "examples": ["png"]
+          },
+          "path": {
+            "description": "Game path of the asset to retrieve.",
+            "examples": ["ui/icon/051000/051474_hr1.tex"],
+            "type": "string"
+          }
+        },
+        "required": ["format", "path"],
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "description": "General purpose error response structure.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/StatusCode",
+            "description": "HTTP status code of the error. Will match the server response code."
+          },
+          "message": {
+            "description": "Description of what went wrong.",
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "type": "object"
+      },
+      "FilterString": {
+        "description": "A filter string for selecting fields within a row.\n\nFilters are comprised of a comma-seperated list of field paths, i.e. `a,b` will select the fields `a` and `b`.\n\nDecorators may be used to modify the way a field is read. They take the form of `@decorator(arguments)`, i.e. `field@lang(en)`. Currently accepted decorators:\n\n- `@lang(<language>)`: Overrides the query's language for the decorated field. Allows one query to access data for multiple languages. `language` accepts any valid `LanguageString`.\n\n- `@as(<format>)`: Overrides the default output format for the decorated field.\n\nCurrently accepted `format`s for `@as`:\n\n- `raw`: Prevents further processing, such as sheet relations, being performed on the decorated field. Has no effect on regular scalar fields.\n\n- `html`: Formats a string field as rich HTML. Invalid on non-string fields. Output will be a valid HTML fragment, however no stability guarantees are made over the precise markup used.\n\nNested fields may be selected using dot notation, i.e. `a.b` will select the field `b` contained in the struct `a`.\n\nArrays must be targeted if selecting fields within them, i.e. `a[].b` will select _all_ `b` fields of structs within the array `a`, however `a.b` will select nothing.",
+        "type": "string"
+      },
+      "ListResponse": {
+        "description": "Response structure for the list endpoint.",
+        "properties": {
+          "sheets": {
+            "description": "Array of sheets known to the API.",
+            "items": {
+              "$ref": "#/components/schemas/SheetMetadata"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["sheets"],
+        "type": "object"
+      },
+      "MapPath": {
+        "description": "Path segments expected by the asset map endpoint.",
+        "properties": {
+          "index": {
+            "description": "Index of the map within the territory. This invariably takes the form of a two-digit zero-padded number. See `Map`'s `Id` field for examples of possible combinations of `territory` and `index`.",
+            "examples": ["00"],
+            "type": "string"
+          },
+          "territory": {
+            "description": "Territory of the map to be retrieved. This typically takes the form of 4 characters, [letter][number][letter][number]. See `Map`'s `Id` field for examples of possible combinations of `territory` and `index`.",
+            "examples": ["s1d1"],
+            "type": "string"
+          }
+        },
+        "required": ["index", "territory"],
+        "type": "object"
+      },
+      "QueryString": {
+        "description": "A query string for searching excel data.\n\nQueries are formed of clauses, which take the basic form of `[specifier][operation][value]`, i.e. `Name=\"Example\"`. Multiple clauses may be specified by seperating them with whitespace, i.e. `Foo=1 Bar=2`.\n\nLike field filters, clause specifiers may use dot notation to specify fields inside structs and relations (i.e. `Foo.Bar=1)`, as well as language tags to target fields in particular languages (i.e. `Foo@ja=1`).\n\nArrays must be selected explicitly (i.e. `Foo[]=1`), resulting in a match for any value within the array. An index can be used to reduce the search space (i.e. `Foo[1]=1`).\n\nBy default, results will match at least one clause, with higher relevance scores for those that match more. To modify this behavior, clauses can decorated. `+clause` specifies that the clause _must_ be matched for any result returned, and `-clause` specifies that it _must not_ be matched.\n\nTo represent more involved boolean matching, clauses may be grouped with parentheses. `+(a b) +c` will require that either clauses a _or_ b must match, in addition to c matching.\n\nSupported operations:\n\n- partial string match: `key~\"value\"`\n\n- exact equality: `key=value`\n\n- numeric comparison: `key>=value`, `key>value`, `key<=value`, `key<value`\n\nSupported value types:\n\n- string: `\"example\"`\n\n- number: `1`, `-1`, `1.0`\n\n- boolean: `true`, `false`",
+        "type": "string"
+      },
+      "RowPath": {
+        "description": "Path variables accepted by the row endpoint.",
+        "properties": {
+          "row": {
+            "$ref": "#/components/schemas/RowSpecifier",
+            "description": "Row to read."
+          },
+          "sheet": {
+            "description": "Name of the sheet to read.",
+            "type": "string"
+          }
+        },
+        "required": ["row", "sheet"],
+        "type": "object"
+      },
+      "RowReaderQuery": {
+        "description": "Query parameters accepted by endpoints that retrieve excel row data.",
+        "properties": {
+          "fields": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FilterString"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Data fields to read for selected rows."
+          },
+          "language": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchemaLanguage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Language to use for data with no language otherwise specified in the fields filter."
+          },
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchemaSpecifier"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Schema that row data should be read with."
+          },
+          "transient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FilterString"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Data fields to read for selected rows' transient row, if any is present."
+          }
+        },
+        "type": "object"
+      },
+      "RowResponse": {
+        "description": "Response structure for the row endpoint.",
+        "properties": {
+          "fields": {
+            "$ref": "#/components/schemas/ValueString",
+            "description": "Field values for this row, according to the current schema and field filter."
+          },
+          "row_id": {
+            "description": "ID of this row.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "schema": {
+            "description": "The canonical specifier for the schema used in this response.",
+            "type": "string"
+          },
+          "subrow_id": {
+            "description": "Subrow ID of this row, when relevant.",
+            "format": "uint16",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "transient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueString"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Field values for this row's transient row, if any is present, according to the current schema and transient filter."
+          },
+          "version": {
+            "description": "The canonical specifier for the version used in this response.",
+            "type": "string"
+          }
+        },
+        "required": ["fields", "row_id", "schema", "version"],
+        "type": "object"
+      },
+      "RowResult": {
+        "properties": {
+          "fields": {
+            "$ref": "#/components/schemas/ValueString",
+            "description": "Field values for this row, according to the current schema and field filter."
+          },
+          "row_id": {
+            "description": "ID of this row.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "subrow_id": {
+            "description": "Subrow ID of this row, when relevant.",
+            "format": "uint16",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "transient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueString"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Field values for this row's transient row, if any is present, according to the current schema and transient filter."
+          }
+        },
+        "required": ["fields", "row_id"],
+        "type": "object"
+      },
+      "RowSpecifier": {
+        "pattern": "^\\d+(:\\d+)?$",
+        "type": "string"
+      },
+      "SchemaFormat": {
+        "enum": ["jpg", "png", "webp"],
+        "type": "string"
+      },
+      "SchemaLanguage": {
+        "description": "Known languages supported by the game data format. **NOTE:** Not all languages that are supported by the format are valid for all editions of the game. For example, the global game client acknowledges the existence of `chs` and `kr`, however does not provide any data for them.",
+        "enum": ["none", "ja", "en", "de", "fr", "chs", "cht", "kr"],
+        "type": "string"
+      },
+      "SchemaSpecifier": {
+        "pattern": "^.+(@.+)?$",
+        "type": "string"
+      },
+      "SearchQuery": {
+        "description": "Query paramters accepted by the search endpoint.",
+        "properties": {
+          "cursor": {
+            "description": "Continuation token to retrieve further results from a prior search request. If specified, takes priority over `query`.",
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "limit": {
+            "description": "Maximum number of rows to return. To paginate, provide the cursor token provided in `next` to the `cursor` parameter.",
+            "format": "uint",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "query": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryString"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Search query to execute in this request. Must be specified if not querying a cursor. URL special characters, such as `+`, must be escaped to prevent mis-parses of the query."
+          },
+          "sheets": {
+            "description": "List of excel sheets that the query should be run against. At least one must be specified if not querying a cursor.",
+            "type": ["string", "null"]
+          }
+        },
+        "type": "object"
+      },
+      "SearchResponse": {
+        "description": "Response structure for the search endpoint.",
+        "properties": {
+          "next": {
+            "description": "A cursor that can be used to retrieve further results if available.",
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "results": {
+            "description": "Array of results found by the query, sorted by their relevance.",
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array"
+          },
+          "schema": {
+            "description": "The canonical specifier for the schema used in this response.",
+            "type": "string"
+          },
+          "version": {
+            "description": "The canonical specifier for the version used in this response.",
+            "type": "string"
+          }
+        },
+        "required": ["results", "schema", "version"],
+        "type": "object"
+      },
+      "SearchResult": {
+        "description": "Result found by a search query, hydrated with data from the underlying excel row the result represents.",
+        "properties": {
+          "fields": {
+            "$ref": "#/components/schemas/ValueString",
+            "description": "Field values for this row, according to the current schema and field filter."
+          },
+          "row_id": {
+            "description": "ID of this row.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "score": {
+            "description": "Relevance score for this entry.\n\nThese values only loosely represent the relevance of an entry to the search query. No guarantee is given that the discrete values, nor resulting sort order, will remain stable.",
+            "format": "float",
+            "type": "number"
+          },
+          "sheet": {
+            "description": "Excel sheet this result was found in.",
+            "type": "string"
+          },
+          "subrow_id": {
+            "description": "Subrow ID of this row, when relevant.",
+            "format": "uint16",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "transient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueString"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Field values for this row's transient row, if any is present, according to the current schema and transient filter."
+          }
+        },
+        "required": ["fields", "row_id", "score", "sheet"],
+        "type": "object"
+      },
+      "SheetMetadata": {
+        "description": "Metadata about a single sheet.",
+        "properties": {
+          "name": {
+            "description": "The name of the sheet.",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "SheetPath": {
+        "description": "Path variables accepted by the sheet endpoint.",
+        "properties": {
+          "sheet": {
+            "description": "Name of the sheet to read.",
+            "type": "string"
+          }
+        },
+        "required": ["sheet"],
+        "type": "object"
+      },
+      "SheetQuery": {
+        "description": "Query parameters accepted by the sheet endpoint.",
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RowSpecifier"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fetch rows after the specified row. Behavior is undefined if both `rows` and `after` are provided."
+          },
+          "limit": {
+            "description": "Maximum number of rows to return. To paginate, provide the last returned row to the next request's `after` parameter.",
+            "format": "uint",
+            "minimum": 0,
+            "type": ["integer", "null"]
+          },
+          "rows": {
+            "description": "Rows to fetch from the sheet, as a comma-separated list. Behavior is undefined if both `rows` and `after` are provided.",
+            "pattern": "^\\d+(:\\d+)?(,\\d+(:\\d+)?)*$",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SheetResponse": {
+        "description": "Response structure for the sheet endpoint.",
+        "properties": {
+          "rows": {
+            "description": "Array of rows retrieved by the query.",
+            "items": {
+              "$ref": "#/components/schemas/RowResult"
+            },
+            "type": "array"
+          },
+          "schema": {
+            "description": "The canonical specifier for the schema used in this response.",
+            "type": "string"
+          },
+          "version": {
+            "description": "The canonical specifier for the version used in this response.",
+            "type": "string"
+          }
+        },
+        "required": ["rows", "schema", "version"],
+        "type": "object"
+      },
+      "StatusCode": {
+        "format": "uint16",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "ValueString": {
+        "type": "object"
+      },
+      "VersionMetadata": {
+        "description": "Metadata about a single version supported by the API.",
+        "properties": {
+          "key": {
+            "description": "Canonical key for this version.",
+            "type": "string"
+          },
+          "names": {
+            "description": "Names associated with this version. Version names specified here are accepted by the `version` query parameter throughout the API.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["key", "names"],
+        "type": "object"
+      },
+      "VersionQueryParams": {
+        "description": "Query parameters accepted by endpoints that interact with versioned game data.",
+        "properties": {
+          "version": {
+            "description": "Game version to utilise for this query.",
+            "type": ["string", "null"]
+          }
+        },
+        "title": "VersionQuery",
+        "type": "object"
+      },
+      "VersionsResponse": {
+        "description": "Response structure for the version endpoint.",
+        "properties": {
+          "versions": {
+            "description": "Array of versions available in the API.",
+            "items": {
+              "$ref": "#/components/schemas/VersionMetadata"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["versions"],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "boilmaster",
+    "version": "1-9c95715"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/asset": {
+      "get": {
+        "description": "Read an asset from the game at the specified path, converting it into a usable format. If no valid conversion between the game file type and specified format exists, an error will be returned.",
+        "parameters": [
+          {
+            "description": "Game version to utilise for this query.",
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "description": "Game version to utilise for this query.",
+              "type": ["string", "null"]
+            },
+            "style": "form"
+          },
+          {
+            "description": "Game path of the asset to retrieve.",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "description": "Game path of the asset to retrieve.",
+              "examples": ["ui/icon/051000/051474_hr1.tex"],
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Format that the asset should be converted into.",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SchemaFormat",
+              "description": "Format that the asset should be converted into.",
+              "examples": ["png"]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {},
+              "image/png": {},
+              "image/webp": {}
+            },
+            "description": "byte stream"
+          },
+          "304": {
+            "description": "not modified"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "message": "invalid request: example error response"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "failed operation"
+          }
+        },
+        "summary": "read an asset",
+        "tags": ["assets"]
+      }
+    },
+    "/asset/map/{territory}/{index}": {
+      "get": {
+        "description": "Retrieve the specified map, composing it from split source files if necessary.",
+        "parameters": [
+          {
+            "description": "Territory of the map to be retrieved. This typically takes the form of 4 characters, [letter][number][letter][number]. See `Map`'s `Id` field for examples of possible combinations of `territory` and `index`.",
+            "in": "path",
+            "name": "territory",
+            "required": true,
+            "schema": {
+              "description": "Territory of the map to be retrieved. This typically takes the form of 4 characters, [letter][number][letter][number]. See `Map`'s `Id` field for examples of possible combinations of `territory` and `index`.",
+              "examples": ["s1d1"],
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "description": "Index of the map within the territory. This invariably takes the form of a two-digit zero-padded number. See `Map`'s `Id` field for examples of possible combinations of `territory` and `index`.",
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "description": "Index of the map within the territory. This invariably takes the form of a two-digit zero-padded number. See `Map`'s `Id` field for examples of possible combinations of `territory` and `index`.",
+              "examples": ["00"],
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "description": "Game version to utilise for this query.",
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "description": "Game version to utilise for this query.",
+              "type": ["string", "null"]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {}
+            },
+            "description": "byte stream"
+          },
+          "304": {
+            "description": "not modified"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "message": "invalid request: example error response"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "failed operation"
+          }
+        },
+        "summary": "compose a map",
+        "tags": ["assets"]
+      }
+    },
+    "/search": {
+      "get": {
+        "description": "Fetch information about rows and their related data that match the provided search query.",
+        "parameters": [
+          {
+            "description": "Game version to utilise for this query.",
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "description": "Game version to utilise for this query.",
+              "type": ["string", "null"]
+            },
+            "style": "form"
+          },
+          {
+            "description": "Search query to execute in this request. Must be specified if not querying a cursor. URL special characters, such as `+`, must be escaped to prevent mis-parses of the query.",
+            "in": "query",
+            "name": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/QueryString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search query to execute in this request. Must be specified if not querying a cursor. URL special characters, such as `+`, must be escaped to prevent mis-parses of the query."
+            },
+            "style": "form"
+          },
+          {
+            "description": "List of excel sheets that the query should be run against. At least one must be specified if not querying a cursor.",
+            "in": "query",
+            "name": "sheets",
+            "schema": {
+              "description": "List of excel sheets that the query should be run against. At least one must be specified if not querying a cursor.",
+              "type": ["string", "null"]
+            },
+            "style": "form"
+          },
+          {
+            "description": "Continuation token to retrieve further results from a prior search request. If specified, takes priority over `query`.",
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "description": "Continuation token to retrieve further results from a prior search request. If specified, takes priority over `query`.",
+              "format": "uuid",
+              "type": ["string", "null"]
+            },
+            "style": "form"
+          },
+          {
+            "description": "Maximum number of rows to return. To paginate, provide the cursor token provided in `next` to the `cursor` parameter.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "description": "Maximum number of rows to return. To paginate, provide the cursor token provided in `next` to the `cursor` parameter.",
+              "format": "uint",
+              "minimum": 0,
+              "type": ["integer", "null"]
+            },
+            "style": "form"
+          },
+          {
+            "description": "Language to use for data with no language otherwise specified in the fields filter.",
+            "in": "query",
+            "name": "language",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchemaLanguage"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Language to use for data with no language otherwise specified in the fields filter."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Schema that row data should be read with.",
+            "in": "query",
+            "name": "schema",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchemaSpecifier"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Schema that row data should be read with."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Data fields to read for selected rows.",
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FilterString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data fields to read for selected rows."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Data fields to read for selected rows' transient row, if any is present.",
+            "in": "query",
+            "name": "transient",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FilterString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data fields to read for selected rows' transient row, if any is present."
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "next": "bbe61a5e-7d22-41ec-9f5a-711c967c5624",
+                  "results": [
+                    {
+                      "fields": {
+                        "FieldName": 14
+                      },
+                      "row_id": 1,
+                      "score": 1.4129999876022339,
+                      "sheet": "SheetName"
+                    }
+                  ],
+                  "schema": "source@version",
+                  "version": "f815390159effefd"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "message": "invalid request: example error response"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "failed operation"
+          }
+        },
+        "summary": "execute a search query",
+        "tags": ["search"]
+      }
+    },
+    "/sheet": {
+      "get": {
+        "description": "List known excel sheets that can be read by the API.",
+        "parameters": [
+          {
+            "description": "Game version to utilise for this query.",
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "description": "Game version to utilise for this query.",
+              "type": ["string", "null"]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "sheets": [
+                    {
+                      "name": "Action"
+                    },
+                    {
+                      "name": "Item"
+                    },
+                    {
+                      "name": "Status"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "message": "invalid request: example error response"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "failed operation"
+          }
+        },
+        "summary": "list sheets",
+        "tags": ["sheets"]
+      }
+    },
+    "/sheet/{sheet}": {
+      "get": {
+        "description": "Read information about one or more rows and their related data.",
+        "parameters": [
+          {
+            "description": "Name of the sheet to read.",
+            "in": "path",
+            "name": "sheet",
+            "required": true,
+            "schema": {
+              "description": "Name of the sheet to read.",
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "description": "Rows to fetch from the sheet, as a comma-separated list. Behavior is undefined if both `rows` and `after` are provided.",
+            "in": "query",
+            "name": "rows",
+            "schema": {
+              "description": "Rows to fetch from the sheet, as a comma-separated list. Behavior is undefined if both `rows` and `after` are provided.",
+              "pattern": "^\\d+(:\\d+)?(,\\d+(:\\d+)?)*$",
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Maximum number of rows to return. To paginate, provide the last returned row to the next request's `after` parameter.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "description": "Maximum number of rows to return. To paginate, provide the last returned row to the next request's `after` parameter.",
+              "format": "uint",
+              "minimum": 0,
+              "type": ["integer", "null"]
+            },
+            "style": "form"
+          },
+          {
+            "description": "Fetch rows after the specified row. Behavior is undefined if both `rows` and `after` are provided.",
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RowSpecifier"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Fetch rows after the specified row. Behavior is undefined if both `rows` and `after` are provided."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Language to use for data with no language otherwise specified in the fields filter.",
+            "in": "query",
+            "name": "language",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchemaLanguage"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Language to use for data with no language otherwise specified in the fields filter."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Schema that row data should be read with.",
+            "in": "query",
+            "name": "schema",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchemaSpecifier"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Schema that row data should be read with."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Data fields to read for selected rows.",
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FilterString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data fields to read for selected rows."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Data fields to read for selected rows' transient row, if any is present.",
+            "in": "query",
+            "name": "transient",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FilterString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data fields to read for selected rows' transient row, if any is present."
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "rows": [
+                    {
+                      "fields": {
+                        "FieldName": 14
+                      },
+                      "row_id": 1
+                    },
+                    {
+                      "fields": {
+                        "FieldName": 14
+                      },
+                      "row_id": 2
+                    }
+                  ],
+                  "schema": "source@version",
+                  "version": "f815390159effefd"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SheetResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "message": "invalid request: example error response"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "failed operation"
+          }
+        },
+        "summary": "list rows in a sheet",
+        "tags": ["sheets"]
+      }
+    },
+    "/sheet/{sheet}/{row}": {
+      "get": {
+        "description": "Read detailed, filterable information from a single sheet row and its related data.",
+        "parameters": [
+          {
+            "description": "Name of the sheet to read.",
+            "in": "path",
+            "name": "sheet",
+            "required": true,
+            "schema": {
+              "description": "Name of the sheet to read.",
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "description": "Row to read.",
+            "in": "path",
+            "name": "row",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RowSpecifier",
+              "description": "Row to read."
+            },
+            "style": "simple"
+          },
+          {
+            "description": "Language to use for data with no language otherwise specified in the fields filter.",
+            "in": "query",
+            "name": "language",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchemaLanguage"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Language to use for data with no language otherwise specified in the fields filter."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Schema that row data should be read with.",
+            "in": "query",
+            "name": "schema",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SchemaSpecifier"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Schema that row data should be read with."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Data fields to read for selected rows.",
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FilterString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data fields to read for selected rows."
+            },
+            "style": "form"
+          },
+          {
+            "description": "Data fields to read for selected rows' transient row, if any is present.",
+            "in": "query",
+            "name": "transient",
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FilterString"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data fields to read for selected rows' transient row, if any is present."
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "fields": {
+                    "FieldName": 14
+                  },
+                  "row_id": 1,
+                  "schema": "source@version",
+                  "version": "f815390159effefd"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/RowResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "message": "invalid request: example error response"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "failed operation"
+          }
+        },
+        "summary": "read a sheet row",
+        "tags": ["sheets"]
+      }
+    },
+    "/version": {
+      "get": {
+        "description": "List versions understood by the API.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "versions": [
+                    {
+                      "key": "f815390159effefd",
+                      "names": ["7.0"]
+                    },
+                    {
+                      "key": "2139246928a48a9a",
+                      "names": ["7.01", "latest"]
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/VersionsResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "summary": "list versions",
+        "tags": ["versions"]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "Endpoints for accessing game data on a file-by-file basis. Commonly useful for fetching icons or other textures to display on the web.",
+      "name": "assets"
+    },
+    {
+      "description": "Endpoints for seaching and filtering the game's static relational data store.",
+      "name": "search"
+    },
+    {
+      "description": "Endpoints for reading data from the game's static relational data store.",
+      "name": "sheets"
+    },
+    {
+      "description": "Endpoints for querying metadata about the versions recorded by the boilmaster system.",
+      "name": "versions"
+    }
+  ]
+}

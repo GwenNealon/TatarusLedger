@@ -4,26 +4,30 @@
 
 Tataru's Ledger is a **TypeScript + React** single-page web application that uses data from the [Universalis API](https://universalis.app/docs/index.html) to surface profitable crafting, gathering, and market board arbitrage opportunities in the MMORPG **Final Fantasy XIV**.
 
-The project is early-stage: the current `src/App.tsx` renders an official landing page while core features are built out inside the `src/` directory.
+The current `src/App.tsx` renders the checked-in item index experience: item search, item detail routing, and resource links for individual FFXIV items.
 
 ---
 
 ## Repository Layout
 
+Keep this section updated when key folders/files move or responsibilities change.
+
 ```
-TatarusLedger/                   ← repo root; ALL frontend code lives here
-  README.md
-  package.json
-  package-lock.json
-  index.html
-  vite.config.ts
-  eslint.config.js
-  tsconfig.json / tsconfig.app.json / tsconfig.node.json
-  public/
-    favicon.svg
-  src/
-    main.tsx                     ← React entry point
-    App.tsx                      ← root component (official landing page)
+TatarusLedger/                   ← repo root
+	.github/
+		apis/                        ← local API docs; source of truth before web lookup
+		workflows/                   ← CI/CD + release automation
+	README.md                      ← canonical workflow and project docs
+	scripts/                       ← maintenance/data/spec update entrypoints
+	public/
+		data/                        ← checked-in static datasets consumed at runtime
+	src/                           ← runtime application source
+		api/                         ← API clients + provider-specific OpenAPI snapshot/type artifacts
+			universalis/              ← Universalis OpenAPI snapshot + generated schema types
+			xivapi/                   ← XIVAPI OpenAPI snapshot + generated schema types
+		data/                        ← normalization/parsing utilities
+		features/                    ← user-facing feature modules
+			items/                     ← item search/detail experience and cached item index helpers
 ```
 
 **All `npm` commands are run from the repo root.**
@@ -32,66 +36,86 @@ TatarusLedger/                   ← repo root; ALL frontend code lives here
 
 ## Tech Stack
 
-| Layer           | Tool / Version                                                       |
-| --------------- | -------------------------------------------------------------------- |
-| UI framework    | React 19 (StrictMode)                                                |
-| Language        | TypeScript ~6.0                                                      |
-| Bundler         | Vite 8                                                               |
-| Compiler plugin | `babel-plugin-react-compiler` via `@rolldown/plugin-babel`           |
-| Linter          | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked) |
+| Layer        | Tool / Version                                                           |
+| ------------ | ------------------------------------------------------------------------ |
+| UI framework | React 19 (StrictMode)                                                    |
+| Language     | TypeScript `~6.0.2` (see `package.json` for the exact installed version) |
+| Bundler      | Vite `^8.0.12` (see `package.json` for the exact installed version)      |
+| Linter       | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked)     |
 
 ---
 
 ## Development Commands
 
-Run all commands from the **repo root**:
+Run all commands from the **repo root**.
+
+Build commands:
 
 ```bash
-npm run dev        # start Vite dev server (hot module reload)
-npm run build      # tsc -b && vite build  (full type-check + production bundle)
-npm run lint       # ESLint over all .ts/.tsx files
-npm run preview    # serve the production build locally
+npm run dev
+npm run build
+npm run api:spec:update # refresh Universalis snapshot + regenerate API types
+npm run api:spec:check  # verify structural snapshot parity + generated types are current
+npm run api:xivapi:spec:update # refresh XIVAPI snapshot + regenerate API types
+npm run api:xivapi:spec:check  # verify structural snapshot parity + generated types are current
+npm run lint
+npm run preview
 ```
 
-**Validation is done via `format:check`, `lint`, `typecheck`, `test`, and `build`.**
-
-Before committing changes, always verify with:
+Validation commands:
 
 ```bash
-npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test
 ```
+
+### PR Suggestion Quality Gate (Required)
+
+When preparing or suggesting PR-ready changes, run all validation commands above in the local workspace where the change was made. If a command fails, attempt the following automated fixes and re-run validations:
+
+1. If `npm run format:check` fails, run `npm run format`, then re-run `npm run format:check`.
+2. If `npm run lint` fails, run `npm run lint:fix`, then re-run `npm run lint`.
+3. If `npm run typecheck` fails, fix the type errors, then re-run `npm run typecheck`.
+4. If `npm run test` fails, fix the test errors, then re-run `npm run test`.
+
+If any command fails after the automated fix, report the exact failure output, do **not** describe the change as PR-ready, and stop. Do not attempt further automated fixes unless the user explicitly asks for them.
+
+### PR Description Maintenance (Required)
+
+When working on a branch that already has an open pull request:
+
+1. Review the existing PR description before or while making changes.
+2. Update the PR description so it accurately reflects the latest scope, implementation details, and validation status.
+3. Ensure the PR description calls out any meaningful behavior changes, follow-up work, or known limitations introduced by the latest commit(s).
 
 ---
 
 ## TypeScript Conventions
 
-The TypeScript config (`tsconfig.app.json`) enforces strict checks. Key rules to follow:
+The TypeScript config (`tsconfig.app.json`) is strict. Follow these rules:
 
-- **`noUnusedLocals` / `noUnusedParameters`** – every declared variable and parameter must be used. Prefix intentionally-unused parameters with `_` if needed.
-- **`verbatimModuleSyntax: true`** – use `import type` for type-only imports (e.g., `import type { Foo } from './types'`). Mixing value and type imports in the same statement is fine only when at least one import is a value.
-- **`erasableSyntaxOnly: true`** – avoid TypeScript-only syntax that cannot be erased (e.g., no `const enum`, no decorators without `experimentalDecorators`).
-- **`noFallthroughCasesInSwitch`** – every `case` block must end with `break`, `return`, or `throw`.
-- Target is **ES2023**; modern JavaScript syntax (optional chaining, nullish coalescing, `Array.at()`, etc.) is encouraged.
-- **`jsx: "react-jsx"`** – no need to import React for JSX.
+- Use every declared variable and parameter; prefix intentionally unused parameters with `_`.
+- Use `import type` for type-only imports. For mixed imports, use inline type markers as the default style (`import { type Foo, bar } from './mod'`).
+- Avoid non-erasable TypeScript syntax (for example `const enum`, decorators without `experimentalDecorators`).
+- Do not allow switch fallthrough; each `case` must end with `break`, `return`, or `throw`.
+- Use the React JSX transform (`jsx: react-jsx`); do not add React imports only for JSX.
 
 ---
 
 ## ESLint Configuration
 
-ESLint config is in `eslint.config.js` and applies to all `.ts` / `.tsx` files. Active rule sets:
+ESLint config is in `eslint.config.js` and applies to all `.ts` / `.tsx` files.
 
 - `@eslint/js` recommended
-- `typescript-eslint` **strictTypeChecked** + **stylisticTypeChecked** – these are stricter than the default recommended presets. Type information is used for linting, so the tsconfig paths are wired in.
+- `typescript-eslint` **strictTypeChecked** + **stylisticTypeChecked**
 - `eslint-plugin-react-hooks` recommended – enforces Rules of Hooks.
 - `eslint-plugin-react-refresh` (vite preset) – warns about non-component exports from `.tsx` files that would break HMR.
 
-Because `typescript-eslint` strict+stylistic is enabled, expect rules like:
+Linting is type-aware (wired to the project tsconfig), so lint can fail even when TypeScript compile succeeds.
 
-- Prefer `interface` over `type` aliases for object shapes.
-- No unnecessary type assertions.
-- Consistent type exports.
-
-Run `npm run lint` after any changes to catch issues early.
+Run `npm run lint` after any change.
 
 ---
 
@@ -105,17 +129,18 @@ The project uses the **React Compiler** (`babel-plugin-react-compiler`) via `@ro
 
 ---
 
-## Universalis API
+## External API
 
-The app consumes the [Universalis REST API](https://universalis.app/docs/index.html) (no authentication required). Key endpoints:
+The app consumes Universalis and XIVAPI.
 
-- `GET /api/v2/{worldDcRegion}/{itemIds}` – current market board listings and recent history for one or more item IDs in a world, data-centre, or region.
-- `GET /api/v2/history/{worldDcRegion}/{itemIds}` – sale history only.
-- `GET /api/v2/marketable` – list of all marketable item IDs.
-- `GET /api/v2/worlds` – list of all worlds.
-- `GET /api/v2/data-centers` – list of all data centres and their worlds.
+Use local API docs as source of truth before web lookup:
 
-Item names and metadata (not provided by Universalis) come from the community XIVAPI (`https://v2.xivapi.com/api/1/`) or the static Lodestone game data. Prefer fetching only what is needed; Universalis supports batching multiple item IDs in a single request (comma-separated).
+- `.github/apis/universalis.md`
+- `.github/apis/xivapi.md`
+
+### Spec Snapshot Workflow
+
+See the README section "Universalis Spec Workflow" for the canonical workflow and rationale.
 
 ---
 
