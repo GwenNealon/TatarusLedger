@@ -98,26 +98,31 @@ export function ItemSearch(props: ItemSearchProps) {
       />
 
       <ul style={styles.itemList}>
-        {filteredItems.map((item) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              style={styles.itemButton}
-              onClick={() => {
-                onSelectItem(item)
-              }}
-            >
-              <img
-                src={`https://xivapi.com/i/${String(item.iconId).padStart(6, '0').slice(0, 3)}000/${String(item.iconId).padStart(6, '0')}.png`}
-                alt={`${item.name} icon`}
-                width={24}
-                height={24}
-                style={{ borderRadius: '4px' }}
-              />
-              <span>{item.name}</span>
-            </button>
-          </li>
-        ))}
+        {filteredItems.map((item) => {
+          const iconId = String(item.iconId).padStart(6, '0')
+          const iconUrl = `https://xivapi.com/i/${iconId.slice(0, 3)}000/${iconId}.png`
+
+          return (
+            <li key={item.id}>
+              <button
+                type="button"
+                style={styles.itemButton}
+                onClick={() => {
+                  onSelectItem(item)
+                }}
+              >
+                <img
+                  src={iconUrl}
+                  alt={`${item.name} icon`}
+                  width={24}
+                  height={24}
+                  style={{ borderRadius: '4px' }}
+                />
+                <span>{item.name}</span>
+              </button>
+            </li>
+          )
+        })}
         {hasMoreResults ? (
           <li style={{ padding: '0.5rem' }}>
             <button
