@@ -607,14 +607,24 @@ describe('App', () => {
 
     const { container } = await renderApp()
 
-    const retainers = container.querySelector<HTMLTextAreaElement>(
-      'textarea[placeholder="One retainer name per line"]',
+    const retainers = container.querySelector<HTMLInputElement>(
+      'input[placeholder="Add retainer name"]',
     )
     expect(retainers).not.toBeNull()
     if (retainers === null) return
 
     act(() => {
       setInputValue(retainers, 'Tataru')
+    })
+
+    const addRetainerButton = Array.from(
+      container.querySelectorAll('button'),
+    ).find((button) => button.textContent === 'Add retainer')
+    expect(addRetainerButton).not.toBeUndefined()
+    if (addRetainerButton === undefined) return
+
+    act(() => {
+      addRetainerButton.click()
     })
 
     const discoverButton = Array.from(
@@ -691,14 +701,24 @@ describe('App', () => {
 
     const { container } = await renderApp()
 
-    const retainers = container.querySelector<HTMLTextAreaElement>(
-      'textarea[placeholder="One retainer name per line"]',
+    const retainers = container.querySelector<HTMLInputElement>(
+      'input[placeholder="Add retainer name"]',
     )
     expect(retainers).not.toBeNull()
     if (retainers === null) return
 
     act(() => {
       setInputValue(retainers, 'Tataru')
+    })
+
+    const addRetainerButton = Array.from(
+      container.querySelectorAll('button'),
+    ).find((button) => button.textContent === 'Add retainer')
+    expect(addRetainerButton).not.toBeUndefined()
+    if (addRetainerButton === undefined) return
+
+    act(() => {
+      addRetainerButton.click()
     })
 
     const discoverButton = Array.from(

@@ -209,6 +209,7 @@ function readStoredConfig(): StoredConfig {
 export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const { items } = props
   const [config, setConfig] = useState(readStoredConfig)
+  const [retainerDraft, setRetainerDraft] = useState('')
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof Notification === 'undefined' ? 'denied' : Notification.permission,
   )
@@ -266,6 +267,19 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     worldOptions.length > 0 &&
     selectedWorld.length > 0 &&
     retainerNames.length > 0
+
+  const addRetainerName = () => {
+    const nextRetainer = retainerDraft.trim()
+    if (nextRetainer.length === 0) {
+      return
+    }
+
+    setConfig((current) => ({
+      ...current,
+      retainerInput: appendUniqueTokens(current.retainerInput, [nextRetainer]),
+    }))
+    setRetainerDraft('')
+  }
 
   useEffect(() => {
     try {
@@ -381,7 +395,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           unknown
         >
         const eventName = typeof payload.event === 'string' ? payload.event : ''
-
         if (
           eventName === 'listings/add' ||
           eventName === 'listings/remove' ||
@@ -536,19 +549,57 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
 
         <label>
           Retainer names
-          <textarea
-            rows={4}
-            value={config.retainerInput}
-            onChange={(event) => {
-              setConfig((current) => ({
-                ...current,
-                retainerInput: event.target.value,
-              }))
-            }}
-            placeholder="One retainer name per line"
-          />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              value={retainerDraft}
+              onChange={(event) => {
+                setRetainerDraft(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') {
+                  return
+                }
+
+                event.preventDefault()
+                addRetainerName()
+              }}
+              placeholder="Add retainer name"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                addRetainerName()
+              }}
+            >
+              Add retainer
+            </button>
+          </div>
         </label>
       </div>
+
+      {parseWatchTokens(config.retainerInput).length > 0 ? (
+        <ul style={styles.chips}>
+          {parseWatchTokens(config.retainerInput).map((retainerName, index) => (
+            <li key={`${retainerName}-${index.toString()}`} style={styles.chip}>
+              <span>{retainerName}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfig((current) => ({
+                    ...current,
+                    retainerInput: parseWatchTokens(current.retainerInput)
+                      .filter((token) => token !== retainerName)
+                      .join('\n'),
+                  }))
+                }}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <button
         type="button"
