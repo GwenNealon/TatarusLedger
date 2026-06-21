@@ -35,20 +35,14 @@ const APP_BASE_PATH =
 const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
 
 function parseRoutedItemId(pathname: string): number | null {
-  const base = APP_BASE_PATH.endsWith('/')
-    ? APP_BASE_PATH.slice(0, -1)
-    : APP_BASE_PATH
-
-  if (pathname !== base && !pathname.startsWith(`${base}/`)) {
+  const base = APP_BASE_PATH.replace(/\/+$/, '')
+  const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = new RegExp(`^${escapedBase}/(\\d+)/?$`).exec(pathname)
+  if (match === null) {
     return null
   }
 
-  const rest = pathname.slice(base.length).replace(/^\/+|\/+$/g, '')
-  if (rest.length === 0 || rest.includes('/')) {
-    return null
-  }
-
-  const parsed = Number.parseInt(rest, 10)
+  const parsed = Number.parseInt(match[1], 10)
   if (!Number.isSafeInteger(parsed) || parsed <= 0) {
     return null
   }
