@@ -3,7 +3,6 @@ import type { CSSProperties } from 'react'
 
 import { fetchMarketBoard } from '../../api/universalis.ts'
 import type { NormalizedItem } from '../../data/types.ts'
-import { toIconUrl } from './iconUrl.ts'
 
 interface ItemMarketSummary {
   lowestPrice: number | null
@@ -17,50 +16,82 @@ interface ItemCacheEntry {
   marketSummary: ItemMarketSummary
 }
 
-type CacheStatus =
-  | { state: 'cached' }
-  | { state: 'refreshing' }
-  | { state: 'error'; message: string }
-
 const ITEM_CACHE_TTL_MS = 5 * 60 * 1_000
 
-const sectionStyles: CSSProperties = {
-  marginTop: '1.5rem',
-  paddingTop: '1rem',
-  borderTop: '1px solid #e2e8f0',
+const styles: Record<
+  'section' | 'itemHeader' | 'icon' | 'spinningIcon',
+  CSSProperties
+> = {
+  section: {
+    marginTop: '1.5rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid #e2e8f0',
+  },
+  itemHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  icon: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+  },
+  spinningIcon: {
+    display: 'inline-block',
+    marginRight: '0.35rem',
+    animation: 'spin 1s linear infinite',
+  },
 }
 
-const itemHeaderStyles: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.75rem',
-}
+function isItemCacheEntry(value: unknown): value is ItemCacheEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
 
-const iconStyles: CSSProperties = {
-  width: '40px',
-  height: '40px',
-  borderRadius: '6px',
-  border: '1px solid #cbd5e1',
-}
+  const entry = value as Record<string, unknown>
 
-const spinningIconStyles: CSSProperties = {
-  display: 'inline-block',
-  marginRight: '0.35rem',
-  animation: 'spin 1s linear infinite',
-}
+  if (typeof entry.fetchedAt !== 'number') {
+    return false
+  }
 
-function getCacheKey(itemId: number): string {
-  return `item-cache-${itemId.toString()}`
-}
+  const item = entry.item
+  const marketSummary = entry.marketSummary
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+  // Validate item
+  if (
+    typeof item !== 'object' ||
+    item === null ||
+    typeof (item as Record<string, unknown>).id !== 'number' ||
+    typeof (item as Record<string, unknown>).name !== 'string' ||
+    typeof (item as Record<string, unknown>).iconId !== 'number' ||
+    typeof (item as Record<string, unknown>).levelItem !== 'number' ||
+    typeof (item as Record<string, unknown>).rarity !== 'number' ||
+    typeof (item as Record<string, unknown>).uiCategory !== 'number'
+  ) {
+    return false
+  }
+
+  // Validate marketSummary
+  if (typeof marketSummary !== 'object' || marketSummary === null) {
+    return false
+  }
+
+  const ms = marketSummary as Record<string, unknown>
+  const lowestPrice = ms.lowestPrice
+
+  return (
+    typeof ms.listingCount === 'number' &&
+    typeof ms.saleCount === 'number' &&
+    (typeof lowestPrice === 'number' || lowestPrice === null)
+  )
 }
 
 function readCache(itemId: number): ItemCacheEntry | null {
   let raw: string | null
   try {
-    raw = window.localStorage.getItem(getCacheKey(itemId))
+    raw = window.localStorage.getItem(`item-cache-${itemId.toString()}`)
   } catch {
     return null
   }
@@ -70,56 +101,16 @@ function readCache(itemId: number): ItemCacheEntry | null {
 
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (!isRecord(parsed)) {
-      return null
-    }
-
-    const item = parsed.item
-    const marketSummary = parsed.marketSummary
-
-    if (
-      typeof parsed.fetchedAt === 'number' &&
-      isRecord(item) &&
-      typeof item.id === 'number' &&
-      typeof item.name === 'string' &&
-      typeof item.iconId === 'number' &&
-      typeof item.levelItem === 'number' &&
-      typeof item.rarity === 'number' &&
-      typeof item.uiCategory === 'number' &&
-      isRecord(marketSummary) &&
-      typeof marketSummary.listingCount === 'number' &&
-      typeof marketSummary.saleCount === 'number' &&
-      (typeof marketSummary.lowestPrice === 'number' ||
-        marketSummary.lowestPrice === null)
-    ) {
-      return {
-        fetchedAt: parsed.fetchedAt,
-        item: {
-          id: item.id,
-          name: item.name,
-          iconId: item.iconId,
-          levelItem: item.levelItem,
-          rarity: item.rarity,
-          uiCategory: item.uiCategory,
-        },
-        marketSummary: {
-          listingCount: marketSummary.listingCount,
-          saleCount: marketSummary.saleCount,
-          lowestPrice: marketSummary.lowestPrice,
-        },
-      }
-    }
+    return isItemCacheEntry(parsed) ? parsed : null
   } catch {
     return null
   }
-
-  return null
 }
 
 function writeCache(entry: ItemCacheEntry): void {
   try {
     window.localStorage.setItem(
-      getCacheKey(entry.item.id),
+      `item-cache-${entry.item.id.toString()}`,
       JSON.stringify(entry),
     )
   } catch {
@@ -131,35 +122,17 @@ function isFresh(entry: ItemCacheEntry): boolean {
   return Date.now() - entry.fetchedAt <= ITEM_CACHE_TTL_MS
 }
 
-function getResourceLinks(
-  item: NormalizedItem,
-): { label: string; href: string }[] {
-  const encodedName = encodeURIComponent(item.name)
-  return [
-    {
-      label: 'Universalis',
-      href: `https://universalis.app/market/${item.id.toString()}`,
-    },
-    {
-      label: 'Saddlebag Exchange',
-      href: `https://saddlebagexchange.com/queries/item-data/${item.id.toString()}`,
-    },
-    {
-      label: 'Teamcraft',
-      href: `https://ffxivteamcraft.com/db/en/item/${item.id.toString()}/${encodedName}`,
-    },
-    {
-      label: 'Garland Tools',
-      href: `https://www.garlandtools.org/db/#item/${item.id.toString()}`,
-    },
-  ]
-}
-
 async function refreshItem(item: NormalizedItem): Promise<ItemCacheEntry> {
-  const [marketData] = await fetchMarketBoard('Crystal', [item.id], {
-    listings: 10,
-    entries: 10,
-  })
+  const marketData = (
+    await fetchMarketBoard('Crystal', [item.id], {
+      listings: 10,
+      entries: 10,
+    })
+  ).at(0)
+
+  if (marketData === undefined) {
+    throw new Error('No market data returned for item')
+  }
 
   const lowestPrice =
     marketData.listings.length === 0
@@ -180,71 +153,22 @@ async function refreshItem(item: NormalizedItem): Promise<ItemCacheEntry> {
   return entry
 }
 
-function CacheStatusIcon(props: { status: CacheStatus; onRetry: () => void }) {
-  const { status, onRetry } = props
-
-  if (status.state === 'cached') {
-    return (
-      <span
-        role="status"
-        aria-label="Cached and fresh"
-        title="Cached and fresh"
-      >
-        ✅ Cached and fresh
-      </span>
-    )
-  }
-
-  if (status.state === 'refreshing') {
-    return (
-      <span role="status" aria-live="polite" title="Refreshing cache">
-        <span aria-hidden="true" style={spinningIconStyles}>
-          ↻
-        </span>
-        Refreshing cache…
-      </span>
-    )
-  }
-
-  return (
-    <span>
-      <span role="status" aria-live="polite">
-        {`⚠️ Cache refresh failed: ${status.message}`}
-      </span>
-      <button type="button" style={{ marginLeft: '0.5rem' }} onClick={onRetry}>
-        Retry
-      </button>
-    </span>
-  )
-}
-
 interface ItemDetailPageProps {
   item: NormalizedItem
 }
 
 export function ItemDetailPage(props: ItemDetailPageProps) {
   const { item } = props
-  const [latestEntry, setLatestEntry] = useState<ItemCacheEntry | null>(null)
+  const [latestEntry, setLatestEntry] = useState<ItemCacheEntry | null>(() =>
+    readCache(item.id),
+  )
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [retrySignal, setRetrySignal] = useState(0)
 
-  const selectedCache =
-    latestEntry !== null && latestEntry.item.id === item.id
-      ? latestEntry
-      : readCache(item.id)
-
-  const needsRefresh = selectedCache === null || !isFresh(selectedCache)
-
-  const cacheStatus: CacheStatus =
-    refreshError !== null
-      ? { state: 'error', message: refreshError }
-      : needsRefresh
-        ? { state: 'refreshing' }
-        : { state: 'cached' }
+  const needsRefresh = latestEntry === null || !isFresh(latestEntry)
 
   useEffect(() => {
-    const cachedEntry = readCache(item.id)
-    if (cachedEntry !== null && isFresh(cachedEntry)) {
+    if (!needsRefresh) {
       return
     }
 
@@ -272,31 +196,56 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
     return () => {
       cancelled = true
     }
-  }, [item, retrySignal])
+  }, [item, needsRefresh, retrySignal])
 
   return (
-    <section aria-labelledby="item-detail-heading" style={sectionStyles}>
+    <section aria-labelledby="item-detail-heading" style={styles.section}>
       <style>
         {
           '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
         }
       </style>
-      <div style={itemHeaderStyles}>
+      <div style={styles.itemHeader}>
         <img
-          src={toIconUrl(item.iconId)}
+          src={`https://xivapi.com/i/${String(item.iconId).padStart(6, '0').slice(0, 3)}000/${String(item.iconId).padStart(6, '0')}.png`}
           alt={`${item.name} icon`}
-          style={iconStyles}
+          style={styles.icon}
         />
         <h2 id="item-detail-heading" style={{ margin: 0 }}>
           {item.name}
         </h2>
-        <CacheStatusIcon
-          status={cacheStatus}
-          onRetry={() => {
-            setRefreshError(null)
-            setRetrySignal((value) => value + 1)
-          }}
-        />
+        {refreshError !== null ? (
+          <span>
+            <span role="status" aria-live="polite">
+              {`⚠️ Cache refresh failed: ${refreshError}`}
+            </span>
+            <button
+              type="button"
+              style={{ marginLeft: '0.5rem' }}
+              onClick={() => {
+                setRefreshError(null)
+                setRetrySignal((value) => value + 1)
+              }}
+            >
+              Retry
+            </button>
+          </span>
+        ) : needsRefresh ? (
+          <span role="status" aria-live="polite" title="Refreshing cache">
+            <span aria-hidden="true" style={styles.spinningIcon}>
+              ↻
+            </span>
+            Refreshing cache…
+          </span>
+        ) : (
+          <span
+            role="status"
+            aria-label="Cached and fresh"
+            title="Cached and fresh"
+          >
+            ✅ Cached and fresh
+          </span>
+        )}
       </div>
 
       <dl>
@@ -305,19 +254,36 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         <dt>Category</dt>
         <dd>{`UI Category ${item.uiCategory.toString()}`}</dd>
         <dt>Listings in latest refresh</dt>
-        <dd>{selectedCache?.marketSummary.listingCount ?? '—'}</dd>
+        <dd>{latestEntry?.marketSummary.listingCount ?? '—'}</dd>
         <dt>Sales in latest refresh</dt>
-        <dd>{selectedCache?.marketSummary.saleCount ?? '—'}</dd>
+        <dd>{latestEntry?.marketSummary.saleCount ?? '—'}</dd>
         <dt>Lowest observed price</dt>
         <dd>
-          {selectedCache?.marketSummary.lowestPrice == null
+          {latestEntry?.marketSummary.lowestPrice == null
             ? '—'
-            : `${selectedCache.marketSummary.lowestPrice.toString()} gil`}
+            : `${latestEntry.marketSummary.lowestPrice.toString()} gil`}
         </dd>
       </dl>
 
       <nav aria-label="External item resources">
-        {getResourceLinks(item).map((link) => (
+        {[
+          {
+            label: 'Universalis',
+            href: `https://universalis.app/market/${item.id.toString()}`,
+          },
+          {
+            label: 'Saddlebag Exchange',
+            href: `https://saddlebagexchange.com/queries/item-data/${item.id.toString()}`,
+          },
+          {
+            label: 'Teamcraft',
+            href: `https://ffxivteamcraft.com/db/en/item/${item.id.toString()}/${encodeURIComponent(item.name)}`,
+          },
+          {
+            label: 'Garland Tools',
+            href: `https://www.garlandtools.org/db/#item/${item.id.toString()}`,
+          },
+        ].map((link) => (
           <a
             key={link.label}
             href={link.href}

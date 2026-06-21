@@ -1,0 +1,31 @@
+import type { NormalizedItem } from '../../data/types.ts'
+import { APP_BASE_PATH } from '../../constants.ts'
+import { isNormalizedItem } from '../../data/validators.ts'
+
+interface ItemsArtifactPayload {
+  items: NormalizedItem[]
+}
+
+function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const payload = value as Record<string, unknown>
+  return Array.isArray(payload.items) && payload.items.every(isNormalizedItem)
+}
+
+export async function loadCachedItemsIndex(): Promise<NormalizedItem[]> {
+  const itemsUrl = `${APP_BASE_PATH}data/items.json`
+  const response = await fetch(itemsUrl)
+  if (!response.ok) {
+    return []
+  }
+
+  const payload: unknown = await response.json()
+  if (!isItemsArtifactPayload(payload)) {
+    return []
+  }
+
+  return payload.items
+}

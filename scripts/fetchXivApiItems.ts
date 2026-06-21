@@ -1,6 +1,3 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { NormalizedItem } from '../src/data/types.ts'
 
 const XIVAPI_BASE = 'https://v2.xivapi.com/api'
@@ -9,10 +6,6 @@ const PAGE_SIZE = 1_000
 interface XivApiItemEntry {
   row_id: number
   fields: Record<string, unknown>
-}
-
-interface XivApiItemsPage {
-  rows: XivApiItemEntry[]
 }
 
 function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
@@ -39,7 +32,10 @@ function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
   }
 }
 
-async function fetchXivApiItems(
+/**
+ * Fetches all tradable items from XIVAPI's Item sheet using cursor pagination.
+ */
+export async function fetchXivApiItems(
   fetchInit?: RequestInit,
 ): Promise<NormalizedItem[]> {
   const items: NormalizedItem[] = []
@@ -64,8 +60,34 @@ async function fetchXivApiItems(
       )
     }
 
-    const payload = (await response.json()) as XivApiItemsPage
-    const pageEntries = payload.rows
+    const raw: unknown = await response.json()
+    const rows = (raw as { rows?: unknown }).rows
+    if (!Array.isArray(rows)) {
+      throw new Error('Invalid XIVAPI item index payload (missing rows array)')
+    }
+
+    const pageEntries: XivApiItemEntry[] = []
+    for (const row of rows) {
+      if (typeof row !== 'object' || row === null) {
+        continue
+      }
+
+      const entry = row as Record<string, unknown>
+      if (typeof entry.row_id !== 'number') {
+        continue
+      }
+
+      const fields = entry.fields
+      if (typeof fields !== 'object' || fields === null) {
+        continue
+      }
+
+      pageEntries.push({
+        row_id: entry.row_id,
+        fields: fields as Record<string, unknown>,
+      })
+    }
+
     if (pageEntries.length === 0) {
       break
     }
@@ -87,30 +109,3 @@ async function fetchXivApiItems(
 
   return items
 }
-
-async function run(): Promise<void> {
-  const version = process.argv[2] ?? 'unknown'
-  const items = await fetchXivApiItems({
-    headers: {
-      'Accept-Encoding': 'identity',
-    },
-  })
-
-  const outDir = join(
-    dirname(fileURLToPath(import.meta.url)),
-    '..',
-    'public',
-    'data',
-  )
-  await mkdir(outDir, { recursive: true })
-
-  const artifact: { version: string; items: NormalizedItem[] } = {
-    version,
-    items,
-  }
-
-  await writeFile(join(outDir, 'items.json'), JSON.stringify(artifact), 'utf8')
-  console.log(`Wrote ${items.length.toString()} items to ${outDir}`)
-}
-
-await run()

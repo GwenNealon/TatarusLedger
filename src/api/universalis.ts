@@ -1,4 +1,3 @@
-import pLimit from 'p-limit'
 import type { Listing, MarketData, Sale } from './types.ts'
 import type { components } from './universalis.swagger.v2.generated.ts'
 
@@ -12,15 +11,11 @@ type CurrentlyShownMultiViewV2 =
   components['schemas']['Universalis.Application.Views.V2.CurrentlyShownMultiViewV2']
 type HistoryView =
   components['schemas']['Universalis.Application.Views.V1.HistoryView']
-type HistoryMultiViewV2 =
-  components['schemas']['Universalis.Application.Views.V2.HistoryMultiViewV2']
 
 const BASE_URL = 'https://universalis.app/api/v2'
 const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_BASE_DELAY_MS = 1_000
-const MAX_CONCURRENT_API_REQUESTS = 4
 const USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
-const limitApiRequest = pLimit(MAX_CONCURRENT_API_REQUESTS)
 
 export class UniversalisError extends Error {
   readonly statusCode: number | undefined
@@ -32,28 +27,17 @@ export class UniversalisError extends Error {
   }
 }
 
-export class RateLimitError extends UniversalisError {
-  constructor(message = 'Rate limit exceeded') {
-    super(message, 429)
-    this.name = 'RateLimitError'
-  }
-}
-
-/** Options for controlling retry behaviour on API calls. */
-export interface FetchOptions {
-  /** Maximum number of retry attempts on failure (default: 3). */
-  maxRetries?: number
-  /** Base delay in milliseconds for exponential backoff (default: 1000). */
-  baseDelayMs?: number
-}
-
 /**
  * Query options for {@link fetchMarketBoard}.
  *
  * All query parameters map directly to the Universalis v2 API:
  * `GET /api/v2/{worldDcRegion}/{itemIds}`
  */
-export interface MarketBoardOptions extends FetchOptions {
+export interface MarketBoardOptions {
+  /** Maximum number of retry attempts on failure (default: 3). */
+  maxRetries?: number
+  /** Base delay in milliseconds for exponential backoff (default: 1000). */
+  baseDelayMs?: number
   /**
    * Number of listings to return per item.
    * By default all listings are returned.
@@ -88,51 +72,6 @@ export interface MarketBoardOptions extends FetchOptions {
   fields?: string
 }
 
-/**
- * Query options for {@link fetchSaleHistory}.
- *
- * All query parameters map directly to the Universalis v2 API:
- * `GET /api/v2/history/{worldDcRegion}/{itemIds}`
- */
-export interface SaleHistoryOptions extends FetchOptions {
-  /**
-   * Number of sale history entries to return per item.
-   * Defaults to 1800; maximum is 99 999.
-   */
-  entriesToReturn?: number
-  /**
-   * The amount of time before now to calculate stats over, in milliseconds.
-   * Defaults to 604 800 000 (7 days).
-   */
-  statsWithin?: number
-  /**
-   * The amount of time before {@link entriesUntil} (or now) to take entries
-   * within, in seconds. Defaults to 604 800 (7 days). Negative values are
-   * ignored by the API.
-   */
-  entriesWithin?: number
-  /**
-   * UNIX timestamp in seconds. Only entries recorded before this time are
-   * returned. Defaults to the current time. Negative values are ignored by
-   * the API.
-   */
-  entriesUntil?: number
-  /**
-   * Inclusive minimum unit sale price of entries to return.
-   */
-  minSalePrice?: number
-  /**
-   * Inclusive maximum unit sale price of entries to return.
-   */
-  maxSalePrice?: number
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
 async function fetchWithRetry(
   url: string,
   maxRetries: number,
@@ -145,11 +84,11 @@ async function fetchWithRetry(
   }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await limitApiRequest(async () => fetch(url, requestInit))
+    const response = await fetch(url, requestInit)
 
     if (response.status === 429) {
       if (attempt >= maxRetries) {
-        throw new RateLimitError()
+        throw new UniversalisError('Rate limit exceeded', 429)
       }
       const retryAfter = response.headers.get('Retry-After')
       const retryAfterSeconds =
@@ -158,7 +97,9 @@ async function fetchWithRetry(
         Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? retryAfterSeconds * 1_000
           : baseDelayMs * 2 ** attempt
-      await sleep(delay)
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, delay)
+      })
       continue
     }
 
@@ -172,7 +113,7 @@ async function fetchWithRetry(
     return response
   }
 
-  throw new RateLimitError()
+  throw new UniversalisError('Rate limit exceeded', 429)
 }
 
 function hasItemsMap(value: unknown): value is {
@@ -227,7 +168,6 @@ export function transformSale(
     buyerName: raw.buyerName ?? undefined,
   }
 }
-
 /**
  * Fetches current market board listings and recent sale history for one or
  * more items from a world, data centre, or region.
@@ -277,63 +217,6 @@ export async function fetchMarketBoard(
       itemId: data.itemID,
       listings: (data.listings ?? []).map(transformListing),
       sales: (data.recentHistory ?? []).map(transformSale),
-    },
-  ]
-}
-
-/**
- * Fetches recent sale history only for one or more items from a world, data
- * centre, or region.
- */
-export async function fetchSaleHistory(
-  worldDcRegion: string,
-  itemIds: number[],
-  options: SaleHistoryOptions = {},
-): Promise<MarketData[]> {
-  const {
-    maxRetries = DEFAULT_MAX_RETRIES,
-    baseDelayMs = DEFAULT_BASE_DELAY_MS,
-    entriesToReturn,
-    statsWithin,
-    entriesWithin,
-    entriesUntil,
-    minSalePrice,
-    maxSalePrice,
-  } = options
-
-  const params = new URLSearchParams()
-  if (entriesToReturn !== undefined)
-    params.set('entriesToReturn', String(entriesToReturn))
-  if (statsWithin !== undefined) params.set('statsWithin', String(statsWithin))
-  if (entriesWithin !== undefined)
-    params.set('entriesWithin', String(entriesWithin))
-  if (entriesUntil !== undefined)
-    params.set('entriesUntil', String(entriesUntil))
-  if (minSalePrice !== undefined)
-    params.set('minSalePrice', String(minSalePrice))
-  if (maxSalePrice !== undefined)
-    params.set('maxSalePrice', String(maxSalePrice))
-
-  const query = params.size > 0 ? `?${params.toString()}` : ''
-  const url = `${BASE_URL}/history/${encodeURIComponent(worldDcRegion)}/${itemIds.join(',')}${query}`
-  const response = await fetchWithRetry(url, maxRetries, baseDelayMs)
-  const raw: unknown = await response.json()
-
-  if (hasItemsMap(raw)) {
-    const data = raw as HistoryMultiViewV2
-    return Object.values(data.items ?? {}).map((item) => ({
-      itemId: item.itemID,
-      listings: [],
-      sales: (item.entries ?? []).map(transformSale),
-    }))
-  }
-
-  const data = raw as HistoryView
-  return [
-    {
-      itemId: data.itemID,
-      listings: [],
-      sales: (data.entries ?? []).map(transformSale),
     },
   ]
 }

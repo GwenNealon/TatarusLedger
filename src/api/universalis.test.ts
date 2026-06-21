@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  RateLimitError,
   UniversalisError,
   fetchMarketBoard,
-  fetchSaleHistory,
   transformListing,
   transformSale,
 } from './universalis.ts'
@@ -152,11 +150,6 @@ const SINGLE_MARKET_BODY = {
   recentHistory: [RAW_SALE],
 }
 
-const SINGLE_HISTORY_BODY = {
-  itemID: 5,
-  entries: [RAW_SALE],
-}
-
 const EXPECTED_USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
 
 describe('fetchMarketBoard — rate-limit handling', () => {
@@ -212,12 +205,12 @@ describe('fetchMarketBoard — rate-limit handling', () => {
     }
   })
 
-  it('throws RateLimitError after exhausting all retries', async () => {
+  it('throws UniversalisError with 429 status after exhausting all retries', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(make429Response())
 
     await expect(
       fetchMarketBoard('Balmung', [5], { maxRetries: 2, baseDelayMs: 0 }),
-    ).rejects.toThrow(RateLimitError)
+    ).rejects.toThrow(UniversalisError)
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(3)
   })
@@ -266,87 +259,6 @@ describe('fetchMarketBoard — rate-limit handling', () => {
     expect(result).toHaveLength(1)
     expect(result[0].itemId).toBe(5)
     expect(result[0].listings).toHaveLength(1)
-    expect(result[0].sales).toHaveLength(1)
-  })
-})
-
-describe('fetchSaleHistory — rate-limit handling', () => {
-  beforeEach(() => {
-    vi.spyOn(globalThis, 'fetch')
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('returns sale history on a successful single-item request', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      makeOkResponse(SINGLE_HISTORY_BODY),
-    )
-
-    const result = await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
-
-    expect(result).toHaveLength(1)
-    expect(result[0].itemId).toBe(5)
-    expect(result[0].listings).toHaveLength(0)
-    expect(result[0].sales).toHaveLength(1)
-    expect(result[0].sales[0].buyerName).toBe('BuyerA')
-  })
-
-  it('retries after a 429 and succeeds', async () => {
-    vi.mocked(globalThis.fetch)
-      .mockResolvedValueOnce(make429Response())
-      .mockResolvedValueOnce(makeOkResponse(SINGLE_HISTORY_BODY))
-
-    const result = await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
-
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
-    expect(result[0].itemId).toBe(5)
-  })
-
-  it('throws RateLimitError after exhausting all retries', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValue(make429Response())
-
-    await expect(
-      fetchSaleHistory('Crystal', [5], { maxRetries: 1, baseDelayMs: 0 }),
-    ).rejects.toThrow(RateLimitError)
-
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
-  })
-
-  it('returns data for multiple items', async () => {
-    const multiBody = {
-      itemIDs: [5, 6],
-      items: {
-        '5': { itemID: 5, entries: [] },
-        '6': { itemID: 6, entries: [RAW_SALE] },
-      },
-    }
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeOkResponse(multiBody))
-
-    const result = await fetchSaleHistory('Crystal', [5, 6], { baseDelayMs: 0 })
-
-    expect(result).toHaveLength(2)
-    const item6 = result.find((r) => r.itemId === 6)
-    expect(item6?.sales).toHaveLength(1)
-  })
-
-  it('handles single requested item returned in multi-shape payload', async () => {
-    const multiShapeSingleItemBody = {
-      itemIDs: [5],
-      items: {
-        '5': { itemID: 5, entries: [RAW_SALE] },
-      },
-    }
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      makeOkResponse(multiShapeSingleItemBody),
-    )
-
-    const result = await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
-
-    expect(result).toHaveLength(1)
-    expect(result[0].itemId).toBe(5)
-    expect(result[0].listings).toHaveLength(0)
     expect(result[0].sales).toHaveLength(1)
   })
 })
@@ -429,71 +341,6 @@ describe('fetchMarketBoard — query parameter forwarding', () => {
 
   it('sends the configured User-Agent header', async () => {
     await fetchMarketBoard('Balmung', [5], { baseDelayMs: 0 })
-
-    expect(capturedRequestInit()).toMatchObject({
-      headers: {
-        'User-Agent': EXPECTED_USER_AGENT,
-      },
-    })
-  })
-})
-
-describe('fetchSaleHistory — query parameter forwarding', () => {
-  beforeEach(() => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      makeOkResponse(SINGLE_HISTORY_BODY),
-    )
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('appends no query string when no API options are set', async () => {
-    await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
-    expect(capturedUrl()).not.toContain('?')
-  })
-
-  it('forwards entriesToReturn', async () => {
-    await fetchSaleHistory('Crystal', [5], {
-      baseDelayMs: 0,
-      entriesToReturn: 500,
-    })
-    expect(capturedUrl()).toContain('entriesToReturn=500')
-  })
-
-  it('forwards statsWithin and entriesWithin', async () => {
-    await fetchSaleHistory('Crystal', [5], {
-      baseDelayMs: 0,
-      statsWithin: 604_800_000,
-      entriesWithin: 604_800,
-    })
-    const url = capturedUrl()
-    expect(url).toContain('statsWithin=604800000')
-    expect(url).toContain('entriesWithin=604800')
-  })
-
-  it('forwards entriesUntil', async () => {
-    await fetchSaleHistory('Crystal', [5], {
-      baseDelayMs: 0,
-      entriesUntil: 1_700_000_000,
-    })
-    expect(capturedUrl()).toContain('entriesUntil=1700000000')
-  })
-
-  it('forwards minSalePrice and maxSalePrice', async () => {
-    await fetchSaleHistory('Crystal', [5], {
-      baseDelayMs: 0,
-      minSalePrice: 100,
-      maxSalePrice: 50_000,
-    })
-    const url = capturedUrl()
-    expect(url).toContain('minSalePrice=100')
-    expect(url).toContain('maxSalePrice=50000')
-  })
-
-  it('sends the configured User-Agent header', async () => {
-    await fetchSaleHistory('Crystal', [5], { baseDelayMs: 0 })
 
     expect(capturedRequestInit()).toMatchObject({
       headers: {
