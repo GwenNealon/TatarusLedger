@@ -436,4 +436,41 @@ describe('App', () => {
     expect(container.textContent).toContain('Cached and fresh')
     expect(container.textContent).toContain('450 gil')
   })
+
+  it('shows a refresh error when the market API returns no entry for the item', async () => {
+    vi.useFakeTimers()
+
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          new Response(
+            JSON.stringify({
+              itemIDs: [5339],
+              items: {},
+              unresolvedItems: [5339],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          ),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+    await searchAndSelectItem({
+      container,
+      query: 'craftsman',
+      itemName: 'Craftsman Syrup',
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    expect(container.textContent).toContain(
+      'Cache refresh failed: No market data returned for item',
+    )
+  })
 })

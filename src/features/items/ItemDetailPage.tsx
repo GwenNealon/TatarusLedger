@@ -123,10 +123,16 @@ function isFresh(entry: ItemCacheEntry): boolean {
 }
 
 async function refreshItem(item: NormalizedItem): Promise<ItemCacheEntry> {
-  const [marketData] = await fetchMarketBoard('Crystal', [item.id], {
-    listings: 10,
-    entries: 10,
-  })
+  const marketData = (
+    await fetchMarketBoard('Crystal', [item.id], {
+      listings: 10,
+      entries: 10,
+    })
+  ).at(0)
+
+  if (marketData === undefined) {
+    throw new Error('No market data returned for item')
+  }
 
   const lowestPrice =
     marketData.listings.length === 0
