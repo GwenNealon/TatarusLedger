@@ -161,6 +161,14 @@ const styles: Record<
   },
 }
 
+const SUBTABLE_LEFT_DIVIDER: CSSProperties = {
+  borderLeft: '1px solid #e2e8f0',
+}
+
+const SUBTABLE_RIGHT_DIVIDER: CSSProperties = {
+  borderRight: '1px solid #e2e8f0',
+}
+
 function loadStoredConfig(): StoredConfig {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
@@ -831,88 +839,136 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.tableCell} />
-                <th style={styles.tableCell} />
-                <th style={styles.tableCell}>Item Name</th>
-                <th style={styles.tableCell}>Quality</th>
+                <th style={styles.tableCell} rowSpan={2} />
+                <th style={styles.tableCell} rowSpan={2} />
+                <th style={styles.tableCell} rowSpan={2}>
+                  Item Name
+                </th>
+                <th
+                  style={{
+                    ...styles.tableCell,
+                    ...SUBTABLE_LEFT_DIVIDER,
+                    ...SUBTABLE_RIGHT_DIVIDER,
+                    textAlign: 'center',
+                  }}
+                  colSpan={4}
+                >
+                  Your listings
+                </th>
+                <th style={styles.tableCell} rowSpan={2}>
+                  Lowest Competitor Price
+                </th>
+                <th style={styles.tableCell} rowSpan={2}>
+                  Last Synced
+                </th>
+              </tr>
+              <tr>
+                <th style={{ ...styles.tableCell, ...SUBTABLE_LEFT_DIVIDER }}>
+                  Quality
+                </th>
                 <th style={styles.tableCell}>Quantity</th>
                 <th style={styles.tableCell}>Selling Price</th>
-                <th style={styles.tableCell}>Lowest Competitor Price</th>
-                <th style={styles.tableCell}>Last Synced</th>
+                <th style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}>
+                  Retainer Name
+                </th>
               </tr>
             </thead>
             <tbody>
-              {visibleItemRows.map(({ item, state }) => {
+              {visibleItemRows.flatMap(({ item, state }) => {
                 const iconId = String(
                   itemById.get(item.id)?.iconId ?? item.iconId,
                 ).padStart(6, '0')
                 const iconUrl = `https://xivapi.com/i/${iconId.slice(0, 3)}000/${iconId}.png`
+                const listingRows =
+                  state?.ownedListings.length !== undefined &&
+                  state.ownedListings.length > 0
+                    ? state.ownedListings
+                    : [null]
+                const rowSpan = listingRows.length
 
-                return (
-                  <tr key={item.id}>
-                    <td style={styles.tableCell}>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${item.name}`}
-                        style={styles.removeButton}
-                        onClick={() => {
-                          setConfig((current) => ({
-                            ...current,
-                            itemInput: parseWatchTokens(current.itemInput)
-                              .filter((token) => token !== item.id.toString())
-                              .join('\n'),
-                          }))
-                        }}
-                      >
-                        X
-                      </button>
-                    </td>
-                    <td style={{ ...styles.tableCell, ...styles.iconCell }}>
-                      <img
-                        src={iconUrl}
-                        alt={`${item.name} icon`}
-                        width={24}
-                        height={24}
-                        style={styles.icon}
-                      />
-                    </td>
-                    <td style={styles.tableCell}>
-                      <a href={`${itemBasePath}${item.id.toString()}`}>
-                        {item.name}
-                      </a>
-                    </td>
-                    <td style={styles.tableCell}>
+                return listingRows.map((listing, index) => (
+                  <tr key={`${item.id.toString()}-${index.toString()}`}>
+                    {index === 0 ? (
+                      <>
+                        <td style={styles.tableCell} rowSpan={rowSpan}>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${item.name}`}
+                            style={styles.removeButton}
+                            onClick={() => {
+                              setConfig((current) => ({
+                                ...current,
+                                itemInput: parseWatchTokens(current.itemInput)
+                                  .filter(
+                                    (token) => token !== item.id.toString(),
+                                  )
+                                  .join('\n'),
+                              }))
+                            }}
+                          >
+                            X
+                          </button>
+                        </td>
+                        <td
+                          style={{ ...styles.tableCell, ...styles.iconCell }}
+                          rowSpan={rowSpan}
+                        >
+                          <img
+                            src={iconUrl}
+                            alt={`${item.name} icon`}
+                            width={24}
+                            height={24}
+                            style={styles.icon}
+                          />
+                        </td>
+                        <td style={styles.tableCell} rowSpan={rowSpan}>
+                          <a href={`${itemBasePath}${item.id.toString()}`}>
+                            {item.name}
+                          </a>
+                        </td>
+                      </>
+                    ) : null}
+                    <td
+                      style={{ ...styles.tableCell, ...SUBTABLE_LEFT_DIVIDER }}
+                    >
                       <span
                         aria-label={
-                          state?.ownedQuality === 'HQ'
-                            ? 'High Quality'
-                            : undefined
+                          listing?.quality === 'HQ' ? 'High Quality' : undefined
                         }
                         style={
-                          state?.ownedQuality === 'HQ'
+                          listing?.quality === 'HQ'
                             ? styles.qualitySymbol
                             : undefined
                         }
                       >
-                        {formatQuality(state?.ownedQuality ?? null)}
+                        {formatQuality(listing?.quality ?? null)}
                       </span>
                     </td>
                     <td style={styles.tableCell}>
-                      {state?.lowestOwnedPrice != null
-                        ? formatQuantity(state.ownedQuantity)
-                        : '—'}
+                      {listing === null
+                        ? '—'
+                        : formatQuantity(listing.quantity)}
                     </td>
                     <td style={styles.tableCell}>
-                      {formatGil(state?.lowestOwnedPrice ?? null)}
+                      {listing === null ? '—' : formatGil(listing.sellingPrice)}
                     </td>
-                    <td style={styles.tableCell}>
-                      {formatGil(state?.lowestCompetitorPrice ?? null)}
+                    <td
+                      style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}
+                    >
+                      {listing?.retainerName ?? '—'}
                     </td>
-                    <td style={styles.tableCell}>
-                      {formatDate(state?.lastSyncedAt ?? Number.NaN)}
-                    </td>
+                    {index === 0 ? (
+                      <>
+                        <td style={styles.tableCell} rowSpan={rowSpan}>
+                          {formatGil(state?.lowestCompetitorPrice ?? null)}
+                        </td>
+                        <td style={styles.tableCell} rowSpan={rowSpan}>
+                          {formatDate(state?.lastSyncedAt ?? Number.NaN)}
+                        </td>
+                      </>
+                    ) : null}
                   </tr>
-                )
+                ))
               })}
             </tbody>
           </table>

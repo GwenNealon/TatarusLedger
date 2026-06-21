@@ -90,6 +90,14 @@ describe('deriveItemState', () => {
     expect(state.lowestCompetitorPrice).toBe(900)
     expect(state.ownedQuantity).toBe(1)
     expect(state.ownedQuality).toBe('NQ')
+    expect(state.ownedListings).toEqual([
+      {
+        quality: 'NQ',
+        quantity: 1,
+        sellingPrice: 1_000,
+        retainerName: 'Owned',
+      },
+    ])
   })
 
   it('marks quality as mixed when both HQ and NQ owned listings exist', () => {
