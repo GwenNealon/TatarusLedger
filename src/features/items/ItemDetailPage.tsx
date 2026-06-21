@@ -17,9 +17,10 @@ interface ItemCacheEntry {
 }
 
 const ITEM_CACHE_TTL_MS = 5 * 60 * 1_000
+const GIL_SYMBOL = '\uE049'
 
 const styles: Record<
-  'section' | 'itemHeader' | 'icon' | 'spinningIcon',
+  'section' | 'itemHeader' | 'icon' | 'spinningIcon' | 'gilSymbol',
   CSSProperties
 > = {
   section: {
@@ -42,6 +43,9 @@ const styles: Record<
     display: 'inline-block',
     marginRight: '0.35rem',
     animation: 'spin 1s linear infinite',
+  },
+  gilSymbol: {
+    fontFamily: 'FFXIV_Lodestone_SSF',
   },
 }
 
@@ -263,9 +267,14 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         <dd>{latestEntry?.marketSummary.saleCount ?? '—'}</dd>
         <dt>Lowest observed price</dt>
         <dd>
-          {latestEntry?.marketSummary.lowestPrice == null
-            ? '—'
-            : `${latestEntry.marketSummary.lowestPrice.toString()} gil`}
+          {latestEntry?.marketSummary.lowestPrice == null ? (
+            '—'
+          ) : (
+            <>
+              {latestEntry.marketSummary.lowestPrice.toString()}{' '}
+              <span style={styles.gilSymbol}>{GIL_SYMBOL}</span>
+            </>
+          )}
         </dd>
       </dl>
 

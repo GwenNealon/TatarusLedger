@@ -97,10 +97,112 @@ describe('deriveItemState', () => {
         quality: 'NQ',
         quantity: 1,
         sellingPrice: 1_000,
+        totalCost: 1_000,
         retainerName: 'Owned',
         retainerCity: 1,
       },
     ])
+  })
+
+  it('dedupes competitor listings and aggregates matching reasons', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          retainerCity: 1,
+          hq: false,
+          quantity: 10,
+          total: 10_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 950,
+          retainerName: 'Competitor A',
+          retainerCity: 14,
+          hq: true,
+          quantity: 2,
+          total: 1_900,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:10:00Z'),
+          listingId: 'comp-a',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 980,
+          retainerName: 'Competitor B',
+          retainerCity: 3,
+          hq: false,
+          quantity: 20,
+          total: 19_600,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:20:00Z'),
+          listingId: 'comp-b',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    const competitorA = state.competitorListings.find(
+      (listing) => listing.retainerName === 'Competitor A',
+    )
+    expect(competitorA).toBeDefined()
+    expect(competitorA?.reasons).toEqual(
+      expect.arrayContaining([
+        'Lowest price',
+        'Lowest HQ',
+        'Lowest smaller stack',
+        'Lowest HQ smaller stack',
+        'Cheaper total than your highest stack',
+      ]),
+    )
+  })
+
+  it('skips cheaper-total rule when owned quantities are all one', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 1_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 900,
+          retainerName: 'Competitor',
+          hq: false,
+          quantity: 1,
+          total: 900,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(
+      state.competitorListings.some((listing) =>
+        listing.reasons.includes('Cheaper total than your highest stack'),
+      ),
+    ).toBe(false)
   })
 
   it('marks quality as mixed when both HQ and NQ owned listings exist', () => {

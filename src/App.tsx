@@ -127,7 +127,12 @@ export default function App() {
 
   return (
     <main style={styles.page}>
-      <article style={styles.card}>
+      <article
+        style={{
+          ...styles.card,
+          maxWidth: isUndercutTrackerRoute ? '96rem' : styles.card.maxWidth,
+        }}
+      >
         <h1>Tataru&apos;s Ledger</h1>
         <p>
           Search an item, open its details page, and quickly jump to popular

@@ -450,7 +450,7 @@ describe('App', () => {
     })
 
     expect(container.textContent).toContain('Cached and fresh')
-    expect(container.textContent).toContain('1000 gil')
+    expect(container.textContent).toContain('1000 \uE049')
 
     const universalisCalls = fetchSpy.mock.calls.filter((call) => {
       const request = call[0] as RequestInfo | URL
@@ -509,7 +509,7 @@ describe('App', () => {
     })
 
     expect(container.textContent).toContain('Craftsman Syrup')
-    expect(container.textContent).toContain('700 gil')
+    expect(container.textContent).toContain('700 \uE049')
   })
 
   it.each([
@@ -577,7 +577,7 @@ describe('App', () => {
     })
 
     expect(container.textContent).toContain('Cached and fresh')
-    expect(container.textContent).toContain('450 gil')
+    expect(container.textContent).toContain('450 \uE049')
   })
 
   it('shows a refresh error when the market API returns no entry for the item', async () => {

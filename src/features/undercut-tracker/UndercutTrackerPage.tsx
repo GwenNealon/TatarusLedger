@@ -1,6 +1,6 @@
 import { deserialize, serialize } from 'bson'
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import {
   fetchMarketBoard,
@@ -37,6 +37,7 @@ interface StoredConfig {
 const STORAGE_KEY = 'undercut-tracker-config'
 const WS_URL = 'wss://universalis.app/api/ws'
 const POLL_INTERVAL_MS = 5 * 60 * 1_000
+const GIL_SYMBOL = '\uE049'
 
 const styles: Record<
   | 'section'
@@ -52,6 +53,8 @@ const styles: Record<
   | 'iconCell'
   | 'icon'
   | 'qualitySymbol'
+  | 'gilSymbol'
+  | 'gilValue'
   | 'removeButton'
   | 'worldField'
   | 'worldSelect'
@@ -62,7 +65,9 @@ const styles: Record<
   | 'retainerChipIcon'
   | 'unknownRetainerIcon'
   | 'retainerHint'
-  | 'chipRemoveButton',
+  | 'chipRemoveButton'
+  | 'rankBadge'
+  | 'rankInfo',
   CSSProperties
 > = {
   section: {
@@ -137,6 +142,15 @@ const styles: Record<
   },
   qualitySymbol: {
     fontFamily: 'FFXIV_Lodestone_SSF',
+  },
+  gilSymbol: {
+    fontFamily: 'FFXIV_Lodestone_SSF',
+  },
+  gilValue: {
+    display: 'inline-flex',
+    alignItems: 'baseline',
+    gap: '0.2rem',
+    whiteSpace: 'nowrap',
   },
   removeButton: {
     border: '1px solid #cbd5e1',
@@ -227,6 +241,40 @@ const styles: Record<
     fontSize: '0.75rem',
     padding: 0,
   },
+  rankBadge: {
+    appearance: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #cbd5e1',
+    borderRadius: '999px',
+    minWidth: '1.35rem',
+    height: '1.35rem',
+    padding: '0 0.35rem',
+    backgroundColor: '#f8fafc',
+    color: '#334155',
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    lineHeight: 1.2,
+    whiteSpace: 'nowrap',
+    cursor: 'help',
+  },
+  rankInfo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #cbd5e1',
+    borderRadius: '999px',
+    width: '1.35rem',
+    height: '1.35rem',
+    backgroundColor: '#f8fafc',
+    color: '#334155',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    lineHeight: 1,
+    cursor: 'help',
+    userSelect: 'none',
+  },
 }
 
 const SUBTABLE_LEFT_DIVIDER: CSSProperties = {
@@ -274,13 +322,20 @@ function loadStoredConfig(): StoredConfig {
   }
 }
 
-function formatGil(value: number | null): string {
-  return value === null ? '—' : `${value.toLocaleString()} gil`
+function formatGil(value: number | null): ReactNode {
+  return value === null ? (
+    ''
+  ) : (
+    <span style={styles.gilValue}>
+      <span>{value.toLocaleString()}</span>
+      <span style={styles.gilSymbol}>{GIL_SYMBOL}</span>
+    </span>
+  )
 }
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp)
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString()
 }
 
 function formatQuantity(value: number): string {
@@ -296,7 +351,7 @@ function formatQuality(value: 'HQ' | 'NQ' | 'Mixed' | null): string {
     return ''
   }
 
-  return value ?? '—'
+  return value ?? ''
 }
 
 interface WatchContext {
@@ -1082,8 +1137,16 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 >
                   Your listings
                 </th>
-                <th style={styles.tableCell} rowSpan={2}>
-                  Lowest Competitor Price
+                <th
+                  style={{
+                    ...styles.tableCell,
+                    ...SUBTABLE_LEFT_DIVIDER,
+                    ...SUBTABLE_RIGHT_DIVIDER,
+                    textAlign: 'center',
+                  }}
+                  colSpan={6}
+                >
+                  Competitor listings
                 </th>
                 <th style={styles.tableCell} rowSpan={2}>
                   Last Synced
@@ -1098,6 +1161,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 <th style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}>
                   Retainer Name
                 </th>
+                <th style={{ ...styles.tableCell, ...SUBTABLE_LEFT_DIVIDER }}>
+                  Quality
+                </th>
+                <th style={styles.tableCell}>Quantity</th>
+                <th style={styles.tableCell}>Selling Price</th>
+                <th style={styles.tableCell}>Total Cost</th>
+                <th style={styles.tableCell}>Retainer Name</th>
+                <th
+                  style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}
+                  aria-label="Competitor details"
+                />
               </tr>
             </thead>
             <tbody>
@@ -1111,9 +1185,22 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   state.ownedListings.length > 0
                     ? state.ownedListings
                     : [null]
-                const rowSpan = listingRows.length
+                const competitorRows =
+                  state?.competitorListings.length !== undefined &&
+                  state.competitorListings.length > 0
+                    ? state.competitorListings
+                    : [null]
+                const competitorListingCount =
+                  state?.competitorListings.length ?? 0
+                const showCompetitorInfoButton = competitorListingCount > 1
+                const rowSpan = Math.max(
+                  listingRows.length,
+                  competitorRows.length,
+                )
 
-                return listingRows.map((listing, index) => {
+                return Array.from({ length: rowSpan }, (_, index) => {
+                  const listing = listingRows[index] ?? null
+                  const competitor = competitorRows[index] ?? null
                   const marketCity =
                     listing?.retainerCity !== undefined
                       ? RETAINER_CITY_BY_ID[listing.retainerCity]
@@ -1126,6 +1213,10 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     typeof taxRate === 'number' &&
                     lowestTaxRate !== null &&
                     taxRate > lowestTaxRate
+                  const competitorCity =
+                    competitor?.retainerCity !== undefined
+                      ? RETAINER_CITY_BY_ID[competitor.retainerCity]
+                      : undefined
 
                   return (
                     <tr key={`${item.id.toString()}-${index.toString()}`}>
@@ -1192,12 +1283,12 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       </td>
                       <td style={styles.tableCell}>
                         {listing === null
-                          ? '—'
+                          ? ''
                           : formatQuantity(listing.quantity)}
                       </td>
                       <td style={styles.tableCell}>
                         {listing === null
-                          ? '—'
+                          ? ''
                           : formatGil(listing.sellingPrice)}
                       </td>
                       <td
@@ -1207,7 +1298,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                         }}
                       >
                         {listing === null ? (
-                          '—'
+                          ''
                         ) : (
                           <span style={styles.retainerCell}>
                             <span>{listing.retainerName}</span>
@@ -1236,15 +1327,90 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           </span>
                         )}
                       </td>
+                      <td
+                        style={{
+                          ...styles.tableCell,
+                          ...SUBTABLE_LEFT_DIVIDER,
+                        }}
+                      >
+                        <span
+                          aria-label={
+                            competitor?.quality === 'HQ'
+                              ? 'High Quality'
+                              : undefined
+                          }
+                          style={
+                            competitor?.quality === 'HQ'
+                              ? styles.qualitySymbol
+                              : undefined
+                          }
+                        >
+                          {formatQuality(competitor?.quality ?? null)}
+                        </span>
+                      </td>
+                      <td style={styles.tableCell}>
+                        {competitor === null
+                          ? ''
+                          : formatQuantity(competitor.quantity)}
+                      </td>
+                      <td style={styles.tableCell}>
+                        {competitor === null
+                          ? ''
+                          : formatGil(competitor.sellingPrice)}
+                      </td>
+                      <td style={styles.tableCell}>
+                        {competitor === null
+                          ? ''
+                          : formatGil(competitor.totalCost)}
+                      </td>
+                      <td
+                        style={{
+                          ...styles.tableCell,
+                        }}
+                      >
+                        {competitor === null ? (
+                          ''
+                        ) : (
+                          <span style={styles.retainerCell}>
+                            <span>{competitor.retainerName}</span>
+                            {competitorCity === undefined ? null : (
+                              <img
+                                src={toXivIconUrl(competitorCity.iconId)}
+                                alt={`${competitorCity.name} market icon`}
+                                title={competitorCity.name}
+                                width={16}
+                                height={16}
+                                style={styles.marketIcon}
+                              />
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td
+                        style={{
+                          ...styles.tableCell,
+                          ...SUBTABLE_RIGHT_DIVIDER,
+                        }}
+                      >
+                        {competitor === null ? (
+                          ''
+                        ) : showCompetitorInfoButton ? (
+                          <button
+                            type="button"
+                            style={styles.rankInfo}
+                            title={competitor.reasons.join(' | ')}
+                            aria-label={`Competitor details: ${competitor.reasons.join(', ')}`}
+                          >
+                            i
+                          </button>
+                        ) : (
+                          ''
+                        )}
+                      </td>
                       {index === 0 ? (
-                        <>
-                          <td style={styles.tableCell} rowSpan={rowSpan}>
-                            {formatGil(state?.lowestCompetitorPrice ?? null)}
-                          </td>
-                          <td style={styles.tableCell} rowSpan={rowSpan}>
-                            {formatDate(state?.lastSyncedAt ?? Number.NaN)}
-                          </td>
-                        </>
+                        <td style={styles.tableCell} rowSpan={rowSpan}>
+                          {formatDate(state?.lastSyncedAt ?? Number.NaN)}
+                        </td>
                       ) : null}
                     </tr>
                   )
