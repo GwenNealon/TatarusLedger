@@ -34,13 +34,12 @@ TatarusLedger/                   ← repo root
 
 ## Tech Stack
 
-| Layer           | Tool / Version                                                           |
-| --------------- | ------------------------------------------------------------------------ |
-| UI framework    | React 19 (StrictMode)                                                    |
-| Language        | TypeScript `~6.0.2` (see `package.json` for the exact installed version) |
-| Bundler         | Vite `^8.0.12` (see `package.json` for the exact installed version)      |
-| Compiler plugin | `babel-plugin-react-compiler` via `@rolldown/plugin-babel`               |
-| Linter          | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked)     |
+| Layer        | Tool / Version                                                           |
+| ------------ | ------------------------------------------------------------------------ |
+| UI framework | React 19 (StrictMode)                                                    |
+| Language     | TypeScript `~6.0.2` (see `package.json` for the exact installed version) |
+| Bundler      | Vite `^8.0.12` (see `package.json` for the exact installed version)      |
+| Linter       | ESLint 10 with `typescript-eslint` (strict + stylistic type-checked)     |
 
 ---
 
