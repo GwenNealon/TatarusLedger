@@ -15,7 +15,6 @@ describe('loadCachedItemsIndex', () => {
       Promise.resolve(
         new Response(
           JSON.stringify({
-            version: 'test',
             items: [
               {
                 id: 33917,

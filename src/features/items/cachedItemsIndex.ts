@@ -1,9 +1,7 @@
-import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
 import { APP_BASE_PATH } from '../../constants.ts'
 
 interface ItemsArtifactPayload {
-  version: string
   items: NormalizedItem[]
 }
 
@@ -13,22 +11,13 @@ function isItemsArtifactPayload(value: unknown): value is ItemsArtifactPayload {
   }
 
   const payload = value as Record<string, unknown>
-  return (
-    typeof payload.version === 'string' &&
-    Array.isArray(payload.items) &&
-    payload.items.every((entry) => isNormalizedItem(entry))
-  )
+  return Array.isArray(payload.items)
 }
 
 export async function loadCachedItemsIndex(): Promise<NormalizedItem[]> {
   const itemsUrl = `${APP_BASE_PATH}data/items.json`
   const response = await fetch(itemsUrl)
   if (!response.ok) {
-    return []
-  }
-
-  const contentType = response.headers.get('content-type') ?? ''
-  if (!contentType.includes('application/json')) {
     return []
   }
 
