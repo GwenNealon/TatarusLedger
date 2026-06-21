@@ -120,6 +120,37 @@ async function renderApp(): Promise<{
   return { root, container }
 }
 
+async function searchAndSelectItem(params: {
+  container: HTMLDivElement
+  query: string
+  itemName: string
+  waitMs?: number
+}): Promise<void> {
+  const { container, query, itemName, waitMs = 300 } = params
+
+  const input = container.querySelector<HTMLInputElement>('#item-search-input')
+  expect(input).not.toBeNull()
+  if (input === null) return
+
+  act(() => {
+    setInputValue(input, query)
+  })
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(waitMs)
+  })
+
+  const itemButton = Array.from(container.querySelectorAll('button')).find(
+    (button) => button.textContent.includes(itemName),
+  )
+  expect(itemButton).not.toBeUndefined()
+  if (itemButton === undefined) return
+
+  act(() => {
+    itemButton.click()
+  })
+}
+
 describe('App', () => {
   const originalFetch = globalThis.fetch
 
@@ -166,29 +197,10 @@ describe('App', () => {
     })
 
     const { container } = await renderApp()
-
-    const input =
-      container.querySelector<HTMLInputElement>('#item-search-input')
-    expect(input).not.toBeNull()
-    if (input === null) return
-
-    act(() => {
-      setInputValue(input, 'orange')
-    })
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300)
-      await Promise.resolve()
-    })
-
-    const itemButton = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent.includes('Orange Juice'),
-    )
-    expect(itemButton).not.toBeUndefined()
-    if (itemButton === undefined) return
-
-    act(() => {
-      itemButton.click()
+    await searchAndSelectItem({
+      container,
+      query: 'orange',
+      itemName: 'Orange Juice',
     })
 
     await act(async () => {
@@ -242,28 +254,10 @@ describe('App', () => {
     const fetchSpy = setupFetchMock({})
 
     const { container } = await renderApp()
-
-    const input =
-      container.querySelector<HTMLInputElement>('#item-search-input')
-    expect(input).not.toBeNull()
-    if (input === null) return
-
-    act(() => {
-      setInputValue(input, 'craftsman')
-    })
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300)
-    })
-
-    const itemButton = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent.includes('Craftsman Syrup'),
-    )
-    expect(itemButton).not.toBeUndefined()
-    if (itemButton === undefined) return
-
-    act(() => {
-      itemButton.click()
+    await searchAndSelectItem({
+      container,
+      query: 'craftsman',
+      itemName: 'Craftsman Syrup',
     })
 
     await act(async () => {
@@ -317,19 +311,11 @@ describe('App', () => {
     })
 
     const { container } = await renderApp()
-
-    const input =
-      container.querySelector<HTMLInputElement>('#item-search-input')
-    expect(input).not.toBeNull()
-    if (input === null) return
-
-    act(() => {
-      setInputValue(input, 'craftsman')
-    })
-
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+    await searchAndSelectItem({
+      container,
+      query: 'craftsman',
+      itemName: 'Craftsman Syrup',
+      waitMs: 180,
     })
 
     await act(async () => {
@@ -380,28 +366,10 @@ describe('App', () => {
     })
 
     const { container } = await renderApp()
-
-    const input =
-      container.querySelector<HTMLInputElement>('#item-search-input')
-    expect(input).not.toBeNull()
-    if (input === null) return
-
-    act(() => {
-      setInputValue(input, 'craftsman')
-    })
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300)
-    })
-
-    const itemButton = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent.includes('Craftsman Syrup'),
-    )
-    expect(itemButton).not.toBeUndefined()
-    if (itemButton === undefined) return
-
-    act(() => {
-      itemButton.click()
+    await searchAndSelectItem({
+      container,
+      query: 'craftsman',
+      itemName: 'Craftsman Syrup',
     })
 
     await act(async () => {
