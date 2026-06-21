@@ -1,5 +1,5 @@
 import type { Listing, MarketData, Sale } from './types.ts'
-import type { components } from './universalis.swagger.v2.generated.ts'
+import type { components } from './universalis/universalis.swagger.v2.generated.ts'
 
 type ListingView =
   components['schemas']['Universalis.Application.Views.V1.ListingView']

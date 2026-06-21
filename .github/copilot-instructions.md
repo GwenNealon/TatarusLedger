@@ -22,7 +22,9 @@ TatarusLedger/                   ← repo root
 	public/
 		data/                        ← checked-in static datasets consumed at runtime
 	src/                           ← runtime application source
-		api/                         ← Universalis client and generated/snapshotted API artifacts
+		api/                         ← API clients + provider-specific OpenAPI snapshot/type artifacts
+			universalis/              ← Universalis OpenAPI snapshot + generated schema types
+			xivapi/                   ← XIVAPI OpenAPI snapshot + generated schema types
 		data/                        ← normalization/parsing utilities
 		features/                    ← user-facing feature modules
 			items/                     ← item search/detail experience and cached item index helpers
@@ -54,6 +56,8 @@ npm run dev
 npm run build
 npm run api:spec:update # refresh Universalis snapshot + regenerate API types
 npm run api:spec:check  # verify structural snapshot parity + generated types are current
+npm run api:xivapi:spec:update # refresh XIVAPI snapshot + regenerate API types
+npm run api:xivapi:spec:check  # verify structural snapshot parity + generated types are current
 npm run lint
 npm run preview
 ```

@@ -5,8 +5,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 
-const UNIVERSALIS_SWAGGER_URL =
-  'https://universalis.app/swagger/v2/swagger.json'
+const XIVAPI_SWAGGER_URL = 'https://v2.xivapi.com/api/openapi.json'
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const { version: APP_VERSION } = JSON.parse(
   readFileSync(resolve(PROJECT_ROOT, 'package.json'), 'utf8'),
@@ -19,15 +18,15 @@ const SNAPSHOT_FILE_PATH = resolve(
   PROJECT_ROOT,
   'src',
   'api',
-  'universalis',
-  'universalis.swagger.v2.snapshot.json',
+  'xivapi',
+  'xivapi.swagger.snapshot.json',
 )
 const GENERATED_TYPES_FILE_PATH = resolve(
   PROJECT_ROOT,
   'src',
   'api',
-  'universalis',
-  'universalis.swagger.v2.generated.ts',
+  'xivapi',
+  'xivapi.swagger.generated.ts',
 )
 
 type JsonValue =
@@ -57,20 +56,23 @@ function sortJson(value: JsonValue): JsonValue {
 async function fetchLatestSwagger(): Promise<JsonValue> {
   for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt += 1) {
     try {
-      const response = await fetch(UNIVERSALIS_SWAGGER_URL, {
-        headers: { 'User-Agent': USER_AGENT },
+      const response = await fetch(XIVAPI_SWAGGER_URL, {
+        headers: {
+          'Accept-Encoding': 'identity',
+          'User-Agent': USER_AGENT,
+        },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       })
 
       if (!response.ok) {
         if (response.status < 500 && response.status !== 429) {
           throw new Error(
-            `Failed to fetch Universalis swagger snapshot: HTTP ${response.status.toString()}`,
+            `Failed to fetch XIVAPI swagger snapshot: HTTP ${response.status.toString()}`,
           )
         }
 
         throw new Error(
-          `Transient fetch failure for Universalis swagger snapshot: HTTP ${response.status.toString()}`,
+          `Transient fetch failure for XIVAPI swagger snapshot: HTTP ${response.status.toString()}`,
         )
       }
 
@@ -86,7 +88,7 @@ async function fetchLatestSwagger(): Promise<JsonValue> {
           ? String(error.name)
           : ''
       const isRetryableHttpError = message.includes(
-        'Transient fetch failure for Universalis swagger snapshot: HTTP',
+        'Transient fetch failure for XIVAPI swagger snapshot: HTTP',
       )
       const isRetryableNetworkError =
         error instanceof TypeError || errorName === 'TimeoutError'
@@ -128,23 +130,20 @@ async function checkSnapshot(): Promise<void> {
 
   if (latestCanonical !== snapshotCanonical) {
     throw new Error(
-      'Universalis swagger changed structurally. Run "npm run api:spec:update" and commit the updated snapshot and generated types.',
+      'XIVAPI swagger changed structurally. Run "npm run api:xivapi:spec:update" and commit the updated snapshot and generated types.',
     )
   }
 
   console.log(
-    'Universalis swagger snapshot matches latest API (format-insensitive).',
+    'XIVAPI swagger snapshot matches latest API (format-insensitive).',
   )
 }
 
 async function checkGeneratedTypesUpToDate(): Promise<void> {
   const tempDirPath = await mkdtemp(
-    resolve(tmpdir(), 'tatarus-ledger-openapi-'),
+    resolve(tmpdir(), 'tatarus-ledger-openapi-xivapi-'),
   )
-  const tempTypesFilePath = resolve(
-    tempDirPath,
-    'universalis.swagger.v2.generated.ts',
-  )
+  const tempTypesFilePath = resolve(tempDirPath, 'xivapi.swagger.generated.ts')
 
   try {
     await new Promise<void>((resolvePromise, rejectPromise) => {
@@ -188,11 +187,11 @@ async function checkGeneratedTypesUpToDate(): Promise<void> {
 
     if (currentTypes !== expectedTypes) {
       throw new Error(
-        'Generated types are out of date with the committed snapshot. Run "npm run api:spec:generate-types" and commit src/api/universalis/universalis.swagger.v2.generated.ts.',
+        'Generated types are out of date with the committed snapshot. Run "npm run api:xivapi:spec:generate-types" and commit src/api/xivapi/xivapi.swagger.generated.ts.',
       )
     }
 
-    console.log('Generated Universalis API types are up to date.')
+    console.log('Generated XIVAPI API types are up to date.')
   } finally {
     await rm(tempDirPath, { force: true, recursive: true })
   }
