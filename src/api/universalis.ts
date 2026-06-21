@@ -72,12 +72,6 @@ export interface MarketBoardOptions {
   fields?: string
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
 async function fetchWithRetry(
   url: string,
   maxRetries: number,
@@ -103,7 +97,9 @@ async function fetchWithRetry(
         Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? retryAfterSeconds * 1_000
           : baseDelayMs * 2 ** attempt
-      await sleep(delay)
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, delay)
+      })
       continue
     }
 
