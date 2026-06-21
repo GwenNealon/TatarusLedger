@@ -5,7 +5,9 @@ import type { CSSProperties } from 'react'
 import {
   fetchMarketBoard,
   fetchMarketableItemIds,
+  fetchTaxRates,
   fetchWorlds,
+  type TaxRates,
 } from '../../api/universalis.ts'
 import type { MarketData } from '../../api/types.ts'
 import type { NormalizedItem } from '../../data/types.ts'
@@ -53,7 +55,14 @@ const styles: Record<
   | 'removeButton'
   | 'worldField'
   | 'worldSelect'
-  | 'worldChevron',
+  | 'worldChevron'
+  | 'retainerCell'
+  | 'marketIcon'
+  | 'taxWarningBadge'
+  | 'retainerChipIcon'
+  | 'unknownRetainerIcon'
+  | 'retainerHint'
+  | 'chipRemoveButton',
   CSSProperties
 > = {
   section: {
@@ -159,6 +168,65 @@ const styles: Record<
     color: '#475569',
     fontSize: '0.85rem',
   },
+  retainerCell: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+  },
+  marketIcon: {
+    width: '16px',
+    height: '16px',
+    borderRadius: '6px',
+    verticalAlign: 'middle',
+  },
+  taxWarningBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    border: '1px solid #f59e0b',
+    borderRadius: '999px',
+    padding: '0.05rem 0.35rem',
+    backgroundColor: '#fffbeb',
+    color: '#92400e',
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    lineHeight: 1.2,
+    whiteSpace: 'nowrap',
+  },
+  retainerChipIcon: {
+    width: '14px',
+    height: '14px',
+    borderRadius: '5px',
+    verticalAlign: 'middle',
+  },
+  unknownRetainerIcon: {
+    width: '14px',
+    height: '14px',
+    borderRadius: '999px',
+    border: '1px solid #94a3b8',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.65rem',
+    color: '#475569',
+    background: '#fff',
+  },
+  retainerHint: {
+    marginTop: '0.5rem',
+    marginBottom: 0,
+    color: '#475569',
+    fontSize: '0.85rem',
+  },
+  chipRemoveButton: {
+    border: '1px solid #cbd5e1',
+    borderRadius: '0.35rem',
+    background: '#fff',
+    cursor: 'pointer',
+    width: '1.3rem',
+    height: '1.3rem',
+    lineHeight: 1,
+    fontSize: '0.75rem',
+    padding: 0,
+  },
 }
 
 const SUBTABLE_LEFT_DIVIDER: CSSProperties = {
@@ -167,6 +235,24 @@ const SUBTABLE_LEFT_DIVIDER: CSSProperties = {
 
 const SUBTABLE_RIGHT_DIVIDER: CSSProperties = {
   borderRight: '1px solid #e2e8f0',
+}
+
+const RETAINER_CITY_BY_ID: Partial<
+  Record<number, { name: keyof TaxRates; iconId: number }>
+> = {
+  1: { name: 'Limsa Lominsa', iconId: 60_881 },
+  2: { name: 'Gridania', iconId: 60_882 },
+  3: { name: "Ul'dah", iconId: 60_883 },
+  4: { name: 'Ishgard', iconId: 60_884 },
+  7: { name: 'Kugane', iconId: 60_885 },
+  10: { name: 'Crystarium', iconId: 60_886 },
+  12: { name: 'Old Sharlayan', iconId: 60_887 },
+  14: { name: 'Tuliyollal', iconId: 60_888 },
+}
+
+function toXivIconUrl(iconId: number): string {
+  const normalizedId = iconId.toString().padStart(6, '0')
+  return `https://xivapi.com/i/${normalizedId.slice(0, 3)}000/${normalizedId}.png`
 }
 
 function loadStoredConfig(): StoredConfig {
@@ -289,6 +375,68 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const [socketStatus, setSocketStatus] = useState('idle')
   const [refreshStatus, setRefreshStatus] = useState('Waiting for input')
   const [discoverStatus, setDiscoverStatus] = useState<string | null>(null)
+  const [taxRatesByCity, setTaxRatesByCity] = useState<Partial<TaxRates>>({})
+  const retainerInputTokens = useMemo(
+    () => parseWatchTokens(config.retainerInput),
+    [config.retainerInput],
+  )
+  const retainerCityByName = useMemo(() => {
+    const cityByName = new Map<string, number>()
+
+    for (const state of itemStates) {
+      for (const listing of state.ownedListings) {
+        if (listing.retainerCity === undefined) {
+          continue
+        }
+
+        const key = listing.retainerName.toLowerCase()
+        if (!cityByName.has(key)) {
+          cityByName.set(key, listing.retainerCity)
+        }
+      }
+    }
+
+    return cityByName
+  }, [itemStates])
+  const hasUnknownRetainerCity = useMemo(
+    () =>
+      retainerInputTokens.some((retainerName) => {
+        const cityId = retainerCityByName.get(retainerName.toLowerCase())
+        if (cityId === undefined) {
+          return true
+        }
+
+        return RETAINER_CITY_BY_ID[cityId] === undefined
+      }),
+    [retainerCityByName, retainerInputTokens],
+  )
+  const taxRateEntries = useMemo(() => {
+    const entries: [keyof TaxRates, number][] = []
+
+    for (const [city, taxRate] of Object.entries(taxRatesByCity)) {
+      if (typeof taxRate === 'number') {
+        entries.push([city as keyof TaxRates, taxRate])
+      }
+    }
+
+    return entries
+  }, [taxRatesByCity])
+  const lowestTaxRate = useMemo(
+    () =>
+      taxRateEntries.length > 0
+        ? Math.min(...taxRateEntries.map(([, taxRate]) => taxRate))
+        : null,
+    [taxRateEntries],
+  )
+  const lowestTaxCities = useMemo(
+    () =>
+      lowestTaxRate === null
+        ? []
+        : taxRateEntries
+            .filter(([, taxRate]) => taxRate === lowestTaxRate)
+            .map(([city]) => city),
+    [lowestTaxRate, taxRateEntries],
+  )
 
   const itemTokens = useMemo(
     () => parseWatchTokens(config.itemInput),
@@ -459,6 +607,30 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       cancelled = true
     }
   }, [watchContext, watchedItemIdsKey, retainerNamesKey])
+
+  useEffect(() => {
+    if (selectedWorld.length === 0) {
+      return
+    }
+
+    let cancelled = false
+
+    void fetchTaxRates(selectedWorld)
+      .then((taxRates) => {
+        if (!cancelled) {
+          setTaxRatesByCity(taxRates)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaxRatesByCity({})
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedWorld])
 
   useEffect(() => {
     if (!watchContext.hasInput) {
@@ -685,27 +857,62 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         </label>
       </div>
 
-      {parseWatchTokens(config.retainerInput).length > 0 ? (
+      {retainerInputTokens.length > 0 ? (
         <ul style={styles.chips}>
-          {parseWatchTokens(config.retainerInput).map((retainerName, index) => (
-            <li key={`${retainerName}-${index.toString()}`} style={styles.chip}>
-              <span>{retainerName}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfig((current) => ({
-                    ...current,
-                    retainerInput: parseWatchTokens(current.retainerInput)
-                      .filter((token) => token !== retainerName)
-                      .join('\n'),
-                  }))
-                }}
+          {retainerInputTokens.map((retainerName, index) => {
+            const cityId = retainerCityByName.get(retainerName.toLowerCase())
+            const marketCity =
+              cityId === undefined ? undefined : RETAINER_CITY_BY_ID[cityId]
+
+            return (
+              <li
+                key={`${retainerName}-${index.toString()}`}
+                style={styles.chip}
               >
-                Remove
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  aria-label={`Remove ${retainerName}`}
+                  style={styles.chipRemoveButton}
+                  onClick={() => {
+                    setConfig((current) => ({
+                      ...current,
+                      retainerInput: parseWatchTokens(current.retainerInput)
+                        .filter((token) => token !== retainerName)
+                        .join('\n'),
+                    }))
+                  }}
+                >
+                  X
+                </button>
+                <span>{retainerName}</span>
+                {marketCity !== undefined ? (
+                  <img
+                    src={toXivIconUrl(marketCity.iconId)}
+                    alt={`${marketCity.name} market icon`}
+                    title={marketCity.name}
+                    width={14}
+                    height={14}
+                    style={styles.retainerChipIcon}
+                  />
+                ) : (
+                  <span
+                    aria-label="Market city unknown"
+                    title="Market city unknown"
+                    style={styles.unknownRetainerIcon}
+                  >
+                    ?
+                  </span>
+                )}
+              </li>
+            )
+          })}
         </ul>
+      ) : null}
+      {hasUnknownRetainerCity ? (
+        <p style={styles.retainerHint}>
+          Unknown retainer market icons will update once a listing associated
+          with that retainer is found.
+        </p>
       ) : null}
 
       {typeof Notification !== 'undefined' && permission !== 'granted' ? (
@@ -886,89 +1093,142 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     : [null]
                 const rowSpan = listingRows.length
 
-                return listingRows.map((listing, index) => (
-                  <tr key={`${item.id.toString()}-${index.toString()}`}>
-                    {index === 0 ? (
-                      <>
-                        <td style={styles.tableCell} rowSpan={rowSpan}>
-                          <button
-                            type="button"
-                            aria-label={`Remove ${item.name}`}
-                            style={styles.removeButton}
-                            onClick={() => {
-                              setConfig((current) => ({
-                                ...current,
-                                itemInput: parseWatchTokens(current.itemInput)
-                                  .filter(
-                                    (token) => token !== item.id.toString(),
-                                  )
-                                  .join('\n'),
-                              }))
-                            }}
+                return listingRows.map((listing, index) => {
+                  const marketCity =
+                    listing?.retainerCity !== undefined
+                      ? RETAINER_CITY_BY_ID[listing.retainerCity]
+                      : undefined
+                  const taxRate =
+                    marketCity === undefined
+                      ? undefined
+                      : taxRatesByCity[marketCity.name]
+                  const isHigherTaxThanLowest =
+                    typeof taxRate === 'number' &&
+                    lowestTaxRate !== null &&
+                    taxRate > lowestTaxRate
+
+                  return (
+                    <tr key={`${item.id.toString()}-${index.toString()}`}>
+                      {index === 0 ? (
+                        <>
+                          <td style={styles.tableCell} rowSpan={rowSpan}>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${item.name}`}
+                              style={styles.removeButton}
+                              onClick={() => {
+                                setConfig((current) => ({
+                                  ...current,
+                                  itemInput: parseWatchTokens(current.itemInput)
+                                    .filter(
+                                      (token) => token !== item.id.toString(),
+                                    )
+                                    .join('\n'),
+                                }))
+                              }}
+                            >
+                              X
+                            </button>
+                          </td>
+                          <td
+                            style={{ ...styles.tableCell, ...styles.iconCell }}
+                            rowSpan={rowSpan}
                           >
-                            X
-                          </button>
-                        </td>
-                        <td
-                          style={{ ...styles.tableCell, ...styles.iconCell }}
-                          rowSpan={rowSpan}
-                        >
-                          <img
-                            src={iconUrl}
-                            alt={`${item.name} icon`}
-                            width={24}
-                            height={24}
-                            style={styles.icon}
-                          />
-                        </td>
-                        <td style={styles.tableCell} rowSpan={rowSpan}>
-                          <a href={`${itemBasePath}${item.id.toString()}`}>
-                            {item.name}
-                          </a>
-                        </td>
-                      </>
-                    ) : null}
-                    <td
-                      style={{ ...styles.tableCell, ...SUBTABLE_LEFT_DIVIDER }}
-                    >
-                      <span
-                        aria-label={
-                          listing?.quality === 'HQ' ? 'High Quality' : undefined
-                        }
-                        style={
-                          listing?.quality === 'HQ'
-                            ? styles.qualitySymbol
-                            : undefined
-                        }
+                            <img
+                              src={iconUrl}
+                              alt={`${item.name} icon`}
+                              width={24}
+                              height={24}
+                              style={styles.icon}
+                            />
+                          </td>
+                          <td style={styles.tableCell} rowSpan={rowSpan}>
+                            <a href={`${itemBasePath}${item.id.toString()}`}>
+                              {item.name}
+                            </a>
+                          </td>
+                        </>
+                      ) : null}
+                      <td
+                        style={{
+                          ...styles.tableCell,
+                          ...SUBTABLE_LEFT_DIVIDER,
+                        }}
                       >
-                        {formatQuality(listing?.quality ?? null)}
-                      </span>
-                    </td>
-                    <td style={styles.tableCell}>
-                      {listing === null
-                        ? '—'
-                        : formatQuantity(listing.quantity)}
-                    </td>
-                    <td style={styles.tableCell}>
-                      {listing === null ? '—' : formatGil(listing.sellingPrice)}
-                    </td>
-                    <td
-                      style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}
-                    >
-                      {listing?.retainerName ?? '—'}
-                    </td>
-                    {index === 0 ? (
-                      <>
-                        <td style={styles.tableCell} rowSpan={rowSpan}>
-                          {formatGil(state?.lowestCompetitorPrice ?? null)}
-                        </td>
-                        <td style={styles.tableCell} rowSpan={rowSpan}>
-                          {formatDate(state?.lastSyncedAt ?? Number.NaN)}
-                        </td>
-                      </>
-                    ) : null}
-                  </tr>
-                ))
+                        <span
+                          aria-label={
+                            listing?.quality === 'HQ'
+                              ? 'High Quality'
+                              : undefined
+                          }
+                          style={
+                            listing?.quality === 'HQ'
+                              ? styles.qualitySymbol
+                              : undefined
+                          }
+                        >
+                          {formatQuality(listing?.quality ?? null)}
+                        </span>
+                      </td>
+                      <td style={styles.tableCell}>
+                        {listing === null
+                          ? '—'
+                          : formatQuantity(listing.quantity)}
+                      </td>
+                      <td style={styles.tableCell}>
+                        {listing === null
+                          ? '—'
+                          : formatGil(listing.sellingPrice)}
+                      </td>
+                      <td
+                        style={{
+                          ...styles.tableCell,
+                          ...SUBTABLE_RIGHT_DIVIDER,
+                        }}
+                      >
+                        {listing === null ? (
+                          '—'
+                        ) : (
+                          <span style={styles.retainerCell}>
+                            <span>{listing.retainerName}</span>
+                            {marketCity === undefined ? null : (
+                              <img
+                                src={toXivIconUrl(marketCity.iconId)}
+                                alt={`${marketCity.name} market icon`}
+                                title={
+                                  typeof taxRate === 'number'
+                                    ? `${marketCity.name} (${taxRate.toString()}% tax)`
+                                    : marketCity.name
+                                }
+                                width={16}
+                                height={16}
+                                style={styles.marketIcon}
+                              />
+                            )}
+                            {isHigherTaxThanLowest ? (
+                              <span
+                                style={styles.taxWarningBadge}
+                                title={`Current: ${taxRate.toString()}% | Lowest: ${lowestTaxRate.toString()}% (${lowestTaxCities.join(', ')})`}
+                              >
+                                Tax High
+                              </span>
+                            ) : null}
+                          </span>
+                        )}
+                      </td>
+                      {index === 0 ? (
+                        <>
+                          <td style={styles.tableCell} rowSpan={rowSpan}>
+                            {formatGil(state?.lowestCompetitorPrice ?? null)}
+                          </td>
+                          <td style={styles.tableCell} rowSpan={rowSpan}>
+                            {formatDate(state?.lastSyncedAt ?? Number.NaN)}
+                          </td>
+                        </>
+                      ) : null}
+                    </tr>
+                  )
+                })
               })}
             </tbody>
           </table>

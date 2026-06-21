@@ -76,6 +76,17 @@ export interface WorldInfo {
   name: string
 }
 
+export interface TaxRates {
+  'Limsa Lominsa': number
+  Gridania: number
+  "Ul'dah": number
+  Ishgard: number
+  Kugane: number
+  Crystarium: number
+  'Old Sharlayan': number
+  Tuliyollal: number
+}
+
 async function fetchWithRetry(
   url: string,
   maxRetries: number,
@@ -151,6 +162,7 @@ export function transformListing(raw: ListingView): Listing {
     listingId: raw.listingID ?? undefined,
     worldId: raw.worldID ?? undefined,
     worldName: raw.worldName ?? undefined,
+    retainerCity: raw.retainerCity,
     hq: raw.hq,
     pricePerUnit: raw.pricePerUnit,
     quantity: raw.quantity,
@@ -253,6 +265,49 @@ export async function fetchWorlds(): Promise<WorldInfo[]> {
 
     return [{ id: world.id, name: world.name }]
   })
+}
+
+export async function fetchTaxRates(worldName: string): Promise<TaxRates> {
+  const params = new URLSearchParams({ world: worldName })
+  const response = await fetchWithRetry(
+    `${BASE_URL}/tax-rates?${params.toString()}`,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BASE_DELAY_MS,
+  )
+  const raw: unknown = await response.json()
+
+  if (typeof raw !== 'object' || raw === null) {
+    throw new UniversalisError('Universalis tax rates payload was invalid')
+  }
+
+  const data = raw as Partial<Record<keyof TaxRates, unknown>>
+  const keys: (keyof TaxRates)[] = [
+    'Limsa Lominsa',
+    'Gridania',
+    "Ul'dah",
+    'Ishgard',
+    'Kugane',
+    'Crystarium',
+    'Old Sharlayan',
+    'Tuliyollal',
+  ]
+
+  for (const key of keys) {
+    if (typeof data[key] !== 'number') {
+      throw new UniversalisError(`Missing tax rate for ${key}`)
+    }
+  }
+
+  return {
+    'Limsa Lominsa': data['Limsa Lominsa'] as number,
+    Gridania: data.Gridania as number,
+    "Ul'dah": data["Ul'dah"] as number,
+    Ishgard: data.Ishgard as number,
+    Kugane: data.Kugane as number,
+    Crystarium: data.Crystarium as number,
+    'Old Sharlayan': data['Old Sharlayan'] as number,
+    Tuliyollal: data.Tuliyollal as number,
+  }
 }
 
 export async function fetchMarketableItemIds(): Promise<number[]> {

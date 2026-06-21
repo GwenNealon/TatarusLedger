@@ -59,6 +59,7 @@ describe('deriveItemState', () => {
         {
           pricePerUnit: 1_000,
           retainerName: 'Owned',
+          retainerCity: 1,
           hq: false,
           quantity: 1,
           total: 1_000,
@@ -71,6 +72,7 @@ describe('deriveItemState', () => {
         {
           pricePerUnit: 900,
           retainerName: 'Other',
+          retainerCity: 2,
           hq: false,
           quantity: 1,
           total: 900,
@@ -96,6 +98,7 @@ describe('deriveItemState', () => {
         quantity: 1,
         sellingPrice: 1_000,
         retainerName: 'Owned',
+        retainerCity: 1,
       },
     ])
   })

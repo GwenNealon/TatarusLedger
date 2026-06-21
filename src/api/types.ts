@@ -4,6 +4,7 @@ export interface Listing {
   listingId: string | undefined
   worldId: number | undefined
   worldName: string | undefined
+  retainerCity?: number
   hq: boolean
   pricePerUnit: number
   quantity: number

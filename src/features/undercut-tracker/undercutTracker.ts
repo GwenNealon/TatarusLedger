@@ -10,6 +10,7 @@ export interface UndercutItemState {
     quantity: number
     sellingPrice: number
     retainerName: string
+    retainerCity?: number
   }[]
   ownedQuantity: number
   ownedQuality: 'HQ' | 'NQ' | 'Mixed' | null
@@ -114,6 +115,7 @@ export function deriveItemState(params: {
         quantity: listing.quantity,
         sellingPrice: listing.pricePerUnit,
         retainerName: listing.retainerName ?? '—',
+        retainerCity: listing.retainerCity,
       })
       lowestOwnedPrice =
         lowestOwnedPrice === null
