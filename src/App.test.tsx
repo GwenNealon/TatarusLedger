@@ -379,9 +379,7 @@ describe('App', () => {
 
     const { container } = await renderApp()
 
-    expect(container.textContent).toContain(
-      'Select an item to open /TatarusLedger/{itemId}.',
-    )
+    expect(container.textContent).toContain('Select an item to open /{itemId}.')
   })
 
   it('shows error indicator on refresh failure and supports retry', async () => {
