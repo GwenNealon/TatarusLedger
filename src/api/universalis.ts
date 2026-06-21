@@ -15,7 +15,6 @@ type HistoryView =
 const BASE_URL = 'https://universalis.app/api/v2'
 const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_BASE_DELAY_MS = 1_000
-const USER_AGENT = `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`
 
 export class UniversalisError extends Error {
   readonly statusCode: number | undefined
@@ -77,17 +76,13 @@ async function fetchWithRetry(
   maxRetries: number,
   baseDelayMs: number,
 ): Promise<Response> {
-  const requestInit: RequestInit = {
-    headers: {
-      'User-Agent': USER_AGENT,
-    },
-  }
+  const maxAttempts = Math.max(0, maxRetries)
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url, requestInit)
+  for (let attempt = 0; attempt <= maxAttempts; attempt++) {
+    const response = await fetch(url)
 
     if (response.status === 429) {
-      if (attempt >= maxRetries) {
+      if (attempt >= maxAttempts) {
         throw new UniversalisError('Rate limit exceeded', 429)
       }
       const retryAfter = response.headers.get('Retry-After')

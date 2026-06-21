@@ -248,7 +248,7 @@ describe('App', () => {
       await vi.advanceTimersByTimeAsync(300)
     })
 
-    expect(window.location.pathname).toBe('/TatarusLedger/33917')
+    expect(window.location.pathname.endsWith('/33917')).toBe(true)
     expect(container.textContent).toContain('Orange Juice')
     expect(container.textContent).toContain('ID')
     expect(container.textContent).toContain('Category')

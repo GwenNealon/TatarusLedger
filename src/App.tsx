@@ -57,7 +57,7 @@ export default function App() {
           return
         }
         if (cachedItems.length === 0) {
-          setLoadingError('Checked-in item artifact is empty or unavailable')
+          setLoadingError('Cached item artifact is empty or unavailable')
           return
         }
 
@@ -72,7 +72,7 @@ export default function App() {
         setLoadingError(
           error instanceof Error
             ? error.message
-            : 'Unable to load checked-in item index',
+            : 'Unable to load cached item index',
         )
       })
 

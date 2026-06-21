@@ -101,7 +101,10 @@ function readCache(itemId: number): ItemCacheEntry | null {
 
   try {
     const parsed: unknown = JSON.parse(raw)
-    return isItemCacheEntry(parsed) ? parsed : null
+    if (!isItemCacheEntry(parsed) || parsed.item.id !== itemId) {
+      return null
+    }
+    return parsed
   } catch {
     return null
   }
@@ -217,7 +220,8 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         {refreshError !== null ? (
           <span>
             <span role="status" aria-live="polite">
-              {`⚠️ Cache refresh failed: ${refreshError}`}
+              <span aria-hidden="true">⚠️ </span>
+              {`Cache refresh failed: ${refreshError}`}
             </span>
             <button
               type="button"
