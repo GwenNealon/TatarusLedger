@@ -28,7 +28,10 @@ const styles: Record<'page' | 'card', CSSProperties> = {
   },
 }
 
-const APP_BASE_PATH = import.meta.env.BASE_URL
+const APP_BASE_PATH =
+  import.meta.env.BASE_URL === '/'
+    ? '/TatarusLedger/'
+    : import.meta.env.BASE_URL
 const BUILD_TIMESTAMP = import.meta.env.VITE_BUILD_TIMESTAMP
 
 export default function App() {
