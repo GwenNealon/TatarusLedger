@@ -6,6 +6,7 @@ export interface UndercutItemState {
   itemName: string
   listingCount: number
   ownedListings: {
+    listingId?: string
     quality: 'HQ' | 'NQ'
     quantity: number
     sellingPrice: number
@@ -14,6 +15,7 @@ export interface UndercutItemState {
     retainerCity?: number
   }[]
   competitorListings: {
+    listingId?: string
     quality: 'HQ' | 'NQ'
     quantity: number
     sellingPrice: number
@@ -102,6 +104,7 @@ export function deriveItemState(params: {
 }): UndercutItemState {
   const { marketData, itemName, retainerNames } = params
   const ownedNames = new Set(retainerNames.map((name) => name.toLowerCase()))
+  const seenListingKeys = new Set<string>()
 
   let lowestOwnedPrice: number | null = null
   let lowestCompetitorPrice: number | null = null
@@ -113,6 +116,13 @@ export function deriveItemState(params: {
   const competitorMarketListings: MarketData['listings'] = []
 
   for (const listing of marketData.listings) {
+    if (listing.listingId !== undefined) {
+      if (seenListingKeys.has(listing.listingId)) {
+        continue
+      }
+      seenListingKeys.add(listing.listingId)
+    }
+
     const ownerName = listing.retainerName?.toLowerCase()
     const isOwned = ownerName !== undefined && ownedNames.has(ownerName)
 
@@ -124,6 +134,7 @@ export function deriveItemState(params: {
         hasOwnedNq = true
       }
       ownedListings.push({
+        listingId: listing.listingId,
         quality: listing.hq ? 'HQ' : 'NQ',
         quantity: listing.quantity,
         sellingPrice: listing.pricePerUnit,
@@ -177,6 +188,7 @@ export function deriveItemState(params: {
     }
 
     candidateByKey.set(key, {
+      listingId: listing.listingId,
       quality: listing.hq ? 'HQ' : 'NQ',
       quantity: listing.quantity,
       sellingPrice: listing.pricePerUnit,

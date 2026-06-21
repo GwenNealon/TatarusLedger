@@ -94,6 +94,7 @@ describe('deriveItemState', () => {
     expect(state.ownedQuality).toBe('NQ')
     expect(state.ownedListings).toEqual([
       {
+        listingId: undefined,
         quality: 'NQ',
         quantity: 1,
         sellingPrice: 1_000,
@@ -273,5 +274,46 @@ describe('deriveItemState', () => {
     })
 
     expect(state.undercut).toBe(false)
+  })
+
+  it('dedupes duplicate owned listings with the same listing id', () => {
+    const duplicatedOwnedListing: MarketData['listings'][number] = {
+      pricePerUnit: 993,
+      retainerName: 'Venasea',
+      retainerCity: 14,
+      hq: false,
+      quantity: 40,
+      total: 39_720,
+      tax: 0,
+      lastReviewTime: new Date('2026-06-21T17:35:43Z'),
+      listingId: 'owned-dup-1',
+      worldId: 34,
+      worldName: 'Brynhildr',
+    }
+
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        duplicatedOwnedListing,
+        { ...duplicatedOwnedListing },
+        {
+          pricePerUnit: 950,
+          retainerName: 'Competitor',
+          retainerCity: 4,
+          hq: false,
+          quantity: 1,
+          total: 950,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T17:36:43Z'),
+          listingId: 'comp-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['venasea'],
+    })
+
+    expect(state.ownedListings).toHaveLength(1)
+    expect(state.ownedQuantity).toBe(40)
   })
 })

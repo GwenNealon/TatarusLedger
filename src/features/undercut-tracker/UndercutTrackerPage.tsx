@@ -1201,6 +1201,10 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 return Array.from({ length: rowSpan }, (_, index) => {
                   const listing = listingRows[index] ?? null
                   const competitor = competitorRows[index] ?? null
+                  const rowKey =
+                    listing?.listingId ??
+                    competitor?.listingId ??
+                    `${item.id.toString()}-${index.toString()}`
                   const marketCity =
                     listing?.retainerCity !== undefined
                       ? RETAINER_CITY_BY_ID[listing.retainerCity]
@@ -1219,7 +1223,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       : undefined
 
                   return (
-                    <tr key={`${item.id.toString()}-${index.toString()}`}>
+                    <tr key={rowKey}>
                       {index === 0 ? (
                         <>
                           <td style={styles.tableCell} rowSpan={rowSpan}>
