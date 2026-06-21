@@ -6,6 +6,7 @@ export interface UndercutItemState {
   itemName: string
   listingCount: number
   ownedQuantity: number
+  ownedQuality: 'HQ' | 'NQ' | 'Mixed' | null
   lowestOwnedPrice: number | null
   lowestCompetitorPrice: number | null
   undercut: boolean
@@ -87,6 +88,8 @@ export function deriveItemState(params: {
   let lowestOwnedPrice: number | null = null
   let lowestCompetitorPrice: number | null = null
   let ownedQuantity = 0
+  let hasOwnedHq = false
+  let hasOwnedNq = false
 
   for (const listing of marketData.listings) {
     const ownerName = listing.retainerName?.toLowerCase()
@@ -94,6 +97,11 @@ export function deriveItemState(params: {
 
     if (isOwned) {
       ownedQuantity += listing.quantity
+      if (listing.hq) {
+        hasOwnedHq = true
+      } else {
+        hasOwnedNq = true
+      }
       lowestOwnedPrice =
         lowestOwnedPrice === null
           ? listing.pricePerUnit
@@ -112,6 +120,14 @@ export function deriveItemState(params: {
     itemName,
     listingCount: marketData.listings.length,
     ownedQuantity,
+    ownedQuality:
+      hasOwnedHq && hasOwnedNq
+        ? 'Mixed'
+        : hasOwnedHq
+          ? 'HQ'
+          : hasOwnedNq
+            ? 'NQ'
+            : null,
     lowestOwnedPrice,
     lowestCompetitorPrice,
     undercut:

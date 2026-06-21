@@ -89,6 +89,42 @@ describe('deriveItemState', () => {
     expect(state.lowestOwnedPrice).toBe(1_000)
     expect(state.lowestCompetitorPrice).toBe(900)
     expect(state.ownedQuantity).toBe(1)
+    expect(state.ownedQuality).toBe('NQ')
+  })
+
+  it('marks quality as mixed when both HQ and NQ owned listings exist', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: true,
+          quantity: 1,
+          total: 1_000,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: undefined,
+          worldId: undefined,
+          worldName: undefined,
+        },
+        {
+          pricePerUnit: 1_100,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 1_100,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: undefined,
+          worldId: undefined,
+          worldName: undefined,
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(state.ownedQuality).toBe('Mixed')
   })
 
   it('stays competitive when owned listings are cheapest', () => {

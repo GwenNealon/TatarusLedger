@@ -819,6 +819,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 <th style={styles.tableCell} />
                 <th style={styles.tableCell}>Item Name</th>
                 <th style={styles.tableCell}>Quantity</th>
+                <th style={styles.tableCell}>Quality</th>
                 <th style={styles.tableCell}>Selling Price</th>
                 <th style={styles.tableCell}>Lowest Competitor Price</th>
                 <th style={styles.tableCell}>Last Synced</th>
@@ -868,6 +869,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       {state?.lowestOwnedPrice != null
                         ? formatQuantity(state.ownedQuantity)
                         : '—'}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {state?.ownedQuality ?? '—'}
                     </td>
                     <td style={styles.tableCell}>
                       {formatGil(state?.lowestOwnedPrice ?? null)}
