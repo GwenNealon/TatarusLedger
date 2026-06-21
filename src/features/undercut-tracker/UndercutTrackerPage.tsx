@@ -263,6 +263,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const displayRefreshStatus = watchContext.hasInput
     ? refreshStatus
     : 'Add a world and items to start tracking'
+  const visibleItemStates = watchContext.hasInput ? itemStates : []
   const canDiscover =
     worldOptions.length > 0 &&
     selectedWorld.length > 0 &&
@@ -731,14 +732,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       </ul>
 
       <div style={styles.grid}>
-        {itemStates.length === 0 ? (
+        {visibleItemStates.length === 0 ? (
           <article style={styles.card}>
             <p style={{ margin: 0 }}>
               Add a world and at least one item to start tracking.
             </p>
           </article>
         ) : (
-          itemStates.map((itemState) => (
+          visibleItemStates.map((itemState) => (
             <article key={itemState.itemId} style={styles.card}>
               <h3 style={{ marginTop: 0 }}>{itemState.itemName}</h3>
               <p style={styles.status}>

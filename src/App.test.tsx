@@ -166,7 +166,7 @@ function setupFetchMock(params: {
       )
     }
 
-    const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
+    const marketMatch = /\/api\/v2\/(?:Crystal|Balmung)\/(\d+)/.exec(requestUrl)
     if (marketMatch !== null) {
       const itemId = Number.parseInt(marketMatch[1], 10)
       const queue = queueByItemId.get(itemId)
@@ -599,6 +599,78 @@ describe('App', () => {
 
     const chevron = container.querySelector('[aria-hidden="true"]')
     expect(chevron?.textContent).toBe('▾')
+  })
+
+  it('clears item listing when removing the last tracked item', async () => {
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          makeResponse({
+            itemID: 5339,
+            listings: [
+              {
+                listingID: 'owned-1',
+                hq: false,
+                isCrafted: true,
+                onMannequin: false,
+                pricePerUnit: 1_000,
+                quantity: 1,
+                total: 1_000,
+                tax: 0,
+                retainerCity: 1,
+                stainID: 0,
+                retainerName: 'Tataru',
+                worldID: 73,
+                worldName: 'Balmung',
+                lastReviewTime: 1_700_000_000,
+              },
+            ],
+            recentHistory: [],
+          }),
+        ],
+      },
+    })
+    window.localStorage.setItem(
+      'undercut-tracker-config',
+      JSON.stringify({
+        world: 'Balmung',
+        retainerInput: 'Tataru',
+        itemInput: '5339',
+      }),
+    )
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup')
+
+    const itemChip = Array.from(container.querySelectorAll('li')).find((chip) =>
+      chip.textContent.includes('Craftsman Syrup (5339)'),
+    )
+    expect(itemChip).not.toBeUndefined()
+    if (itemChip === undefined) return
+
+    const removeButton = itemChip.querySelector('button')
+    expect(removeButton).not.toBeNull()
+    if (removeButton === null) return
+
+    act(() => {
+      removeButton.click()
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain(
+      'Add a world and at least one item to start tracking.',
+    )
+    expect(container.textContent).not.toContain('Craftsman Syrup')
   })
 
   it('auto-discovers watched items from retainers', async () => {
