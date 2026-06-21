@@ -149,7 +149,8 @@ async function searchAndSelectItem(params: {
   }
 
   const itemButton = Array.from(container.querySelectorAll('button')).find(
-    (button) => button.textContent.includes(itemName),
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    (button) => (button.textContent ?? '').includes(itemName),
   )
   expect(itemButton).not.toBeUndefined()
   if (itemButton === undefined) return

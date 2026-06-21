@@ -11,10 +11,6 @@ interface XivApiItemEntry {
   fields: Record<string, unknown>
 }
 
-interface XivApiItemsPage {
-  rows: XivApiItemEntry[]
-}
-
 function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
   const name = entry.fields.Name
   if (typeof name !== 'string' || name === '' || entry.row_id === 0) {
@@ -64,8 +60,12 @@ async function fetchXivApiItems(
       )
     }
 
-    const payload = (await response.json()) as XivApiItemsPage
-    const pageEntries = payload.rows
+    const raw: unknown = await response.json()
+    const rows = (raw as { rows?: unknown }).rows
+    if (!Array.isArray(rows)) {
+      throw new Error('Invalid XIVAPI item index payload (missing rows array)')
+    }
+    const pageEntries = rows as XivApiItemEntry[]
     if (pageEntries.length === 0) {
       break
     }
