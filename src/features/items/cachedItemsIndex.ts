@@ -1,10 +1,7 @@
 import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
 
-const APP_BASE_PATH =
-  import.meta.env.BASE_URL === '/'
-    ? '/TatarusLedger/'
-    : import.meta.env.BASE_URL
+const APP_BASE_PATH = import.meta.env.BASE_URL
 
 interface ItemsArtifactPayload {
   version: string
