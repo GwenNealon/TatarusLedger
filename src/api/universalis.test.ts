@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   UniversalisError,
   fetchMarketBoard,
+  fetchMarketableItemIds,
+  fetchWorlds,
   transformListing,
   transformSale,
 } from './universalis.ts'
@@ -336,5 +338,31 @@ describe('fetchMarketBoard — query parameter forwarding', () => {
     const call = vi.mocked(globalThis.fetch).mock.calls.at(-1)
     expect(call).toBeDefined()
     expect(call?.[1]).toBeUndefined()
+  })
+})
+
+describe('market discovery helpers', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('fetches world names', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      makeOkResponse([
+        { id: 73, name: 'Balmung' },
+        { id: 74, name: 'Jenova' },
+      ]),
+    )
+
+    await expect(fetchWorlds()).resolves.toEqual([
+      { id: 73, name: 'Balmung' },
+      { id: 74, name: 'Jenova' },
+    ])
+  })
+
+  it('fetches marketable item ids', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(makeOkResponse([1, 2, 3]))
+
+    await expect(fetchMarketableItemIds()).resolves.toEqual([1, 2, 3])
   })
 })

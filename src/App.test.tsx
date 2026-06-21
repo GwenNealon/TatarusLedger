@@ -30,9 +30,14 @@ const ITEMS_FIXTURE: NormalizedItem[] = [
 
 let lastRoot: ReturnType<typeof createRoot> | null = null
 
-function setInputValue(input: HTMLInputElement, value: string): void {
+function setInputValue(
+  input: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+): void {
   const valueDescriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
+    input instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype,
     'value',
   )
   if (valueDescriptor?.set === undefined) {
@@ -72,6 +77,78 @@ function setupFetchMock(params: {
         jsonResponse({
           version: 'test',
           items: ITEMS_FIXTURE,
+        }),
+      )
+    }
+
+    if (requestUrl.endsWith('/api/v2/worlds')) {
+      return Promise.resolve(
+        jsonResponse([
+          { id: 73, name: 'Balmung' },
+          { id: 74, name: 'Jenova' },
+        ]),
+      )
+    }
+
+    if (requestUrl.endsWith('/api/v2/marketable')) {
+      return Promise.resolve(jsonResponse([5339, 33917, 999999]))
+    }
+
+    if (requestUrl.includes('/api/v2/Balmung/5339,33917,999999')) {
+      return Promise.resolve(
+        jsonResponse({
+          itemIDs: [5339, 33917, 999999],
+          items: {
+            5339: {
+              itemID: 5339,
+              listings: [
+                {
+                  listingID: 'owned-1',
+                  hq: false,
+                  isCrafted: true,
+                  onMannequin: false,
+                  pricePerUnit: 1_000,
+                  quantity: 1,
+                  total: 1_000,
+                  tax: 0,
+                  retainerCity: 1,
+                  stainID: 0,
+                  retainerName: 'Tataru',
+                  worldID: 73,
+                  worldName: 'Balmung',
+                  lastReviewTime: 1_700_000_000,
+                },
+              ],
+              recentHistory: [],
+            },
+            33917: {
+              itemID: 33917,
+              listings: [
+                {
+                  listingID: 'other-1',
+                  hq: false,
+                  isCrafted: true,
+                  onMannequin: false,
+                  pricePerUnit: 2_000,
+                  quantity: 1,
+                  total: 2_000,
+                  tax: 0,
+                  retainerCity: 1,
+                  stainID: 0,
+                  retainerName: 'SomeoneElse',
+                  worldID: 73,
+                  worldName: 'Balmung',
+                  lastReviewTime: 1_700_000_000,
+                },
+              ],
+              recentHistory: [],
+            },
+            999999: {
+              itemID: 999999,
+              listings: [],
+              recentHistory: [],
+            },
+          },
         }),
       )
     }
@@ -471,5 +548,79 @@ describe('App', () => {
     expect(container.textContent).toContain(
       'Cache refresh failed: No market data returned for item',
     )
+  })
+
+  it('opens the live undercut tracker page', async () => {
+    setupFetchMock({})
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    expect(container.textContent).toContain('Live undercut tracker')
+    expect(container.textContent).toContain('WebSocket first')
+  })
+
+  it('links to the live undercut tracker from the main page', async () => {
+    setupFetchMock({})
+
+    const { container } = await renderApp()
+
+    const trackerLink = Array.from(container.querySelectorAll('a')).find(
+      (link) => link.textContent === 'undercut tracker',
+    )
+
+    expect(trackerLink?.getAttribute('href')).toContain('/undercut-tracker')
+  })
+
+  it('shows world suggestions on the undercut tracker page', async () => {
+    setupFetchMock({})
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    const worldSelect = container.querySelector<HTMLSelectElement>(
+      '#undercut-world-select',
+    )
+    expect(worldSelect).not.toBeNull()
+    expect(worldSelect?.value).toBe('Balmung')
+
+    const chevron = container.querySelector('[aria-hidden="true"]')
+    expect(chevron?.textContent).toBe('▾')
+  })
+
+  it('auto-discovers watched items from retainers', async () => {
+    setupFetchMock({})
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    const retainers = container.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="One retainer name per line"]',
+    )
+    expect(retainers).not.toBeNull()
+    if (retainers === null) return
+
+    act(() => {
+      setInputValue(retainers, 'Tataru')
+    })
+
+    const discoverButton = Array.from(
+      container.querySelectorAll('button'),
+    ).find((button) => button.textContent === 'Discover my listings')
+    expect(discoverButton).not.toBeUndefined()
+    if (discoverButton === undefined) return
+
+    act(() => {
+      discoverButton.click()
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+    expect(container.textContent).not.toContain('Orange Juice (33917)')
+    expect(container.textContent).toContain('Discovered 1 item(s)')
   })
 })

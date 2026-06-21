@@ -5,6 +5,7 @@ import type { NormalizedItem } from './data/types.ts'
 import { ItemDetailPage } from './features/items/ItemDetailPage.tsx'
 import { ItemSearch } from './features/items/ItemSearch.tsx'
 import { loadCachedItemsIndex } from './features/items/cachedItemsIndex.ts'
+import { UndercutTrackerPage } from './features/undercut-tracker/UndercutTrackerPage.tsx'
 import { APP_BASE_PATH } from './constants.ts'
 
 const styles: Record<'page' | 'card', CSSProperties> = {
@@ -35,6 +36,12 @@ export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
   const [items, setItems] = useState<NormalizedItem[] | null>(null)
   const [loadingError, setLoadingError] = useState<string | null>(null)
+  const basePath = APP_BASE_PATH.replace(/\/+$/, '')
+  const undercutTrackerPath = `${basePath}/undercut-tracker`
+  const routeBases = [...new Set(['/TatarusLedger', basePath || '/'])]
+
+  const joinRoute = (base: string, suffix: string): string =>
+    base === '/' ? `/${suffix}` : `${base}/${suffix}`
 
   useEffect(() => {
     const handlePopState = () => {
@@ -82,8 +89,21 @@ export default function App() {
   }, [])
 
   const selectedItemId = (() => {
-    const base = APP_BASE_PATH.replace(/\/+$/, '')
-    const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const matchedBase = routeBases.find(
+      (candidate) =>
+        pathname === candidate ||
+        pathname.startsWith(candidate === '/' ? '/' : `${candidate}/`),
+    )
+    if (matchedBase === undefined) {
+      return null
+    }
+
+    if (pathname === joinRoute(matchedBase, 'undercut-tracker')) {
+      return null
+    }
+
+    const routeBase = matchedBase === '/' ? '' : matchedBase
+    const escapedBase = routeBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const match = new RegExp(`^${escapedBase}/(\\d+)/?$`).exec(pathname)
     if (match === null) {
       return null
@@ -97,8 +117,11 @@ export default function App() {
     return parsed
   })()
 
+  const isUndercutTrackerRoute = routeBases.some(
+    (candidate) => pathname === joinRoute(candidate, 'undercut-tracker'),
+  )
   const selectedItem =
-    selectedItemId === null || items === null
+    selectedItemId === null || items === null || isUndercutTrackerRoute
       ? null
       : (items.find((item) => item.id === selectedItemId) ?? null)
 
@@ -108,7 +131,8 @@ export default function App() {
         <h1>Tataru&apos;s Ledger</h1>
         <p>
           Search an item, open its details page, and quickly jump to popular
-          FFXIV item resources.
+          FFXIV item resources. For live tracking, open the{' '}
+          <a href={undercutTrackerPath}>undercut tracker</a>.
         </p>
 
         {loadingError === null && items === null ? (
@@ -123,27 +147,33 @@ export default function App() {
             : new Date(BUILD_TIMESTAMP).toLocaleString()
         }`}</p>
 
-        <ItemSearch
-          items={items ?? []}
-          onSelectItem={(item) => {
-            window.history.pushState(
-              {},
-              '',
-              `${APP_BASE_PATH}${item.id.toString()}`,
-            )
-            setPathname(window.location.pathname)
-          }}
-        />
-
-        {selectedItem !== null ? (
-          <ItemDetailPage key={selectedItem.id} item={selectedItem} />
-        ) : selectedItemId !== null && items !== null ? (
-          <p role="alert">Item not found in the loaded index.</p>
+        {isUndercutTrackerRoute ? (
+          <UndercutTrackerPage items={items ?? []} />
         ) : (
-          <p role="status">
-            Select an item to open {APP_BASE_PATH}
-            {'{itemId}'}.
-          </p>
+          <>
+            <ItemSearch
+              items={items ?? []}
+              onSelectItem={(item) => {
+                window.history.pushState(
+                  {},
+                  '',
+                  `${APP_BASE_PATH}${item.id.toString()}`,
+                )
+                setPathname(window.location.pathname)
+              }}
+            />
+
+            {selectedItem !== null ? (
+              <ItemDetailPage key={selectedItem.id} item={selectedItem} />
+            ) : selectedItemId !== null && items !== null ? (
+              <p role="alert">Item not found in the loaded index.</p>
+            ) : (
+              <p role="status">
+                Select an item to open {APP_BASE_PATH}
+                {'{itemId}'}. For live tracking, open {undercutTrackerPath}.
+              </p>
+            )}
+          </>
         )}
       </article>
     </main>

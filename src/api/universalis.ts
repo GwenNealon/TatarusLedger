@@ -71,6 +71,11 @@ export interface MarketBoardOptions {
   fields?: string
 }
 
+export interface WorldInfo {
+  id: number
+  name: string
+}
+
 async function fetchWithRetry(
   url: string,
   maxRetries: number,
@@ -222,4 +227,49 @@ export async function fetchMarketBoard(
       sales: (data.recentHistory ?? []).map(transformSale),
     },
   ]
+}
+
+export async function fetchWorlds(): Promise<WorldInfo[]> {
+  const response = await fetchWithRetry(
+    `${BASE_URL}/worlds`,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BASE_DELAY_MS,
+  )
+  const raw: unknown = await response.json()
+
+  if (!Array.isArray(raw)) {
+    throw new UniversalisError('Universalis world list was not an array')
+  }
+
+  return raw.flatMap((entry) => {
+    if (typeof entry !== 'object' || entry === null) {
+      return []
+    }
+
+    const world = entry as { id?: unknown; name?: unknown }
+    if (typeof world.id !== 'number' || typeof world.name !== 'string') {
+      return []
+    }
+
+    return [{ id: world.id, name: world.name }]
+  })
+}
+
+export async function fetchMarketableItemIds(): Promise<number[]> {
+  const response = await fetchWithRetry(
+    `${BASE_URL}/marketable`,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BASE_DELAY_MS,
+  )
+  const raw: unknown = await response.json()
+
+  if (!Array.isArray(raw)) {
+    throw new UniversalisError('Universalis marketable list was not an array')
+  }
+
+  return raw.flatMap((entry) =>
+    typeof entry === 'number' && Number.isInteger(entry) && entry > 0
+      ? [entry]
+      : [],
+  )
 }
