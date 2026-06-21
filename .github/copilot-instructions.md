@@ -4,7 +4,7 @@
 
 Tataru's Ledger is a **TypeScript + React** single-page web application that uses data from the [Universalis API](https://universalis.app/docs/index.html) to surface profitable crafting, gathering, and market board arbitrage opportunities in the MMORPG **Final Fantasy XIV**.
 
-The project is early-stage: the current `src/App.tsx` renders an official landing page while core features are built out inside the `src/` directory.
+The current `src/App.tsx` renders the checked-in item index experience: item search, item detail routing, and resource links for individual FFXIV items.
 
 ---
 
@@ -25,6 +25,7 @@ TatarusLedger/                   ← repo root
 		api/                         ← Universalis client and generated/snapshotted API artifacts
 		data/                        ← normalization/parsing utilities
 		features/                    ← user-facing feature modules
+			items/                     ← item search/detail experience and cached item index helpers
 ```
 
 **All `npm` commands are run from the repo root.**
