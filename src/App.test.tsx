@@ -156,7 +156,9 @@ describe('App', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    window.localStorage.clear()
+    if (typeof window.localStorage.clear === 'function') {
+      window.localStorage.clear()
+    }
     globalThis.IS_REACT_ACT_ENVIRONMENT = true
     window.history.replaceState({}, '', '/TatarusLedger/')
   })
