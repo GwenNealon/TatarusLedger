@@ -49,6 +49,7 @@ export function ItemSearch(props: ItemSearchProps) {
   const [queryInput, setQueryInput] = useState('')
   const [query, setQuery] = useState('')
   const [showAllResults, setShowAllResults] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -80,6 +81,9 @@ export function ItemSearch(props: ItemSearchProps) {
     }
   }
 
+  const effectiveHighlightedIndex =
+    highlightedIndex < filteredItems.length ? highlightedIndex : 0
+
   return (
     <section aria-labelledby="item-search-heading">
       <h2 id="item-search-heading">Item search</h2>
@@ -93,20 +97,75 @@ export function ItemSearch(props: ItemSearchProps) {
         onChange={(event) => {
           setQueryInput(event.target.value)
           setShowAllResults(false)
+          setHighlightedIndex(0)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            if (filteredItems.length === 0) {
+              return
+            }
+
+            event.preventDefault()
+            setHighlightedIndex((currentIndex) => {
+              const boundedIndex =
+                currentIndex < filteredItems.length ? currentIndex : 0
+              return Math.min(boundedIndex + 1, filteredItems.length - 1)
+            })
+            return
+          }
+
+          if (event.key === 'ArrowUp') {
+            if (filteredItems.length === 0) {
+              return
+            }
+
+            event.preventDefault()
+            setHighlightedIndex((currentIndex) => {
+              const boundedIndex =
+                currentIndex < filteredItems.length ? currentIndex : 0
+              return Math.max(boundedIndex - 1, 0)
+            })
+            return
+          }
+
+          if (event.key !== 'Enter') {
+            return
+          }
+
+          const selectedItem = filteredItems.at(effectiveHighlightedIndex)
+          if (selectedItem === undefined) {
+            return
+          }
+
+          event.preventDefault()
+          onSelectItem(selectedItem)
         }}
         placeholder="Type an item name"
       />
 
-      <ul style={styles.itemList}>
-        {filteredItems.map((item) => {
+      <ul
+        style={styles.itemList}
+        onMouseLeave={() => {
+          setHighlightedIndex(0)
+        }}
+      >
+        {filteredItems.map((item, index) => {
           const iconId = String(item.iconId).padStart(6, '0')
           const iconUrl = `https://xivapi.com/i/${iconId.slice(0, 3)}000/${iconId}.png`
+          const isHighlighted = index === effectiveHighlightedIndex
 
           return (
             <li key={item.id}>
               <button
                 type="button"
-                style={styles.itemButton}
+                style={{
+                  ...styles.itemButton,
+                  background: isHighlighted ? '#e2e8f0' : '#fff',
+                }}
+                aria-selected={isHighlighted}
+                onMouseEnter={() => {
+                  setHighlightedIndex(index)
+                }}
                 onClick={() => {
                   onSelectItem(item)
                 }}
@@ -130,6 +189,7 @@ export function ItemSearch(props: ItemSearchProps) {
               style={{ width: '100%' }}
               onClick={() => {
                 setShowAllResults(true)
+                setHighlightedIndex(0)
               }}
             >
               Load remaining entries

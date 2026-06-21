@@ -601,6 +601,106 @@ describe('App', () => {
     expect(chevron?.textContent).toBe('▾')
   })
 
+  it('selects highlighted item from item search on Enter', async () => {
+    vi.useFakeTimers()
+    setupFetchMock({})
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'r')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+
+    const orangeButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent.includes('Orange Juice'),
+    )
+    expect(orangeButton).not.toBeUndefined()
+    if (orangeButton === undefined) return
+
+    act(() => {
+      orangeButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    })
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Orange Juice (33917)')
+  })
+
+  it('moves item search highlight with ArrowUp and ArrowDown', async () => {
+    vi.useFakeTimers()
+    setupFetchMock({})
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, 'r')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+      )
+    })
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+    })
+
+    expect(container.textContent).toContain('Orange Juice (33917)')
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }),
+      )
+    })
+
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+    })
+
+    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+  })
+
   it('clears item listing when removing the last tracked item', async () => {
     setupFetchMock({
       marketResponsesByItemId: {
