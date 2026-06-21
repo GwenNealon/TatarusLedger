@@ -76,29 +76,6 @@ function setupFetchMock(params: {
       )
     }
 
-    if (requestUrl.includes('/sheet/Item')) {
-      const parsed = new URL(requestUrl)
-      if (parsed.searchParams.has('after')) {
-        return Promise.resolve(jsonResponse({ rows: [] }))
-      }
-
-      return Promise.resolve(
-        jsonResponse({
-          rows: ITEMS_FIXTURE.map((item) => ({
-            row_id: item.id,
-            fields: {
-              Name: item.name,
-              'Icon@as(raw)': item.iconId,
-              'LevelItem@as(raw)': item.levelItem,
-              Rarity: item.rarity,
-              'ItemUICategory@as(raw)': item.uiCategory,
-              IsUntradable: false,
-            },
-          })),
-        }),
-      )
-    }
-
     const marketMatch = /\/api\/v2\/Crystal\/(\d+)/.exec(requestUrl)
     if (marketMatch !== null) {
       const itemId = Number.parseInt(marketMatch[1], 10)
@@ -310,24 +287,12 @@ describe('App', () => {
   })
 
   it('does not expose live refresh controls in artifact-only mode', async () => {
-    const fetchMock = setupFetchMock({})
+    setupFetchMock({})
 
     const { container } = await renderApp()
 
     expect(container.textContent).toContain('Last updated (build artifact):')
     expect(container.textContent).not.toContain('Refresh Item Data')
-
-    const calledItemSheet = fetchMock.mock.calls.some((call) => {
-      const request = call[0] as RequestInfo | URL
-      const requestUrl =
-        typeof request === 'string'
-          ? request
-          : request instanceof URL
-            ? request.href
-            : request.url
-      return requestUrl.includes('/sheet/Item')
-    })
-    expect(calledItemSheet).toBe(false)
   })
 
   it('opens a routed item URL with trailing slash', async () => {
