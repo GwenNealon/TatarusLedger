@@ -66,9 +66,13 @@ export function ItemSearch(props: ItemSearchProps) {
 
   if (query.length > 0) {
     const lowered = query.toLowerCase()
+    const shouldMatchById = /^\d+$/.test(query)
 
     for (const item of items) {
-      if (!item.name.toLowerCase().includes(lowered)) {
+      if (
+        !item.name.toLowerCase().includes(lowered) &&
+        !(shouldMatchById && item.id.toString().includes(query))
+      ) {
         continue
       }
 

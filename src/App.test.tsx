@@ -356,6 +356,60 @@ describe('App', () => {
     )
   })
 
+  it('searches by item id without showing ids in search results', async () => {
+    vi.useFakeTimers()
+
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          new Response(
+            JSON.stringify({
+              itemID: 5339,
+              listings: [{ pricePerUnit: 700 }],
+              recentHistory: [{ pricePerUnit: 680, timestamp: 1_700_000_100 }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          ),
+        ],
+      },
+    })
+
+    const { container } = await renderApp()
+    const input =
+      container.querySelector<HTMLInputElement>('#item-search-input')
+    expect(input).not.toBeNull()
+    if (input === null) return
+
+    act(() => {
+      setInputValue(input, '5339')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    const itemButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent.includes('Craftsman Syrup'),
+    )
+    expect(itemButton).not.toBeUndefined()
+    if (itemButton === undefined) return
+
+    expect(itemButton.textContent).not.toContain('5339')
+
+    act(() => {
+      itemButton.click()
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+
+    expect(window.location.pathname.endsWith('/5339')).toBe(true)
+  })
+
   it('shows cached indicator when local cache is fresh', async () => {
     vi.useFakeTimers()
 
