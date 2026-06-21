@@ -863,6 +863,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             const cityId = retainerCityByName.get(retainerName.toLowerCase())
             const marketCity =
               cityId === undefined ? undefined : RETAINER_CITY_BY_ID[cityId]
+            const taxRate =
+              marketCity === undefined
+                ? undefined
+                : taxRatesByCity[marketCity.name]
+            const isHigherTaxThanLowest =
+              typeof taxRate === 'number' &&
+              lowestTaxRate !== null &&
+              taxRate > lowestTaxRate
 
             return (
               <li
@@ -889,7 +897,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   <img
                     src={toXivIconUrl(marketCity.iconId)}
                     alt={`${marketCity.name} market icon`}
-                    title={marketCity.name}
+                    title={
+                      typeof taxRate === 'number'
+                        ? `${marketCity.name} (${taxRate.toString()}% tax)`
+                        : marketCity.name
+                    }
                     width={14}
                     height={14}
                     style={styles.retainerChipIcon}
@@ -903,6 +915,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     ?
                   </span>
                 )}
+                {isHigherTaxThanLowest ? (
+                  <span
+                    style={styles.taxWarningBadge}
+                    title={`Current: ${taxRate.toString()}% | Lowest: ${lowestTaxRate.toString()}% (${lowestTaxCities.join(', ')})`}
+                  >
+                    Tax High
+                  </span>
+                ) : null}
               </li>
             )
           })}
