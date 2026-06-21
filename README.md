@@ -186,6 +186,7 @@ You are free to use, modify, and distribute this software under the terms of the
 ## 🎮 Final Fantasy XIV Legal Notice
 
 FINAL FANTASY is a registered trademark of Square Enix Holdings Co., Ltd.  
+Font assets in this repository are owned by Square Enix and reproduced in accordance with the [Materials Usage License](https://support.na.square-enix.com/rule.php?id=5382&tag=authc).
 FINAL FANTASY XIV © SQUARE ENIX CO., LTD.
 
 Tataru's Ledger is a fan-made project and is not affiliated with, endorsed by, or sponsored by Square Enix.

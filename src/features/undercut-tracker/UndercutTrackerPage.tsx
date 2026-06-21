@@ -49,6 +49,7 @@ const styles: Record<
   | 'tableCell'
   | 'iconCell'
   | 'icon'
+  | 'qualitySymbol'
   | 'removeButton'
   | 'worldField'
   | 'worldSelect'
@@ -125,6 +126,9 @@ const styles: Record<
     borderRadius: '4px',
     verticalAlign: 'middle',
   },
+  qualitySymbol: {
+    fontFamily: 'FFXIV_Lodestone_SSF',
+  },
   removeButton: {
     border: '1px solid #cbd5e1',
     borderRadius: '0.4rem',
@@ -187,6 +191,18 @@ function formatDate(timestamp: number): string {
 
 function formatQuantity(value: number): string {
   return value.toLocaleString()
+}
+
+function formatQuality(value: 'HQ' | 'NQ' | 'Mixed' | null): string {
+  if (value === 'HQ') {
+    return '\uE03C'
+  }
+
+  if (value === 'NQ') {
+    return ''
+  }
+
+  return value ?? '—'
 }
 
 interface WatchContext {
@@ -818,8 +834,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 <th style={styles.tableCell} />
                 <th style={styles.tableCell} />
                 <th style={styles.tableCell}>Item Name</th>
-                <th style={styles.tableCell}>Quantity</th>
                 <th style={styles.tableCell}>Quality</th>
+                <th style={styles.tableCell}>Quantity</th>
                 <th style={styles.tableCell}>Selling Price</th>
                 <th style={styles.tableCell}>Lowest Competitor Price</th>
                 <th style={styles.tableCell}>Last Synced</th>
@@ -866,12 +882,25 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       </a>
                     </td>
                     <td style={styles.tableCell}>
+                      <span
+                        aria-label={
+                          state?.ownedQuality === 'HQ'
+                            ? 'High Quality'
+                            : undefined
+                        }
+                        style={
+                          state?.ownedQuality === 'HQ'
+                            ? styles.qualitySymbol
+                            : undefined
+                        }
+                      >
+                        {formatQuality(state?.ownedQuality ?? null)}
+                      </span>
+                    </td>
+                    <td style={styles.tableCell}>
                       {state?.lowestOwnedPrice != null
                         ? formatQuantity(state.ownedQuantity)
                         : '—'}
-                    </td>
-                    <td style={styles.tableCell}>
-                      {state?.ownedQuality ?? '—'}
                     </td>
                     <td style={styles.tableCell}>
                       {formatGil(state?.lowestOwnedPrice ?? null)}

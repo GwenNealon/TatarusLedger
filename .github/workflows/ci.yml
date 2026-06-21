@@ -33,6 +33,10 @@ jobs:
         timeout-minutes: 5
         run: npm run api:xivapi:spec:check
 
+      - name: Validate FFXIV Lodestone SSF font files
+        timeout-minutes: 5
+        run: npm run fonts:ffxiv:check
+
       - name: Check formatting with Prettier
         run: npm run format:check
 

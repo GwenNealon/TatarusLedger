@@ -655,6 +655,59 @@ describe('App', () => {
     expect(chevron?.textContent).toBe('▾')
   })
 
+  it('renders the HQ quality glyph in the undercut tracker table', async () => {
+    setupFetchMock({
+      marketResponsesByItemId: {
+        5339: [
+          makeResponse({
+            itemID: 5339,
+            listings: [
+              {
+                listingID: 'owned-1',
+                hq: true,
+                isCrafted: true,
+                onMannequin: false,
+                pricePerUnit: 1_000,
+                quantity: 1,
+                total: 1_000,
+                tax: 0,
+                retainerCity: 1,
+                stainID: 0,
+                retainerName: 'Tataru',
+                worldID: 73,
+                worldName: 'Balmung',
+                lastReviewTime: 1_700_000_000,
+              },
+            ],
+            recentHistory: [],
+          }),
+        ],
+      },
+    })
+    window.localStorage.setItem(
+      'undercut-tracker-config',
+      JSON.stringify({
+        world: 'Balmung',
+        retainerInput: 'Tataru',
+        itemInput: '5339',
+      }),
+    )
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const qualitySymbol = container.querySelector(
+      'span[aria-label="High Quality"]',
+    )
+    expect(qualitySymbol).not.toBeNull()
+    expect(qualitySymbol?.textContent).toBe('')
+  })
+
   it('selects highlighted item from item search on Enter', async () => {
     vi.useFakeTimers()
     setupFetchMock({})

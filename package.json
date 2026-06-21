@@ -18,6 +18,8 @@
     "api:xivapi:spec:generate-types": "npm exec --yes openapi-typescript@7.13.0 -- src/api/xivapi/xivapi.swagger.snapshot.json -o src/api/xivapi/xivapi.swagger.generated.ts",
     "api:xivapi:spec:update": "npm run api:xivapi:spec:update-snapshot && npm run api:xivapi:spec:generate-types",
     "api:xivapi:spec:check": "node --experimental-strip-types scripts/updateXivapiSwaggerSnapshot.ts check",
+    "fonts:ffxiv:update": "node --experimental-strip-types scripts/updateFfxivSymbolFonts.ts update",
+    "fonts:ffxiv:check": "node --experimental-strip-types scripts/updateFfxivSymbolFonts.ts check",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
