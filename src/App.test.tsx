@@ -734,7 +734,7 @@ describe('App', () => {
       )
     })
 
-    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+    expect(container.textContent).toContain('Craftsman Syrup')
 
     const orangeButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent.includes('Orange Juice'),
@@ -756,7 +756,7 @@ describe('App', () => {
       await Promise.resolve()
     })
 
-    expect(container.textContent).toContain('Orange Juice (33917)')
+    expect(container.textContent).toContain('Orange Juice')
   })
 
   it('moves item search highlight with ArrowUp and ArrowDown', async () => {
@@ -791,7 +791,7 @@ describe('App', () => {
       )
     })
 
-    expect(container.textContent).toContain('Orange Juice (33917)')
+    expect(container.textContent).toContain('Orange Juice')
 
     act(() => {
       input.dispatchEvent(
@@ -805,7 +805,7 @@ describe('App', () => {
       )
     })
 
-    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+    expect(container.textContent).toContain('Craftsman Syrup')
   })
 
   it('filters already tracked items from undercut tracker search results', async () => {
@@ -834,7 +834,7 @@ describe('App', () => {
       )
     })
 
-    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+    expect(container.textContent).toContain('Craftsman Syrup')
 
     const craftsmanSearchButton = Array.from(
       container.querySelectorAll('button'),
@@ -892,7 +892,7 @@ describe('App', () => {
     expect(container.textContent).toContain('Craftsman Syrup')
 
     const tableRow = Array.from(container.querySelectorAll('tr')).find((row) =>
-      row.textContent.includes('Craftsman Syrup (5339)'),
+      row.textContent.includes('Craftsman Syrup'),
     )
     expect(tableRow).not.toBeUndefined()
     if (tableRow === undefined) return
@@ -958,8 +958,8 @@ describe('App', () => {
       await Promise.resolve()
     })
 
-    expect(container.textContent).toContain('Craftsman Syrup (5339)')
-    expect(container.textContent).not.toContain('Orange Juice (33917)')
+    expect(container.textContent).toContain('Craftsman Syrup')
+    expect(container.textContent).not.toContain('Orange Juice')
     expect(container.textContent).toContain('Discovered 1 item(s)')
   })
 
@@ -1113,6 +1113,6 @@ describe('App', () => {
     })
 
     expect(container.textContent).toContain('Discovered 1 item(s)')
-    expect(container.textContent).toContain('Craftsman Syrup (5339)')
+    expect(container.textContent).toContain('Craftsman Syrup')
   })
 })

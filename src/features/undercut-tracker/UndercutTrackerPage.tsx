@@ -878,7 +878,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     </td>
                     <td style={styles.tableCell}>
                       <a href={`${itemBasePath}${item.id.toString()}`}>
-                        {`${item.name} (${item.id.toString()})`}
+                        {item.name}
                       </a>
                     </td>
                     <td style={styles.tableCell}>
