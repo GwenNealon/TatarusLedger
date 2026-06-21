@@ -17,11 +17,6 @@ interface ItemCacheEntry {
   marketSummary: ItemMarketSummary
 }
 
-type CacheStatus =
-  | { state: 'cached' }
-  | { state: 'refreshing' }
-  | { state: 'error'; message: string }
-
 const ITEM_CACHE_TTL_MS = 5 * 60 * 1_000
 
 const styles: Record<
@@ -135,44 +130,6 @@ async function refreshItem(item: NormalizedItem): Promise<ItemCacheEntry> {
   return entry
 }
 
-function CacheStatusIcon(props: { status: CacheStatus; onRetry: () => void }) {
-  const { status, onRetry } = props
-
-  if (status.state === 'cached') {
-    return (
-      <span
-        role="status"
-        aria-label="Cached and fresh"
-        title="Cached and fresh"
-      >
-        ✅ Cached and fresh
-      </span>
-    )
-  }
-
-  if (status.state === 'refreshing') {
-    return (
-      <span role="status" aria-live="polite" title="Refreshing cache">
-        <span aria-hidden="true" style={styles.spinningIcon}>
-          ↻
-        </span>
-        Refreshing cache…
-      </span>
-    )
-  }
-
-  return (
-    <span>
-      <span role="status" aria-live="polite">
-        {`⚠️ Cache refresh failed: ${status.message}`}
-      </span>
-      <button type="button" style={{ marginLeft: '0.5rem' }} onClick={onRetry}>
-        Retry
-      </button>
-    </span>
-  )
-}
-
 interface ItemDetailPageProps {
   item: NormalizedItem
 }
@@ -186,13 +143,6 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
   const [retrySignal, setRetrySignal] = useState(0)
 
   const needsRefresh = latestEntry === null || !isFresh(latestEntry)
-
-  const cacheStatus: CacheStatus =
-    refreshError !== null
-      ? { state: 'error', message: refreshError }
-      : needsRefresh
-        ? { state: 'refreshing' }
-        : { state: 'cached' }
 
   useEffect(() => {
     if (!needsRefresh) {
@@ -241,13 +191,38 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
         <h2 id="item-detail-heading" style={{ margin: 0 }}>
           {item.name}
         </h2>
-        <CacheStatusIcon
-          status={cacheStatus}
-          onRetry={() => {
-            setRefreshError(null)
-            setRetrySignal((value) => value + 1)
-          }}
-        />
+        {refreshError !== null ? (
+          <span>
+            <span role="status" aria-live="polite">
+              {`⚠️ Cache refresh failed: ${refreshError}`}
+            </span>
+            <button
+              type="button"
+              style={{ marginLeft: '0.5rem' }}
+              onClick={() => {
+                setRefreshError(null)
+                setRetrySignal((value) => value + 1)
+              }}
+            >
+              Retry
+            </button>
+          </span>
+        ) : needsRefresh ? (
+          <span role="status" aria-live="polite" title="Refreshing cache">
+            <span aria-hidden="true" style={styles.spinningIcon}>
+              ↻
+            </span>
+            Refreshing cache…
+          </span>
+        ) : (
+          <span
+            role="status"
+            aria-label="Cached and fresh"
+            title="Cached and fresh"
+          >
+            ✅ Cached and fresh
+          </span>
+        )}
       </div>
 
       <dl>
