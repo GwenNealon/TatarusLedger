@@ -160,4 +160,4 @@ _None recorded yet. Document here any recurring errors (e.g., API rate limits, T
 
 ## Closing Conversations
 
-When concluding a conversation after making code changes, end with a suggested commit message in imperative mood that clearly describes what changed. Use conventional commit prefixes (e.g., `feat:`, `fix:`, `refactor:`, `docs:`, etc.).
+When concluding a conversation after making code changes, end with a suggested commit message in imperative mood that clearly describes what changed. Consider all changes that have not been committed. Use conventional commit prefixes (e.g., `feat:`, `fix:`, `refactor:`, `docs:`, etc.).
