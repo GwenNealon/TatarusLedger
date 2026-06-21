@@ -79,8 +79,16 @@ async function fetchWithRetry(
   const maxAttempts = Math.max(0, maxRetries)
 
   for (let attempt = 0; attempt <= maxAttempts; attempt++) {
-    const response = await fetch(url)
-
+    const response = await fetch(
+      url,
+      typeof window === 'undefined'
+        ? {
+            headers: {
+              'User-Agent': `TatarusLedger/${import.meta.env.VITE_APP_VERSION} (nealon.gwen@gmail.com)`,
+            },
+          }
+        : undefined,
+    )
     if (response.status === 429) {
       if (attempt >= maxAttempts) {
         throw new UniversalisError('Rate limit exceeded', 429)
