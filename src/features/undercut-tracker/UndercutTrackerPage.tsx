@@ -765,7 +765,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
 
       <p>
         Notifications: {permission}. The tracker only alerts on a transition
-        from clear to undercut.
+        from Competitive to Undercut.
       </p>
     </section>
   )
