@@ -12,13 +12,6 @@ interface XivApiItemsPage {
   rows: XivApiItemEntry[]
 }
 
-function toSafeInt(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return Math.trunc(value)
-  }
-  return fallback
-}
-
 function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
   const name = entry.fields.Name
   if (typeof name !== 'string' || name === '' || entry.row_id === 0) {
@@ -29,13 +22,17 @@ function toNormalizedItem(entry: XivApiItemEntry): NormalizedItem | null {
   }
 
   const rarityValue = Number(entry.fields.Rarity)
+  const iconId = Number(entry.fields['Icon@as(raw)'])
+  const levelItem = Number(entry.fields['LevelItem@as(raw)'])
+  const uiCategory = Number(entry.fields['ItemUICategory@as(raw)'])
+
   return {
     id: entry.row_id,
     name,
-    iconId: toSafeInt(entry.fields['Icon@as(raw)'], 0),
-    levelItem: toSafeInt(entry.fields['LevelItem@as(raw)'], 0),
+    iconId: Number.isFinite(iconId) ? Math.trunc(iconId) : 0,
+    levelItem: Number.isFinite(levelItem) ? Math.trunc(levelItem) : 0,
     rarity: Number.isFinite(rarityValue) ? rarityValue : 1,
-    uiCategory: toSafeInt(entry.fields['ItemUICategory@as(raw)'], 0),
+    uiCategory: Number.isFinite(uiCategory) ? Math.trunc(uiCategory) : 0,
   }
 }
 
