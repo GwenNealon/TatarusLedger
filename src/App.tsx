@@ -141,7 +141,7 @@ export default function App() {
           <p role="alert">Item not found in the loaded index.</p>
         ) : (
           <p role="status">
-            Select an item to open /TatarusLedger/{'{itemId}'}.
+            Select an item to open {APP_BASE_PATH}{'{itemId}'}.
           </p>
         )}
       </article>
