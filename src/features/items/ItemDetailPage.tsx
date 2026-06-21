@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import { fetchMarketBoard } from '../../api/universalis.ts'
-import { isNormalizedItem } from '../../data/validators.ts'
 import type { NormalizedItem } from '../../data/types.ts'
 
 interface ItemMarketSummary {
@@ -47,27 +46,45 @@ const styles: Record<
 }
 
 function isItemCacheEntry(value: unknown): value is ItemCacheEntry {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const entry = value as Record<string, unknown>
+
+  if (typeof entry.fetchedAt !== 'number') {
+    return false
+  }
+
+  const item = entry.item
+  const marketSummary = entry.marketSummary
+
+  // Validate item
   if (
-    typeof value !== 'object' ||
-    value === null ||
-    typeof (value as Record<string, unknown>).fetchedAt !== 'number'
+    typeof item !== 'object' ||
+    item === null ||
+    typeof (item as Record<string, unknown>).id !== 'number' ||
+    typeof (item as Record<string, unknown>).name !== 'string' ||
+    typeof (item as Record<string, unknown>).iconId !== 'number' ||
+    typeof (item as Record<string, unknown>).levelItem !== 'number' ||
+    typeof (item as Record<string, unknown>).rarity !== 'number' ||
+    typeof (item as Record<string, unknown>).uiCategory !== 'number'
   ) {
     return false
   }
 
-  const item = (value as Record<string, unknown>).item
-  const marketSummary = (value as Record<string, unknown>).marketSummary
+  // Validate marketSummary
+  if (typeof marketSummary !== 'object' || marketSummary === null) {
+    return false
+  }
+
+  const ms = marketSummary as Record<string, unknown>
+  const lowestPrice = ms.lowestPrice
 
   return (
-    isNormalizedItem(item) &&
-    typeof marketSummary === 'object' &&
-    marketSummary !== null &&
-    typeof (marketSummary as Record<string, unknown>).listingCount ===
-      'number' &&
-    typeof (marketSummary as Record<string, unknown>).saleCount === 'number' &&
-    (typeof (marketSummary as Record<string, unknown>).lowestPrice ===
-      'number' ||
-      (marketSummary as Record<string, unknown>).lowestPrice === null)
+    typeof ms.listingCount === 'number' &&
+    typeof ms.saleCount === 'number' &&
+    (typeof lowestPrice === 'number' || lowestPrice === null)
   )
 }
 
