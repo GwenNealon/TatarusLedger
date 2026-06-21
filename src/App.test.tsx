@@ -47,15 +47,28 @@ function setInputValue(
   input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve
+    reject = promiseReject
+  })
+
+  return { promise, resolve, reject }
+}
+
+function makeResponse(payload: unknown): Response {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 function setupFetchMock(params: {
   marketResponsesByItemId?: Record<number, (Error | Response)[]>
 }): ReturnType<typeof vi.fn> {
-  const jsonResponse = (payload: unknown): Response =>
-    new Response(JSON.stringify(payload), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })
-
   const queueByItemId = new Map<number, (Error | Response)[]>()
 
   for (const [itemId, queue] of Object.entries(
@@ -74,7 +87,7 @@ function setupFetchMock(params: {
 
     if (requestUrl.includes('/data/items.json')) {
       return Promise.resolve(
-        jsonResponse({
+        makeResponse({
           version: 'test',
           items: ITEMS_FIXTURE,
         }),
@@ -83,7 +96,7 @@ function setupFetchMock(params: {
 
     if (requestUrl.endsWith('/api/v2/worlds')) {
       return Promise.resolve(
-        jsonResponse([
+        makeResponse([
           { id: 73, name: 'Balmung' },
           { id: 74, name: 'Jenova' },
         ]),
@@ -91,12 +104,12 @@ function setupFetchMock(params: {
     }
 
     if (requestUrl.endsWith('/api/v2/marketable')) {
-      return Promise.resolve(jsonResponse([5339, 33917, 999999]))
+      return Promise.resolve(makeResponse([5339, 33917, 999999]))
     }
 
     if (requestUrl.includes('/api/v2/Balmung/5339,33917,999999')) {
       return Promise.resolve(
-        jsonResponse({
+        makeResponse({
           itemIDs: [5339, 33917, 999999],
           items: {
             5339: {
@@ -622,5 +635,148 @@ describe('App', () => {
     expect(container.textContent).toContain('Craftsman Syrup (5339)')
     expect(container.textContent).not.toContain('Orange Juice (33917)')
     expect(container.textContent).toContain('Discovered 1 item(s)')
+  })
+
+  it('shows live discovery progress while scanning marketable items', async () => {
+    const marketableItemIds = Array.from({ length: 101 }, (_, index) =>
+      index === 0 ? 5339 : 40000 + index,
+    )
+    const marketableResponse = createDeferred<Response>()
+    const firstBatchResponse = createDeferred<Response>()
+    const secondBatchResponse = createDeferred<Response>()
+
+    const mock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const requestUrl =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url
+
+      if (requestUrl.includes('/data/items.json')) {
+        return Promise.resolve(
+          makeResponse({
+            version: 'test',
+            items: ITEMS_FIXTURE,
+          }),
+        )
+      }
+
+      if (requestUrl.endsWith('/api/v2/worlds')) {
+        return Promise.resolve(
+          makeResponse([
+            { id: 73, name: 'Balmung' },
+            { id: 74, name: 'Jenova' },
+          ]),
+        )
+      }
+
+      if (requestUrl.endsWith('/api/v2/marketable')) {
+        return marketableResponse.promise
+      }
+
+      if (requestUrl.includes('/api/v2/Balmung/')) {
+        if (requestUrl.includes('5339')) {
+          return firstBatchResponse.promise
+        }
+
+        return secondBatchResponse.promise
+      }
+
+      return Promise.reject(new Error(`Unexpected fetch URL: ${requestUrl}`))
+    })
+
+    globalThis.fetch = mock
+    window.history.replaceState({}, '', '/TatarusLedger/undercut-tracker')
+
+    const { container } = await renderApp()
+
+    const retainers = container.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="One retainer name per line"]',
+    )
+    expect(retainers).not.toBeNull()
+    if (retainers === null) return
+
+    act(() => {
+      setInputValue(retainers, 'Tataru')
+    })
+
+    const discoverButton = Array.from(
+      container.querySelectorAll('button'),
+    ).find((button) => button.textContent === 'Discover my listings')
+    expect(discoverButton).not.toBeUndefined()
+    if (discoverButton === undefined) return
+
+    act(() => {
+      discoverButton.click()
+    })
+
+    await act(async () => {
+      marketableResponse.resolve(makeResponse(marketableItemIds))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain(
+      'Checked 0 of 101 marketable items...',
+    )
+
+    await act(async () => {
+      firstBatchResponse.resolve(
+        makeResponse({
+          itemIDs: marketableItemIds.slice(0, 100),
+          items: {
+            5339: {
+              itemID: 5339,
+              listings: [
+                {
+                  listingID: 'owned-1',
+                  hq: false,
+                  isCrafted: true,
+                  onMannequin: false,
+                  pricePerUnit: 1_000,
+                  quantity: 1,
+                  total: 1_000,
+                  tax: 0,
+                  retainerCity: 1,
+                  stainID: 0,
+                  retainerName: 'Tataru',
+                  worldID: 73,
+                  worldName: 'Balmung',
+                  lastReviewTime: 1_700_000_000,
+                },
+              ],
+              recentHistory: [],
+            },
+          },
+        }),
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain(
+      'Checked 100 of 101 marketable items...',
+    )
+
+    await act(async () => {
+      secondBatchResponse.resolve(
+        makeResponse({
+          itemIDs: marketableItemIds.slice(100),
+          items: {
+            [marketableItemIds[100]]: {
+              itemID: marketableItemIds[100],
+              listings: [],
+              recentHistory: [],
+            },
+          },
+        }),
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(container.textContent).toContain('Discovered 1 item(s)')
+    expect(container.textContent).toContain('Craftsman Syrup (5339)')
   })
 })

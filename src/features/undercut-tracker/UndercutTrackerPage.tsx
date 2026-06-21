@@ -574,11 +574,12 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             if (!canDiscover) {
               return
             }
-
             setDiscoverStatus('Scanning marketable items...')
 
             try {
               const marketableItemIds = await fetchMarketableItemIds()
+              const totalMarketableItems = marketableItemIds.length
+              let checkedMarketableItems = 0
               const discoveredTokens: string[] = []
 
               for (
@@ -586,6 +587,10 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 index < marketableItemIds.length;
                 index += 100
               ) {
+                setDiscoverStatus(
+                  `Checked ${checkedMarketableItems.toString()} of ${totalMarketableItems.toString()} marketable items...`,
+                )
+
                 const batch = marketableItemIds.slice(index, index + 100)
                 const marketData = await fetchMarketBoard(
                   watchContext.world,
@@ -602,6 +607,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     retainerNames: watchContext.retainerNames,
                   }),
                 )
+
+                checkedMarketableItems += batch.length
               }
 
               if (discoveredTokens.length === 0) {
