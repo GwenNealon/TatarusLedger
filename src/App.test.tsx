@@ -148,32 +148,7 @@ describe('App', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    const values = new Map<string, string>()
-    const storage: Storage = {
-      get length() {
-        return values.size
-      },
-      clear() {
-        values.clear()
-      },
-      getItem(key: string) {
-        return values.get(key) ?? null
-      },
-      key(index: number) {
-        return [...values.keys()][index] ?? null
-      },
-      removeItem(key: string) {
-        values.delete(key)
-      },
-      setItem(key: string, value: string) {
-        values.set(key, value)
-      },
-    }
-    vi.stubGlobal('localStorage', storage)
-    Object.defineProperty(window, 'localStorage', {
-      value: storage,
-      configurable: true,
-    })
+    window.localStorage.clear()
     globalThis.IS_REACT_ACT_ENVIRONMENT = true
     window.history.replaceState({}, '', '/TatarusLedger/')
   })
@@ -188,7 +163,6 @@ describe('App', () => {
       })
     }
     globalThis.fetch = originalFetch
-    vi.unstubAllGlobals()
     document.body.innerHTML = ''
     vi.useRealTimers()
   })
