@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  RateLimitError,
   UniversalisError,
   fetchMarketBoard,
   transformListing,
@@ -206,12 +205,12 @@ describe('fetchMarketBoard — rate-limit handling', () => {
     }
   })
 
-  it('throws RateLimitError after exhausting all retries', async () => {
+  it('throws UniversalisError with 429 status after exhausting all retries', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue(make429Response())
 
     await expect(
       fetchMarketBoard('Balmung', [5], { maxRetries: 2, baseDelayMs: 0 }),
-    ).rejects.toThrow(RateLimitError)
+    ).rejects.toThrow(UniversalisError)
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(3)
   })

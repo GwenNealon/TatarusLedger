@@ -27,13 +27,6 @@ export class UniversalisError extends Error {
   }
 }
 
-export class RateLimitError extends UniversalisError {
-  constructor(message = 'Rate limit exceeded') {
-    super(message, 429)
-    this.name = 'RateLimitError'
-  }
-}
-
 /**
  * Query options for {@link fetchMarketBoard}.
  *
@@ -101,7 +94,7 @@ async function fetchWithRetry(
 
     if (response.status === 429) {
       if (attempt >= maxRetries) {
-        throw new RateLimitError()
+        throw new UniversalisError('Rate limit exceeded', 429)
       }
       const retryAfter = response.headers.get('Retry-After')
       const retryAfterSeconds =
@@ -124,7 +117,7 @@ async function fetchWithRetry(
     return response
   }
 
-  throw new RateLimitError()
+  throw new UniversalisError('Rate limit exceeded', 429)
 }
 
 function hasItemsMap(value: unknown): value is {
