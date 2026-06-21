@@ -4,11 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { fetchXivApiItems } from './fetchXivApiItems.ts'
 import type { NormalizedItem } from '../src/data/types.ts'
 
-interface ItemArtifact {
-  version: string
-  items: NormalizedItem[]
-}
-
 async function run(): Promise<void> {
   const version = process.argv[2] ?? 'unknown'
   const items = await fetchXivApiItems({
@@ -25,7 +20,7 @@ async function run(): Promise<void> {
   )
   await mkdir(outDir, { recursive: true })
 
-  const artifact: ItemArtifact = {
+  const artifact: { version: string; items: NormalizedItem[] } = {
     version,
     items,
   }
