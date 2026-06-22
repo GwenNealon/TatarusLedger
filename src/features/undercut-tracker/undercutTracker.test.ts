@@ -101,8 +101,10 @@ describe('deriveItemState', () => {
         totalCost: 1_000,
         retainerName: 'Owned',
         retainerCity: 1,
+        lastReviewAt: state.ownedListings[0]?.lastReviewAt ?? 0,
       },
     ])
+    expect(typeof state.ownedListings[0]?.lastReviewAt).toBe('number')
   })
 
   it('dedupes competitor listings and aggregates matching reasons', () => {
@@ -165,6 +167,11 @@ describe('deriveItemState', () => {
         'Cheaper total than your highest stack',
       ]),
     )
+    expect(state.oldestListingReviewAt).toBe(
+      new Date('2026-06-21T12:00:00Z').getTime(),
+    )
+    expect(state.maxWorldTimestampDeltaMs).toBe(20 * 60 * 1_000)
+    expect(state.hasWorldTimestampDeltaWarning).toBe(true)
   })
 
   it('skips cheaper-total rule when owned quantities are all one', () => {

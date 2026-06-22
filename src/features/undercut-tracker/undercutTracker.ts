@@ -13,6 +13,7 @@ export interface UndercutItemState {
     totalCost: number
     retainerName: string
     retainerCity?: number
+    lastReviewAt: number
   }[]
   competitorListings: {
     listingId?: string
@@ -30,6 +31,9 @@ export interface UndercutItemState {
   lowestOwnedPrice: number | null
   lowestCompetitorPrice: number | null
   undercut: boolean
+  oldestListingReviewAt: number | null
+  maxWorldTimestampDeltaMs: number
+  hasWorldTimestampDeltaWarning: boolean
   lastSyncedAt: number
 }
 
@@ -141,6 +145,7 @@ export function deriveItemState(params: {
         totalCost: listing.total,
         retainerName: listing.retainerName ?? '—',
         retainerCity: listing.retainerCity,
+        lastReviewAt: listing.lastReviewTime.getTime(),
       })
       ownedMarketListings.push(listing)
       lowestOwnedPrice =
@@ -212,10 +217,6 @@ export function deriveItemState(params: {
     left.total - right.total ||
     left.pricePerUnit - right.pricePerUnit ||
     right.lastReviewTime.getTime() - left.lastReviewTime.getTime()
-  const byFreshness = (
-    left: MarketData['listings'][number],
-    right: MarketData['listings'][number],
-  ): number => right.lastReviewTime.getTime() - left.lastReviewTime.getTime()
   const pick = (
     listings: MarketData['listings'],
     compare: (
@@ -260,11 +261,6 @@ export function deriveItemState(params: {
     }
   }
 
-  const freshest = pick(competitorMarketListings, byFreshness)
-  if (freshest !== undefined) {
-    toCandidate(freshest, 'Freshest listing')
-  }
-
   if (highestOwnedQuantity > 1 && highestOwnedTotal > 0) {
     const cheapestLowerTotal = pick(
       competitorMarketListings.filter(
@@ -283,7 +279,6 @@ export function deriveItemState(params: {
     'Lowest smaller stack': 4,
     'Lowest HQ smaller stack': 3,
     'Cheaper total than your highest stack': 3,
-    'Freshest listing': 2,
   }
   const competitorListings = [...candidateByKey.values()].sort(
     (left, right) => {
@@ -303,6 +298,34 @@ export function deriveItemState(params: {
       )
     },
   )
+
+  let oldestListingReviewAt: number | null = null
+  const worldTimestampBounds = new Map<string, { min: number; max: number }>()
+
+  for (const listing of marketData.listings) {
+    const reviewedAt = listing.lastReviewTime.getTime()
+    oldestListingReviewAt =
+      oldestListingReviewAt === null
+        ? reviewedAt
+        : Math.min(oldestListingReviewAt, reviewedAt)
+
+    const worldKey =
+      listing.worldId?.toString() ?? listing.worldName ?? 'unknown-world'
+    const existingBounds = worldTimestampBounds.get(worldKey)
+    if (existingBounds === undefined) {
+      worldTimestampBounds.set(worldKey, { min: reviewedAt, max: reviewedAt })
+      continue
+    }
+
+    existingBounds.min = Math.min(existingBounds.min, reviewedAt)
+    existingBounds.max = Math.max(existingBounds.max, reviewedAt)
+  }
+
+  const maxWorldTimestampDeltaMs = [...worldTimestampBounds.values()].reduce(
+    (maxDelta, bounds) => Math.max(maxDelta, bounds.max - bounds.min),
+    0,
+  )
+  const hasWorldTimestampDeltaWarning = maxWorldTimestampDeltaMs > 60_000
 
   return {
     itemId: marketData.itemId,
@@ -325,6 +348,9 @@ export function deriveItemState(params: {
       lowestOwnedPrice !== null &&
       lowestCompetitorPrice !== null &&
       lowestCompetitorPrice < lowestOwnedPrice,
+    oldestListingReviewAt,
+    maxWorldTimestampDeltaMs,
+    hasWorldTimestampDeltaWarning,
     lastSyncedAt: Date.now(),
   }
 }

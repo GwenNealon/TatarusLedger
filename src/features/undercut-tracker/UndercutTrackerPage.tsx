@@ -50,6 +50,8 @@ const styles: Record<
   | 'tableWrap'
   | 'table'
   | 'tableCell'
+  | 'tableCellRight'
+  | 'tableCellCenter'
   | 'iconCell'
   | 'icon'
   | 'qualitySymbol'
@@ -67,7 +69,15 @@ const styles: Record<
   | 'retainerHint'
   | 'chipRemoveButton'
   | 'rankBadge'
-  | 'rankInfo',
+  | 'rankInfo'
+  | 'ageInfo'
+  | 'ageWarningIcon'
+  | 'refreshButton'
+  | 'refreshButtonError'
+  | 'refreshGlyph'
+  | 'liveTooltip'
+  | 'skeletonBar'
+  | 'visuallyHidden',
   CSSProperties
 > = {
   section: {
@@ -119,6 +129,7 @@ const styles: Record<
   table: {
     width: '100%',
     borderCollapse: 'collapse',
+    tableLayout: 'fixed',
     border: '1px solid #cbd5e1',
     borderRadius: '0.5rem',
     overflow: 'hidden',
@@ -128,6 +139,18 @@ const styles: Record<
     borderBottom: '1px solid #e2e8f0',
     padding: '0.5rem',
     textAlign: 'left',
+    verticalAlign: 'middle',
+  },
+  tableCellRight: {
+    borderBottom: '1px solid #e2e8f0',
+    padding: '0.5rem',
+    textAlign: 'right',
+    verticalAlign: 'middle',
+  },
+  tableCellCenter: {
+    borderBottom: '1px solid #e2e8f0',
+    padding: '0.5rem',
+    textAlign: 'center',
     verticalAlign: 'middle',
   },
   iconCell: {
@@ -275,6 +298,90 @@ const styles: Record<
     cursor: 'help',
     userSelect: 'none',
   },
+  ageInfo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #cbd5e1',
+    borderRadius: '999px',
+    width: '1.35rem',
+    height: '1.35rem',
+    backgroundColor: '#f8fafc',
+    color: '#334155',
+    fontSize: '0.8rem',
+    lineHeight: 1,
+    cursor: 'help',
+    userSelect: 'none',
+  },
+  ageWarningIcon: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#92400e',
+    fontSize: '0.9rem',
+    lineHeight: 1,
+    cursor: 'help',
+    userSelect: 'none',
+  },
+  refreshButton: {
+    appearance: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #cbd5e1',
+    borderRadius: '999px',
+    width: '1.8rem',
+    height: '1.8rem',
+    backgroundColor: '#fff',
+    color: '#334155',
+    cursor: 'pointer',
+    padding: 0,
+  },
+  refreshButtonError: {
+    borderColor: '#dc2626',
+    backgroundColor: '#fef2f2',
+    color: '#b91c1c',
+  },
+  refreshGlyph: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.95rem',
+    lineHeight: 1,
+    transformOrigin: 'center',
+  },
+  liveTooltip: {
+    position: 'fixed',
+    zIndex: 1000,
+    maxWidth: '20rem',
+    border: '1px solid #334155',
+    borderRadius: '0.45rem',
+    backgroundColor: '#0f172a',
+    color: '#f8fafc',
+    fontSize: '0.75rem',
+    lineHeight: 1.35,
+    padding: '0.35rem 0.5rem',
+    whiteSpace: 'pre-line',
+    pointerEvents: 'none',
+    boxShadow: '0 6px 16px rgba(2, 6, 23, 0.35)',
+  },
+  skeletonBar: {
+    display: 'inline-block',
+    height: '0.9rem',
+    borderRadius: '0.35rem',
+    backgroundColor: '#e2e8f0',
+  },
+  visuallyHidden: {
+    position: 'absolute',
+    width: '1px',
+    height: '1px',
+    padding: 0,
+    margin: '-1px',
+    overflow: 'hidden',
+    clip: 'rect(0, 0, 0, 0)',
+    whiteSpace: 'nowrap',
+    border: 0,
+  },
 }
 
 const SUBTABLE_LEFT_DIVIDER: CSSProperties = {
@@ -338,6 +445,97 @@ function formatDate(timestamp: number): string {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString()
 }
 
+function formatMinutesSeconds(timestamp: number, now: number): string {
+  if (!Number.isFinite(timestamp)) {
+    return '--:--'
+  }
+
+  const elapsedMs = Math.max(0, now - timestamp)
+  const elapsedMinutes = Math.floor(elapsedMs / 60_000)
+  const elapsedSeconds = Math.floor((elapsedMs % 60_000) / 1_000)
+
+  return `${elapsedMinutes.toString().padStart(2, '0')}:${elapsedSeconds.toString().padStart(2, '0')}`
+}
+
+function formatRelativeAge(timestamp: number, now: number): string {
+  if (!Number.isFinite(timestamp)) {
+    return 'Age unknown'
+  }
+
+  const diffMs = Math.max(0, now - timestamp)
+  const minuteMs = 60_000
+  const hourMs = 60 * minuteMs
+  const dayMs = 24 * hourMs
+
+  if (diffMs < minuteMs) {
+    return 'Just now'
+  }
+
+  if (diffMs < hourMs) {
+    const minutes = Math.floor(diffMs / minuteMs)
+    return `${minutes.toString()} minute${minutes === 1 ? '' : 's'} ago`
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.floor(diffMs / hourMs)
+    return `${hours.toString()} hour${hours === 1 ? '' : 's'} ago`
+  }
+
+  const days = Math.floor(diffMs / dayMs)
+  return `${days.toString()} day${days === 1 ? '' : 's'} ago`
+}
+
+function formatAgeTooltip(timestamp: number, now: number): string {
+  const relative = formatRelativeAge(timestamp, now)
+  const exact = formatDate(timestamp)
+  return exact.length > 0 ? `${relative} (${exact})` : relative
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1_000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  if (minutes === 0) {
+    return `${seconds.toString()} second${seconds === 1 ? '' : 's'}`
+  }
+
+  if (seconds === 0) {
+    return `${minutes.toString()} minute${minutes === 1 ? '' : 's'}`
+  }
+
+  return `${minutes.toString()} minute${minutes === 1 ? '' : 's'} ${seconds.toString()} second${seconds === 1 ? '' : 's'}`
+}
+
+function ageBadgeStyle(ageMs: number | null): CSSProperties {
+  if (ageMs === null) {
+    return styles.ageInfo
+  }
+
+  const sixHoursMs = 6 * 60 * 60 * 1_000
+  const fortyEightHoursMs = 48 * 60 * 60 * 1_000
+
+  if (ageMs > fortyEightHoursMs) {
+    return {
+      ...styles.ageInfo,
+      borderColor: '#dc2626',
+      backgroundColor: '#fef2f2',
+      color: '#b91c1c',
+    }
+  }
+
+  if (ageMs > sixHoursMs) {
+    return {
+      ...styles.ageInfo,
+      borderColor: '#f59e0b',
+      backgroundColor: '#fffbeb',
+      color: '#92400e',
+    }
+  }
+
+  return styles.ageInfo
+}
+
 function formatQuantity(value: number): string {
   return value.toLocaleString()
 }
@@ -366,6 +564,16 @@ interface ReconcileResult {
   nextStates: UndercutItemState[]
   newlyUndercut: UndercutItemState[]
 }
+
+type LiveTooltipTarget =
+  | {
+      kind: 'refresh'
+      itemId: number
+    }
+  | {
+      kind: 'age'
+      itemId: number
+    }
 
 function reconcileMarketData(params: {
   marketData: MarketData[]
@@ -430,6 +638,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const [socketStatus, setSocketStatus] = useState('idle')
   const [refreshStatus, setRefreshStatus] = useState('Waiting for input')
   const [discoverStatus, setDiscoverStatus] = useState<string | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [refreshingItemIds, setRefreshingItemIds] = useState<number[]>([])
+  const [refreshErrorsByItemId, setRefreshErrorsByItemId] = useState<
+    Partial<Record<number, string>>
+  >({})
+  const [liveTooltipTarget, setLiveTooltipTarget] =
+    useState<LiveTooltipTarget | null>(null)
+  const [liveTooltipPosition, setLiveTooltipPosition] = useState<{
+    x: number
+    y: number
+  }>({ x: 0, y: 0 })
   const [taxRatesByCity, setTaxRatesByCity] = useState<Partial<TaxRates>>({})
   const retainerInputTokens = useMemo(
     () => parseWatchTokens(config.retainerInput),
@@ -514,13 +733,13 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     [resolvedItems.items],
   )
   const trackedItemIds = useMemo(() => new Set(itemIds), [itemIds])
-  const itemById = useMemo(
-    () => new Map(items.map((item) => [item.id, item])),
-    [items],
-  )
   const itemStatesById = useMemo(
     () => new Map(itemStates.map((state) => [state.itemId, state])),
     [itemStates],
+  )
+  const refreshingItemIdSet = useMemo(
+    () => new Set(refreshingItemIds),
+    [refreshingItemIds],
   )
   const searchableItems = useMemo(
     () => items.filter((item) => !trackedItemIds.has(item.id)),
@@ -563,6 +782,37 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const itemBasePath = APP_BASE_PATH.endsWith('/')
     ? APP_BASE_PATH
     : `${APP_BASE_PATH}/`
+  const liveTooltipText = useMemo(() => {
+    if (liveTooltipTarget === null) {
+      return ''
+    }
+
+    const state = itemStatesById.get(liveTooltipTarget.itemId) ?? null
+
+    if (liveTooltipTarget.kind === 'refresh') {
+      const syncText = `Last synced: ${formatMinutesSeconds(
+        state === null ? Number.NaN : state.lastSyncedAt,
+        nowMs,
+      )} ago`
+      const refreshError = refreshErrorsByItemId[liveTooltipTarget.itemId]
+
+      return refreshError === undefined
+        ? syncText
+        : `${syncText}\n\u26A0 Refresh failed: ${refreshError}`
+    }
+
+    if (state?.oldestListingReviewAt == null) {
+      return 'Age unknown'
+    }
+
+    const ageText = formatAgeTooltip(state.oldestListingReviewAt, nowMs)
+    if (!state.hasWorldTimestampDeltaWarning) {
+      return ageText
+    }
+
+    const warningDelta = formatDuration(state.maxWorldTimestampDeltaMs)
+    return `${ageText}\nWarning: listing timestamps differ by up to ${warningDelta} inside at least one world (threshold: 1 minute).`
+  }, [itemStatesById, liveTooltipTarget, nowMs, refreshErrorsByItemId])
 
   const addRetainerName = () => {
     const nextRetainer = retainerDraft.trim()
@@ -575,6 +825,101 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       retainerInput: appendUniqueTokens(current.retainerInput, [nextRetainer]),
     }))
     setRetainerDraft('')
+  }
+
+  const updateLiveTooltipPosition = (params: {
+    clientX: number
+    clientY: number
+  }): void => {
+    setLiveTooltipPosition({
+      x: params.clientX + 12,
+      y: params.clientY + 12,
+    })
+  }
+
+  const showLiveTooltip = (
+    target: LiveTooltipTarget,
+    params: { clientX: number; clientY: number },
+  ): void => {
+    setLiveTooltipTarget(target)
+    updateLiveTooltipPosition(params)
+  }
+
+  const hideLiveTooltip = (): void => {
+    setLiveTooltipTarget(null)
+  }
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, 1_000)
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [])
+
+  const refreshSingleItem = (itemId: number) => {
+    if (!watchContext.hasInput || refreshingItemIdSet.has(itemId)) {
+      return
+    }
+
+    setRefreshingItemIds((current) =>
+      current.includes(itemId) ? current : [...current, itemId],
+    )
+    setRefreshErrorsByItemId((current) => {
+      if (current[itemId] === undefined) {
+        return current
+      }
+
+      const next = { ...current }
+      next[itemId] = undefined
+      return next
+    })
+
+    void fetchMarketBoard(watchContext.world, [itemId], {
+      listings: 100,
+      entries: 5,
+    })
+      .then((marketData) => {
+        const entry = marketData.at(0)
+        if (entry === undefined) {
+          throw new Error('Universalis returned no listings for this item')
+        }
+
+        const itemName =
+          watchContext.itemNamesById.get(entry.itemId) ??
+          `Item ${entry.itemId.toString()}`
+        const nextState = deriveItemState({
+          marketData: entry,
+          itemName,
+          retainerNames: watchContext.retainerNames,
+        })
+
+        setItemStates((currentStates) => {
+          const byId = new Map(
+            currentStates.map((state) => [state.itemId, state]),
+          )
+          byId.set(itemId, nextState)
+
+          return watchContext.itemIds
+            .map((trackedItemId) => byId.get(trackedItemId))
+            .filter((state): state is UndercutItemState => state !== undefined)
+        })
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unable to refresh this item from Universalis'
+        setRefreshErrorsByItemId((current) => ({
+          ...current,
+          [itemId]: message,
+        }))
+      })
+      .finally(() => {
+        setRefreshingItemIds((current) => current.filter((id) => id !== itemId))
+      })
   }
 
   useEffect(() => {
@@ -845,6 +1190,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
 
   return (
     <section aria-labelledby="undercut-tracker-heading" style={styles.section}>
+      <style>{`@keyframes undercut-refresh-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <h2 id="undercut-tracker-heading">Live undercut tracker</h2>
       <p>WebSocket first, REST reconciliation every 5 minutes.</p>
 
@@ -947,7 +1293,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 >
                   X
                 </button>
-                <span>{retainerName}</span>
                 {marketCity !== undefined ? (
                   <img
                     src={toXivIconUrl(marketCity.iconId)}
@@ -970,6 +1315,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     ?
                   </span>
                 )}
+                <span>{retainerName}</span>
                 {isHigherTaxThanLowest ? (
                   <span
                     style={styles.taxWarningBadge}
@@ -1119,6 +1465,23 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           </article>
         ) : (
           <table style={styles.table}>
+            <colgroup>
+              <col style={{ width: '3%' }} />
+              <col style={{ width: '3%' }} />
+              <col style={{ width: '17%' }} />
+              <col style={{ width: '5%' }} />
+              <col style={{ width: '6%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '4%' }} />
+              <col style={{ width: '5%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '3%' }} />
+              <col style={{ width: '5%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th style={styles.tableCell} rowSpan={2} />
@@ -1149,24 +1512,42 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   Competitor listings
                 </th>
                 <th style={styles.tableCell} rowSpan={2}>
-                  Last Synced
+                  Age
+                </th>
+                <th
+                  style={{ ...styles.tableCell, textAlign: 'center' }}
+                  rowSpan={2}
+                  aria-label="Refresh"
+                  title="Refresh"
+                >
+                  {'\u21BB'}
                 </th>
               </tr>
               <tr>
-                <th style={{ ...styles.tableCell, ...SUBTABLE_LEFT_DIVIDER }}>
+                <th
+                  style={{
+                    ...styles.tableCellCenter,
+                    ...SUBTABLE_LEFT_DIVIDER,
+                  }}
+                >
                   Quality
                 </th>
-                <th style={styles.tableCell}>Quantity</th>
-                <th style={styles.tableCell}>Selling Price</th>
+                <th style={styles.tableCellRight}>Quantity</th>
+                <th style={styles.tableCellRight}>Selling Price</th>
                 <th style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}>
                   Retainer Name
                 </th>
-                <th style={{ ...styles.tableCell, ...SUBTABLE_LEFT_DIVIDER }}>
+                <th
+                  style={{
+                    ...styles.tableCellCenter,
+                    ...SUBTABLE_LEFT_DIVIDER,
+                  }}
+                >
                   Quality
                 </th>
-                <th style={styles.tableCell}>Quantity</th>
-                <th style={styles.tableCell}>Selling Price</th>
-                <th style={styles.tableCell}>Total Cost</th>
+                <th style={styles.tableCellRight}>Quantity</th>
+                <th style={styles.tableCellRight}>Selling Price</th>
+                <th style={styles.tableCellRight}>Total Cost</th>
                 <th style={styles.tableCell}>Retainer Name</th>
                 <th
                   style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}
@@ -1176,12 +1557,19 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             </thead>
             <tbody>
               {visibleItemRows.map(({ item, state }) => {
-                const iconId = String(
-                  itemById.get(item.id)?.iconId ?? item.iconId,
-                ).padStart(6, '0')
+                const iconId = String(item.iconId).padStart(6, '0')
                 const iconUrl = `https://v2.xivapi.com/api/asset?path=ui/icon/${iconId.slice(0, 3)}000/${iconId}.tex&format=png`
-                const listingRows = state?.ownedListings ?? []
-                const competitorRows = state?.competitorListings ?? []
+                const isRefreshing = refreshingItemIdSet.has(item.id)
+                const isRowLoading = state === null || isRefreshing
+                const listingRows = isRowLoading ? [] : state.ownedListings
+                const competitorRows = isRowLoading
+                  ? []
+                  : state.competitorListings
+                const refreshError = refreshErrorsByItemId[item.id]
+                const retrievedAtLabel = `Last synced: ${formatMinutesSeconds(
+                  state === null ? Number.NaN : state.lastSyncedAt,
+                  nowMs,
+                )} ago`
                 const showCompetitorInfoButton = competitorRows.length > 1
                 const maxSubtableRows = Math.max(
                   listingRows.length,
@@ -1202,9 +1590,22 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   BASE_SUBTABLE_PADDING_REM +
                   EXTRA_SPREAD_REM * (competitorRowRatio - 1)
                 ).toString()}rem`
+                const renderSkeleton = (
+                  width: string,
+                  height = '0.9rem',
+                ): ReactNode => (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      ...styles.skeletonBar,
+                      width,
+                      height,
+                    }}
+                  />
+                )
 
                 return (
-                  <tr key={item.id.toString()}>
+                  <tr key={item.id.toString()} aria-busy={isRowLoading}>
                     <td style={styles.tableCell}>
                       <button
                         type="button"
@@ -1235,6 +1636,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       <a href={`${itemBasePath}${item.id.toString()}`}>
                         {item.name}
                       </a>
+                      {isRowLoading ? (
+                        <span style={styles.visuallyHidden}>
+                          Loading row data
+                        </span>
+                      ) : null}
                     </td>
                     <td
                       colSpan={4}
@@ -1246,13 +1652,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       }}
                     >
                       <table
-                        style={{ width: '100%', borderCollapse: 'collapse' }}
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          tableLayout: 'fixed',
+                        }}
                       >
                         <colgroup>
-                          <col style={{ width: '18%' }} />
-                          <col style={{ width: '18%' }} />
-                          <col style={{ width: '24%' }} />
-                          <col style={{ width: '40%' }} />
+                          <col style={{ width: '17.86%' }} />
+                          <col style={{ width: '21.43%' }} />
+                          <col style={{ width: '25%' }} />
+                          <col style={{ width: '35.71%' }} />
                         </colgroup>
                         <tbody>
                           {(listingRows.length === 0
@@ -1282,7 +1692,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                               >
                                 <td
                                   style={{
-                                    ...styles.tableCell,
+                                    ...styles.tableCellCenter,
                                     borderBottom: hasDivider
                                       ? '1px solid #e2e8f0'
                                       : 'none',
@@ -1302,12 +1712,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                         : undefined
                                     }
                                   >
-                                    {formatQuality(listing?.quality ?? null)}
+                                    {listing === null && isRowLoading
+                                      ? renderSkeleton('0.95rem')
+                                      : formatQuality(listing?.quality ?? null)}
                                   </span>
                                 </td>
                                 <td
                                   style={{
-                                    ...styles.tableCell,
+                                    ...styles.tableCellRight,
                                     borderBottom: hasDivider
                                       ? '1px solid #e2e8f0'
                                       : 'none',
@@ -1316,12 +1728,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {listing === null
-                                    ? ''
+                                    ? isRowLoading
+                                      ? renderSkeleton('2.4rem')
+                                      : ''
                                     : formatQuantity(listing.quantity)}
                                 </td>
                                 <td
                                   style={{
-                                    ...styles.tableCell,
+                                    ...styles.tableCellRight,
                                     borderBottom: hasDivider
                                       ? '1px solid #e2e8f0'
                                       : 'none',
@@ -1330,7 +1744,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {listing === null
-                                    ? ''
+                                    ? isRowLoading
+                                      ? renderSkeleton('5.4rem')
+                                      : ''
                                     : formatGil(listing.sellingPrice)}
                                 </td>
                                 <td
@@ -1344,10 +1760,13 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {listing === null ? (
-                                    ''
+                                    isRowLoading ? (
+                                      renderSkeleton('7.2rem')
+                                    ) : (
+                                      ''
+                                    )
                                   ) : (
                                     <span style={styles.retainerCell}>
-                                      <span>{listing.retainerName}</span>
                                       {marketCity === undefined ? null : (
                                         <img
                                           src={toXivIconUrl(marketCity.iconId)}
@@ -1362,6 +1781,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           style={styles.marketIcon}
                                         />
                                       )}
+                                      <span>{listing.retainerName}</span>
                                       {isHigherTaxThanLowest ? (
                                         <span
                                           style={styles.taxWarningBadge}
@@ -1389,14 +1809,18 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       }}
                     >
                       <table
-                        style={{ width: '100%', borderCollapse: 'collapse' }}
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          tableLayout: 'fixed',
+                        }}
                       >
                         <colgroup>
                           <col style={{ width: '12%' }} />
-                          <col style={{ width: '12%' }} />
-                          <col style={{ width: '16%' }} />
-                          <col style={{ width: '16%' }} />
-                          <col style={{ width: '34%' }} />
+                          <col style={{ width: '14%' }} />
+                          <col style={{ width: '20%' }} />
+                          <col style={{ width: '20%' }} />
+                          <col style={{ width: '24%' }} />
                           <col style={{ width: '10%' }} />
                         </colgroup>
                         <tbody>
@@ -1420,7 +1844,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                               >
                                 <td
                                   style={{
-                                    ...styles.tableCell,
+                                    ...styles.tableCellCenter,
                                     borderBottom: hasDivider
                                       ? '1px solid #e2e8f0'
                                       : 'none',
@@ -1440,12 +1864,16 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                         : undefined
                                     }
                                   >
-                                    {formatQuality(competitor?.quality ?? null)}
+                                    {competitor === null && isRowLoading
+                                      ? renderSkeleton('0.95rem')
+                                      : formatQuality(
+                                          competitor?.quality ?? null,
+                                        )}
                                   </span>
                                 </td>
                                 <td
                                   style={{
-                                    ...styles.tableCell,
+                                    ...styles.tableCellRight,
                                     borderBottom: hasDivider
                                       ? '1px solid #e2e8f0'
                                       : 'none',
@@ -1454,12 +1882,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {competitor === null
-                                    ? ''
+                                    ? isRowLoading
+                                      ? renderSkeleton('2.4rem')
+                                      : ''
                                     : formatQuantity(competitor.quantity)}
                                 </td>
                                 <td
                                   style={{
-                                    ...styles.tableCell,
+                                    ...styles.tableCellRight,
                                     borderBottom: hasDivider
                                       ? '1px solid #e2e8f0'
                                       : 'none',
@@ -1468,7 +1898,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {competitor === null
-                                    ? ''
+                                    ? isRowLoading
+                                      ? renderSkeleton('5.4rem')
+                                      : ''
                                     : formatGil(competitor.sellingPrice)}
                                 </td>
                                 <td
@@ -1482,7 +1914,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {competitor === null
-                                    ? ''
+                                    ? isRowLoading
+                                      ? renderSkeleton('5.4rem')
+                                      : ''
                                     : formatGil(competitor.totalCost)}
                                 </td>
                                 <td
@@ -1496,10 +1930,13 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {competitor === null ? (
-                                    ''
+                                    isRowLoading ? (
+                                      renderSkeleton('7.2rem')
+                                    ) : (
+                                      ''
+                                    )
                                   ) : (
                                     <span style={styles.retainerCell}>
-                                      <span>{competitor.retainerName}</span>
                                       {competitorCity === undefined ? null : (
                                         <img
                                           src={toXivIconUrl(
@@ -1512,6 +1949,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           style={styles.marketIcon}
                                         />
                                       )}
+                                      <span>{competitor.retainerName}</span>
                                     </span>
                                   )}
                                 </td>
@@ -1526,7 +1964,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   }}
                                 >
                                   {competitor === null ? (
-                                    ''
+                                    isRowLoading ? (
+                                      renderSkeleton('1.35rem', '1.35rem')
+                                    ) : (
+                                      ''
+                                    )
                                   ) : showCompetitorInfoButton ? (
                                     <button
                                       type="button"
@@ -1546,8 +1988,119 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                         </tbody>
                       </table>
                     </td>
+                    <td style={styles.tableCellCenter}>
+                      {isRowLoading
+                        ? renderSkeleton('2.5rem', '1.35rem')
+                        : (() => {
+                            const oldestListingReviewAt =
+                              state.oldestListingReviewAt
+                            const ageMs =
+                              oldestListingReviewAt === null
+                                ? null
+                                : Math.max(0, nowMs - oldestListingReviewAt)
+                            const ageText =
+                              oldestListingReviewAt === null
+                                ? 'Age unknown'
+                                : formatAgeTooltip(oldestListingReviewAt, nowMs)
+                            const hasTimestampWarning =
+                              state.hasWorldTimestampDeltaWarning
+                            const warningDelta = formatDuration(
+                              state.maxWorldTimestampDeltaMs,
+                            )
+                            const warningText = hasTimestampWarning
+                              ? `Warning: listing timestamps differ by up to ${warningDelta} inside at least one world (threshold: 1 minute).`
+                              : ''
+
+                            return (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '0.3rem',
+                                }}
+                                onMouseEnter={(event) => {
+                                  showLiveTooltip(
+                                    {
+                                      kind: 'age',
+                                      itemId: item.id,
+                                    },
+                                    event,
+                                  )
+                                }}
+                                onMouseMove={(event) => {
+                                  updateLiveTooltipPosition(event)
+                                }}
+                                onMouseLeave={() => {
+                                  hideLiveTooltip()
+                                }}
+                              >
+                                <span
+                                  role="img"
+                                  aria-label={`Listing age: ${ageText}`}
+                                  style={ageBadgeStyle(ageMs)}
+                                >
+                                  {'\u23F2'}
+                                </span>
+                                {hasTimestampWarning ? (
+                                  <span
+                                    role="img"
+                                    aria-label={warningText}
+                                    style={styles.ageWarningIcon}
+                                  >
+                                    {'\u26A0'}
+                                  </span>
+                                ) : null}
+                              </span>
+                            )
+                          })()}
+                    </td>
                     <td style={styles.tableCell}>
-                      {formatDate(state?.lastSyncedAt ?? Number.NaN)}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          refreshSingleItem(item.id)
+                        }}
+                        disabled={isRefreshing}
+                        style={{
+                          ...styles.refreshButton,
+                          ...(refreshError === undefined
+                            ? {}
+                            : styles.refreshButtonError),
+                        }}
+                        aria-label={
+                          refreshError === undefined
+                            ? `Refresh ${item.name}. ${retrievedAtLabel}`
+                            : `Refresh ${item.name}. ${retrievedAtLabel}. Warning: refresh failed.`
+                        }
+                        onMouseEnter={(event) => {
+                          showLiveTooltip(
+                            {
+                              kind: 'refresh',
+                              itemId: item.id,
+                            },
+                            event,
+                          )
+                        }}
+                        onMouseMove={(event) => {
+                          updateLiveTooltipPosition(event)
+                        }}
+                        onMouseLeave={() => {
+                          hideLiveTooltip()
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            ...styles.refreshGlyph,
+                            animation: isRefreshing
+                              ? 'undercut-refresh-spin 0.9s linear infinite'
+                              : undefined,
+                          }}
+                        >
+                          {'\u21BB'}
+                        </span>
+                      </button>
                     </td>
                   </tr>
                 )
@@ -1556,6 +2109,19 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           </table>
         )}
       </div>
+
+      {liveTooltipTarget !== null && liveTooltipText.length > 0 ? (
+        <div
+          role="tooltip"
+          style={{
+            ...styles.liveTooltip,
+            left: `${liveTooltipPosition.x.toString()}px`,
+            top: `${liveTooltipPosition.y.toString()}px`,
+          }}
+        >
+          {liveTooltipText}
+        </div>
+      ) : null}
 
       <p>
         Notifications: {permission}. The tracker only alerts on a transition
