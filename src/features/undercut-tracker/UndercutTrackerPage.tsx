@@ -11,7 +11,6 @@ import {
 } from '../../api/universalis.ts'
 import type { MarketData } from '../../api/types.ts'
 import type { NormalizedItem } from '../../data/types.ts'
-import { ItemSearch } from '../items/ItemSearch.tsx'
 import {
   appendUniqueTokens,
   buildSubscriptionChannel,
@@ -57,7 +56,6 @@ const styles: Record<
   | 'qualitySymbol'
   | 'gilSymbol'
   | 'gilValue'
-  | 'removeButton'
   | 'worldField'
   | 'worldSelect'
   | 'worldChevron'
@@ -173,15 +171,6 @@ const styles: Record<
     alignItems: 'baseline',
     gap: '0.2rem',
     whiteSpace: 'nowrap',
-  },
-  removeButton: {
-    border: '1px solid #cbd5e1',
-    borderRadius: '0.4rem',
-    background: '#fff',
-    cursor: 'pointer',
-    width: '1.8rem',
-    height: '1.8rem',
-    lineHeight: 1,
   },
   worldField: {
     position: 'relative',
@@ -639,6 +628,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const [discoverStatus, setDiscoverStatus] = useState<string | null>(null)
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [refreshingItemIds, setRefreshingItemIds] = useState<number[]>([])
+  const [rediscoveryPendingItemIds, setRediscoveryPendingItemIds] = useState<
+    number[]
+  >([])
   const [refreshErrorsByItemId] = useState<Partial<Record<number, string>>>({})
   const [liveTooltipTarget, setLiveTooltipTarget] =
     useState<LiveTooltipTarget | null>(null)
@@ -729,7 +721,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     () => new Map(resolvedItems.items.map((item) => [item.id, item.name])),
     [resolvedItems.items],
   )
-  const trackedItemIds = useMemo(() => new Set(itemIds), [itemIds])
   const itemStatesById = useMemo(
     () => new Map(itemStates.map((state) => [state.itemId, state])),
     [itemStates],
@@ -738,9 +729,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     () => new Set(refreshingItemIds),
     [refreshingItemIds],
   )
-  const searchableItems = useMemo(
-    () => items.filter((item) => !trackedItemIds.has(item.id)),
-    [items, trackedItemIds],
+  const rediscoveryPendingItemIdSet = useMemo(
+    () => new Set(rediscoveryPendingItemIds),
+    [rediscoveryPendingItemIds],
   )
   const selectedWorld = worldOptions.includes(config.world)
     ? config.world
@@ -765,7 +756,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     : 'idle'
   const displayRefreshStatus = watchContext.hasInput
     ? refreshStatus
-    : 'Add a world and items to start tracking'
+    : 'Add a world and retainers, then discover listings'
   const visibleItemRows = watchContext.hasInput
     ? resolvedItems.items.map((item) => ({
         item,
@@ -1392,7 +1383,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             if (!canDiscover) {
               return
             }
+
             setDiscoverStatus('Scanning marketable items...')
+            setRediscoveryPendingItemIds([...watchContext.itemIds])
 
             try {
               const marketableItemIds = await fetchMarketableItemIds()
@@ -1431,12 +1424,22 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     discoveredTokens.add(token)
                   }
 
+                  const newlyDiscoveredItemIds = newlyDiscoveredTokens
+                    .map((token) => Number(token))
+                    .filter((itemId) => Number.isInteger(itemId))
+                  if (newlyDiscoveredItemIds.length > 0) {
+                    setRediscoveryPendingItemIds((current) =>
+                      current.filter(
+                        (itemId) => !newlyDiscoveredItemIds.includes(itemId),
+                      ),
+                    )
+                  }
+
                   setConfig((current) => ({
                     ...current,
-                    itemInput: appendUniqueTokens(
-                      current.itemInput,
-                      newlyDiscoveredTokens,
-                    ),
+                    itemInput: appendUniqueTokens(current.itemInput, [
+                      ...discoveredTokens,
+                    ]),
                   }))
                 }
 
@@ -1444,6 +1447,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   `Checked ${checkedMarketableItems.toString()} of ${totalMarketableItems.toString()} marketable items. Discovered ${discoveredTokens.size.toString()} item(s) so far.`,
                 )
               }
+
+              setConfig((current) => ({
+                ...current,
+                itemInput: [...discoveredTokens].join('\n'),
+              }))
 
               if (discoveredTokens.size === 0) {
                 setDiscoverStatus('No listings matched your retainers')
@@ -1459,6 +1467,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   ? error.message
                   : 'Discovery scan failed',
               )
+            } finally {
+              setRediscoveryPendingItemIds([])
             }
           })()
         }}
@@ -1468,18 +1478,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       {discoverStatus !== null ? (
         <p aria-live="polite">{discoverStatus}</p>
       ) : null}
-
-      <ItemSearch
-        items={searchableItems}
-        onSelectItem={(item) => {
-          setConfig((current) => ({
-            ...current,
-            itemInput: parseWatchTokens(
-              `${current.itemInput}\n${item.id.toString()}`,
-            ).join('\n'),
-          }))
-        }}
-      />
 
       {resolvedItems.unresolvedTokens.length > 0 ? (
         <p role="alert">{`Could not resolve: ${resolvedItems.unresolvedTokens.join(', ')}`}</p>
@@ -1532,7 +1530,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         {visibleItemRows.length === 0 ? (
           <article style={styles.card}>
             <p style={{ margin: 0 }}>
-              Add a world and at least one item to start tracking.
+              Add a world and retainers, then discover listings to start
+              tracking.
             </p>
           </article>
         ) : (
@@ -1540,8 +1539,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             <colgroup>
               {/* ponytail: outer competitor cols must stay proportional to competitor subtable colgroup widths below */}
               <col style={{ width: '3%' }} />
-              <col style={{ width: '3%' }} />
-              <col style={{ width: '22%' }} />
+              <col style={{ width: '25%' }} />
               <col style={{ width: '5%' }} />
               <col style={{ width: '6%' }} />
               <col style={{ width: '7%' }} />
@@ -1555,7 +1553,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             </colgroup>
             <thead>
               <tr>
-                <th style={styles.tableCellCenter} rowSpan={2} />
                 <th style={styles.tableCellCenter} rowSpan={2} />
                 <th style={styles.tableCellCenter} rowSpan={2}>
                   Item
@@ -1628,7 +1625,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 const iconId = String(item.iconId).padStart(6, '0')
                 const iconUrl = `https://v2.xivapi.com/api/asset?path=ui/icon/${iconId.slice(0, 3)}000/${iconId}.tex&format=png`
                 const isRefreshing = refreshingItemIdSet.has(item.id)
-                const isRowLoading = state === null || isRefreshing
+                const isPendingRediscovery = rediscoveryPendingItemIdSet.has(
+                  item.id,
+                )
+                const isRowLoading =
+                  state === null || isRefreshing || isPendingRediscovery
                 const listingRows = isRowLoading ? [] : state.ownedListings
                 const competitorRows = isRowLoading
                   ? []
@@ -1675,23 +1676,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       backgroundColor: itemIndex % 2 === 0 ? '#fff' : '#f1f5f9',
                     }}
                   >
-                    <td style={styles.tableCell}>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${item.name}`}
-                        style={styles.removeButton}
-                        onClick={() => {
-                          setConfig((current) => ({
-                            ...current,
-                            itemInput: parseWatchTokens(current.itemInput)
-                              .filter((token) => token !== item.id.toString())
-                              .join('\n'),
-                          }))
-                        }}
-                      >
-                        X
-                      </button>
-                    </td>
                     <td style={{ ...styles.tableCell, ...styles.iconCell }}>
                       <img
                         src={iconUrl}
@@ -1743,10 +1727,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   padding: '1rem',
                                 }}
                               >
-                                <a
-                                  href="https://universalis.app/contribute"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <span
                                   style={{
                                     color: '#64748b',
                                     textDecoration: 'underline dotted',
@@ -1757,7 +1738,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   title="Universalis data may be out of date. Visit universalis.app/contribute to help update market data."
                                 >
                                   No listings found for your retainers
-                                </a>
+                                </span>
                               </td>
                             </tr>
                           ) : (
