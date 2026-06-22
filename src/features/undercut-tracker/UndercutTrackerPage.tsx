@@ -125,9 +125,7 @@ const styles: Record<
     overflowX: 'auto',
   },
   table: {
-    width: '100%',
     borderCollapse: 'collapse',
-    tableLayout: 'fixed',
     border: '1px solid #cbd5e1',
     borderRadius: '0.5rem',
     overflow: 'hidden',
@@ -528,6 +526,22 @@ function formatQuantity(value: number): string {
   return value.toLocaleString()
 }
 
+function widthFromText(
+  values: string[],
+  minWidthCh: number,
+  maxWidthCh: number,
+  widthScale = 1,
+  extraPaddingCh = 2,
+): string {
+  let maxWidthChValue = minWidthCh
+
+  for (const value of values) {
+    maxWidthChValue = Math.max(maxWidthChValue, value.length * widthScale)
+  }
+
+  return `${Math.min(maxWidthChValue + extraPaddingCh, maxWidthCh).toString()}ch`
+}
+
 function formatQuality(value: 'HQ' | 'NQ' | 'Mixed' | null): string {
   if (value === 'HQ') {
     return '\uE03C'
@@ -700,6 +714,107 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             .map(([city]) => city),
     [lowestTaxRate, taxRateEntries],
   )
+  const listingQuantityColumnWidth = useMemo(
+    () =>
+      widthFromText(
+        [
+          'Quantity',
+          ...itemStates.flatMap((state) =>
+            state.ownedListings.map((listing) =>
+              formatQuantity(listing.quantity),
+            ),
+          ),
+        ],
+        0,
+        12,
+      ),
+    [itemStates],
+  )
+  const listingPriceColumnWidth = useMemo(
+    () =>
+      widthFromText(
+        [
+          'Price',
+          ...itemStates.flatMap((state) =>
+            state.ownedListings.map(
+              (listing) =>
+                `${listing.sellingPrice.toLocaleString()} ${GIL_SYMBOL}`,
+            ),
+          ),
+        ],
+        0,
+        16,
+      ),
+    [itemStates],
+  )
+  const listingRetainerColumnWidth = useMemo(() => {
+    const retainerTexts = ['Retainer']
+
+    for (const state of itemStates) {
+      for (const listing of state.ownedListings) {
+        const marketCity =
+          listing.retainerCity === undefined
+            ? undefined
+            : RETAINER_CITY_BY_ID[listing.retainerCity]
+        const taxRate =
+          marketCity === undefined ? undefined : taxRatesByCity[marketCity.name]
+        const isHigherTaxThanLowest =
+          typeof taxRate === 'number' &&
+          lowestTaxRate !== null &&
+          taxRate > lowestTaxRate
+
+        retainerTexts.push(
+          `${listing.retainerName}${isHigherTaxThanLowest ? ' Tax High' : ''}`,
+        )
+      }
+    }
+
+    return widthFromText(retainerTexts, 0, 24)
+  }, [itemStates, lowestTaxRate, taxRatesByCity])
+  const competitorQuantityColumnWidth = useMemo(
+    () =>
+      widthFromText(
+        [
+          'Quantity',
+          ...itemStates.flatMap((state) =>
+            state.competitorListings.map((competitor) =>
+              formatQuantity(competitor.quantity),
+            ),
+          ),
+        ],
+        0,
+        12,
+      ),
+    [itemStates],
+  )
+  const competitorPriceColumnWidth = useMemo(
+    () =>
+      widthFromText(
+        [
+          'Price',
+          ...itemStates.flatMap((state) =>
+            state.competitorListings.map(
+              (competitor) =>
+                `${competitor.sellingPrice.toLocaleString()} ${GIL_SYMBOL}`,
+            ),
+          ),
+        ],
+        0,
+        16,
+      ),
+    [itemStates],
+  )
+  const competitorRetainerColumnWidth = useMemo(() => {
+    const retainerTexts = ['Retainer']
+
+    for (const state of itemStates) {
+      for (const competitor of state.competitorListings) {
+        retainerTexts.push(competitor.retainerName)
+      }
+    }
+
+    return widthFromText(retainerTexts, 0, 20)
+  }, [itemStates])
 
   const itemTokens = useMemo(
     () => parseWatchTokens(config.itemInput),
@@ -712,6 +827,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const resolvedItems = useMemo(
     () => resolveWatchItems(items, itemTokens),
     [items, itemTokens],
+  )
+  const itemColumnWidth = useMemo(
+    () =>
+      widthFromText(
+        ['Item', ...resolvedItems.items.map((item) => item.name)],
+        0,
+        48,
+        0.84,
+        1.5,
+      ),
+    [resolvedItems.items],
   )
   const itemIds = useMemo(
     () => resolvedItems.items.map((item) => item.id),
@@ -1538,18 +1664,18 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           <table style={styles.table}>
             <colgroup>
               {/* ponytail: outer competitor cols must stay proportional to competitor subtable colgroup widths below */}
-              <col style={{ width: '3%' }} />
-              <col style={{ width: '25%' }} />
-              <col style={{ width: '5%' }} />
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '7%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '4.76%' }} />
-              <col style={{ width: '6.12%' }} />
-              <col style={{ width: '8.16%' }} />
-              <col style={{ width: '10.88%' }} />
-              <col style={{ width: '4.08%' }} />
-              <col style={{ width: '10%' }} />
+              <col style={{ width: '2.5rem' }} />
+              <col style={{ width: itemColumnWidth }} />
+              <col style={{ width: '4rem' }} />
+              <col style={{ width: listingQuantityColumnWidth }} />
+              <col style={{ width: listingPriceColumnWidth }} />
+              <col style={{ width: listingRetainerColumnWidth }} />
+              <col style={{ width: '4rem' }} />
+              <col style={{ width: competitorQuantityColumnWidth }} />
+              <col style={{ width: competitorPriceColumnWidth }} />
+              <col style={{ width: competitorRetainerColumnWidth }} />
+              <col style={{ width: '2.5rem' }} />
+              <col style={{ width: '4rem' }} />
             </colgroup>
             <thead>
               <tr>
@@ -1642,17 +1768,20 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 )
                 const BASE_SUBTABLE_PADDING_REM = 0.25
                 const EXTRA_SPREAD_REM = 0.6
+                const MAX_SUBTABLE_PADDING_REM = 0.85
                 const listingRowRatio =
                   maxSubtableRows / Math.max(listingRows.length, 1)
                 const competitorRowRatio =
                   maxSubtableRows / Math.max(competitorRows.length, 1)
-                const listingRowPadding = `${(
+                const listingRowPadding = `${Math.min(
                   BASE_SUBTABLE_PADDING_REM +
-                  EXTRA_SPREAD_REM * (listingRowRatio - 1)
+                    EXTRA_SPREAD_REM * (listingRowRatio - 1),
+                  MAX_SUBTABLE_PADDING_REM,
                 ).toString()}rem`
-                const competitorRowPadding = `${(
+                const competitorRowPadding = `${Math.min(
                   BASE_SUBTABLE_PADDING_REM +
-                  EXTRA_SPREAD_REM * (competitorRowRatio - 1)
+                    EXTRA_SPREAD_REM * (competitorRowRatio - 1),
+                  MAX_SUBTABLE_PADDING_REM,
                 ).toString()}rem`
                 const renderSkeleton = (
                   width: string,
@@ -1685,7 +1814,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                         style={styles.icon}
                       />
                     </td>
-                    <td style={styles.tableCell}>
+                    <td style={{ ...styles.tableCell, whiteSpace: 'nowrap' }}>
                       <a href={`${itemBasePath}${item.id.toString()}`}>
                         {item.name}
                       </a>
@@ -1706,16 +1835,15 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     >
                       <table
                         style={{
-                          width: '100%',
+                          width: 'max-content',
                           borderCollapse: 'collapse',
-                          tableLayout: 'fixed',
                         }}
                       >
                         <colgroup>
-                          <col style={{ width: '18%' }} />
-                          <col style={{ width: '21%' }} />
-                          <col style={{ width: '25%' }} />
-                          <col style={{ width: '36%' }} />
+                          <col style={{ width: '4rem' }} />
+                          <col style={{ width: listingQuantityColumnWidth }} />
+                          <col style={{ width: listingPriceColumnWidth }} />
+                          <col style={{ width: listingRetainerColumnWidth }} />
                         </colgroup>
                         <tbody>
                           {listingRows.length === 0 && !isRowLoading ? (
@@ -1893,17 +2021,20 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     >
                       <table
                         style={{
-                          width: '100%',
+                          width: 'max-content',
                           borderCollapse: 'collapse',
-                          tableLayout: 'fixed',
                         }}
                       >
                         <colgroup>
-                          <col style={{ width: '14%' }} />
-                          <col style={{ width: '18%' }} />
-                          <col style={{ width: '24%' }} />
-                          <col style={{ width: '32%' }} />
-                          <col style={{ width: '12%' }} />
+                          <col style={{ width: '4rem' }} />
+                          <col
+                            style={{ width: competitorQuantityColumnWidth }}
+                          />
+                          <col style={{ width: competitorPriceColumnWidth }} />
+                          <col
+                            style={{ width: competitorRetainerColumnWidth }}
+                          />
+                          <col style={{ width: '2.5rem' }} />
                         </colgroup>
                         <tbody>
                           {competitorRows.length === 0 && !isRowLoading ? (
