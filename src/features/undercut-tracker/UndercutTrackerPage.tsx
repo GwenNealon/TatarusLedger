@@ -38,11 +38,6 @@ const STORAGE_KEY = 'undercut-tracker-config'
 const WS_URL = 'wss://universalis.app/api/ws'
 const POLL_INTERVAL_MS = 5 * 60 * 1_000
 const GIL_SYMBOL = '\uE049'
-const COMPETITOR_SUBTABLE_WIDTHS = [14, 18, 24, 32, 12] as const
-const COMPETITOR_GROUP_WIDTH_PERCENT = 34
-const COMPETITOR_MAIN_WIDTHS = COMPETITOR_SUBTABLE_WIDTHS.map(
-  (width) => `${((COMPETITOR_GROUP_WIDTH_PERCENT * width) / 100).toFixed(2)}%`,
-)
 
 const styles: Record<
   | 'section'
@@ -142,19 +137,19 @@ const styles: Record<
   },
   tableCell: {
     borderBottom: '1px solid #e2e8f0',
-    padding: '0.5rem',
+    padding: '0.25rem 0.5rem',
     textAlign: 'left',
     verticalAlign: 'middle',
   },
   tableCellRight: {
     borderBottom: '1px solid #e2e8f0',
-    padding: '0.5rem',
+    padding: '0.25rem 0.5rem',
     textAlign: 'right',
     verticalAlign: 'middle',
   },
   tableCellCenter: {
     borderBottom: '1px solid #e2e8f0',
-    padding: '0.5rem',
+    padding: '0.25rem 0.5rem',
     textAlign: 'center',
     verticalAlign: 'middle',
   },
@@ -1590,21 +1585,21 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         ) : (
           <table style={styles.table}>
             <colgroup>
+              {/* ponytail: outer competitor cols must stay proportional to competitor subtable colgroup widths below */}
               <col style={{ width: '3%' }} />
               <col style={{ width: '3%' }} />
-              <col style={{ width: '17%' }} />
+              <col style={{ width: '22%' }} />
               <col style={{ width: '5%' }} />
               <col style={{ width: '6%' }} />
               <col style={{ width: '7%' }} />
               <col style={{ width: '10%' }} />
-              {COMPETITOR_MAIN_WIDTHS.map((width, index) => (
-                <col
-                  key={`competitor-main-col-${index.toString()}`}
-                  style={{ width }}
-                />
-              ))}
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '5%' }} />
+              <col style={{ width: '4.76%' }} />
+              <col style={{ width: '6.12%' }} />
+              <col style={{ width: '8.16%' }} />
+              <col style={{ width: '10.88%' }} />
+              <col style={{ width: '4.08%' }} />
+              <col style={{ width: '6%' }} />
+              <col style={{ width: '4%' }} />
             </colgroup>
             <thead>
               <tr>
@@ -1697,8 +1692,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   competitorRows.length,
                   1,
                 )
-                const BASE_SUBTABLE_PADDING_REM = 0.5
-                const EXTRA_SPREAD_REM = 1.2
+                const BASE_SUBTABLE_PADDING_REM = 0.25
+                const EXTRA_SPREAD_REM = 0.6
                 const listingRowRatio =
                   maxSubtableRows / Math.max(listingRows.length, 1)
                 const competitorRowRatio =
@@ -1780,10 +1775,10 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                         }}
                       >
                         <colgroup>
-                          <col style={{ width: '17.86%' }} />
-                          <col style={{ width: '21.43%' }} />
+                          <col style={{ width: '18%' }} />
+                          <col style={{ width: '21%' }} />
                           <col style={{ width: '25%' }} />
-                          <col style={{ width: '35.71%' }} />
+                          <col style={{ width: '36%' }} />
                         </colgroup>
                         <tbody>
                           {(listingRows.length === 0
@@ -1937,12 +1932,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                         }}
                       >
                         <colgroup>
-                          {COMPETITOR_SUBTABLE_WIDTHS.map((width, index) => (
-                            <col
-                              key={`competitor-subtable-col-${index.toString()}`}
-                              style={{ width: `${width.toString()}%` }}
-                            />
-                          ))}
+                          <col style={{ width: '14%' }} />
+                          <col style={{ width: '18%' }} />
+                          <col style={{ width: '24%' }} />
+                          <col style={{ width: '32%' }} />
+                          <col style={{ width: '12%' }} />
                         </colgroup>
                         <tbody>
                           {(competitorRows.length === 0
