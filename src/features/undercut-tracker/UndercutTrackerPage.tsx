@@ -122,13 +122,15 @@ const styles: Record<
     listStyle: 'none',
   },
   tableWrap: {
+    width: 'fit-content',
+    maxWidth: '100%',
+    border: '1px solid #cbd5e1',
+    borderRadius: '0.5rem',
     overflowX: 'auto',
   },
   table: {
+    width: 'max-content',
     borderCollapse: 'collapse',
-    border: '1px solid #cbd5e1',
-    borderRadius: '0.5rem',
-    overflow: 'hidden',
   },
   tableCell: {
     borderBottom: '1px solid #e2e8f0',
