@@ -316,14 +316,17 @@ const styles: Record<
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: '0.35rem',
     border: '1px solid #cbd5e1',
     borderRadius: '999px',
-    width: '1.8rem',
-    height: '1.8rem',
+    minHeight: '1.8rem',
     backgroundColor: '#fff',
     color: '#334155',
     cursor: 'pointer',
-    padding: 0,
+    padding: '0.2rem 0.6rem',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
   },
   refreshButtonError: {
     borderColor: '#dc2626',
@@ -433,18 +436,6 @@ function formatDate(timestamp: number): string {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString()
 }
 
-function formatMinutesSeconds(timestamp: number, now: number): string {
-  if (!Number.isFinite(timestamp)) {
-    return '--:--'
-  }
-
-  const elapsedMs = Math.max(0, now - timestamp)
-  const elapsedMinutes = Math.floor(elapsedMs / 60_000)
-  const elapsedSeconds = Math.floor((elapsedMs % 60_000) / 1_000)
-
-  return `${elapsedMinutes.toString().padStart(2, '0')}:${elapsedSeconds.toString().padStart(2, '0')}`
-}
-
 function formatRelativeAge(timestamp: number, now: number): string {
   if (!Number.isFinite(timestamp)) {
     return 'Age unknown'
@@ -528,6 +519,16 @@ function formatQuantity(value: number): string {
   return value.toLocaleString()
 }
 
+function formatCountdownMmSs(remainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(remainingMs / 1_000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  return `${minutes.toString().padStart(2, '0')}:${seconds
+    .toString()
+    .padStart(2, '0')}`
+}
+
 function widthFromText(
   values: string[],
   minWidthCh: number,
@@ -572,7 +573,6 @@ interface ReconcileResult {
 type LiveTooltipTarget =
   | {
       kind: 'refresh'
-      itemId: number
     }
   | {
       kind: 'age'
@@ -647,7 +647,10 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
   const [rediscoveryPendingItemIds, setRediscoveryPendingItemIds] = useState<
     number[]
   >([])
-  const [refreshErrorsByItemId] = useState<Partial<Record<number, string>>>({})
+  const [lastAutoRefreshStartMs, setLastAutoRefreshStartMs] = useState<
+    number | null
+  >(null)
+  const [pollResetToken, setPollResetToken] = useState(0)
   const [liveTooltipTarget, setLiveTooltipTarget] =
     useState<LiveTooltipTarget | null>(null)
   const [liveTooltipPosition, setLiveTooltipPosition] = useState<{
@@ -875,6 +878,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       hasInput: world.length > 0 && itemIds.length > 0,
     }
   }, [itemIds, itemNamesById, retainerNames, selectedWorld])
+  const effectiveAutoRefreshAnchorMs =
+    lastAutoRefreshStartMs === null ||
+    nowMs - lastAutoRefreshStartMs > POLL_INTERVAL_MS
+      ? nowMs
+      : lastAutoRefreshStartMs
+  const nextAutoRefreshAtMs = watchContext.hasInput
+    ? effectiveAutoRefreshAnchorMs + POLL_INTERVAL_MS
+    : null
   const watchedItemIdsKey = itemIds.join(',')
   const retainerNamesKey = retainerNames.join(',')
   const displaySocketStatus = watchContext.hasInput
@@ -903,19 +914,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       return ''
     }
 
-    const state = itemStatesById.get(liveTooltipTarget.itemId) ?? null
-
     if (liveTooltipTarget.kind === 'refresh') {
-      const syncText = `Last synced: ${formatMinutesSeconds(
-        state === null ? Number.NaN : state.lastSyncedAt,
-        nowMs,
-      )} ago`
-      const refreshError = refreshErrorsByItemId[liveTooltipTarget.itemId]
+      if (!watchContext.hasInput || nextAutoRefreshAtMs === null) {
+        return 'Auto-refresh runs every 5 minutes once a world and items are set.'
+      }
 
-      return refreshError === undefined
-        ? syncText
-        : `${syncText}\n\u26A0 Refresh failed: ${refreshError}`
+      return `Fetch latest market data now.\nAuto-refresh runs every 5 minutes.\nNext auto-refresh in ${formatCountdownMmSs(
+        nextAutoRefreshAtMs - nowMs,
+      )}.`
     }
+
+    const state = itemStatesById.get(liveTooltipTarget.itemId) ?? null
 
     if (state?.oldestListingReviewAt == null) {
       return 'Age unknown'
@@ -928,7 +937,13 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
 
     const warningDelta = formatDuration(state.maxWorldTimestampDeltaMs)
     return `${ageText}\nWarning: listing timestamps differ by up to ${warningDelta} inside at least one world (threshold: 1 minute).`
-  }, [itemStatesById, liveTooltipTarget, nowMs, refreshErrorsByItemId])
+  }, [
+    itemStatesById,
+    liveTooltipTarget,
+    nextAutoRefreshAtMs,
+    nowMs,
+    watchContext.hasInput,
+  ])
 
   const addRetainerName = () => {
     const nextRetainer = retainerDraft.trim()
@@ -985,6 +1000,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     if (!watchContext.hasInput || watchContext.itemIds.length === 0) {
       return
     }
+
+    setPollResetToken((current) => current + 1)
+    setLastAutoRefreshStartMs(Date.now())
 
     const refreshingIds = [...watchContext.itemIds]
     startRefreshingItems(refreshingIds)
@@ -1282,6 +1300,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     }
 
     const interval = window.setInterval(() => {
+      setLastAutoRefreshStartMs(Date.now())
+
       const refreshingIds = [...watchContext.itemIds]
       startRefreshingItems(refreshingIds)
 
@@ -1334,7 +1354,13 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     return () => {
       window.clearInterval(interval)
     }
-  }, [permission, watchContext, watchedItemIdsKey, retainerNamesKey])
+  }, [
+    permission,
+    pollResetToken,
+    watchContext,
+    watchedItemIdsKey,
+    retainerNamesKey,
+  ])
 
   return (
     <section aria-labelledby="undercut-tracker-heading" style={styles.section}>
@@ -1611,675 +1637,704 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         <p role="alert">{`Could not resolve: ${resolvedItems.unresolvedTokens.join(', ')}`}</p>
       ) : null}
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          marginBottom: '0.5rem',
-        }}
-      >
-        <button
-          type="button"
-          disabled={
-            !watchContext.hasInput ||
-            watchContext.itemIds.length === 0 ||
-            watchContext.itemIds.every((itemId) =>
-              refreshingItemIdSet.has(itemId),
-            )
-          }
-          onClick={() => {
-            refreshAllTrackedItems()
-          }}
+      <div style={{ width: 'fit-content', maxWidth: '100%' }}>
+        <div
           style={{
-            ...styles.refreshButton,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: '0.5rem',
           }}
-          title="Fetch latest market data for all tracked items"
-          aria-label="Refresh all tracked items"
         >
-          <span
-            aria-hidden="true"
-            style={{
-              ...styles.refreshGlyph,
-              animation:
-                itemStates.length > 0 &&
-                itemStates.every((state) =>
-                  refreshingItemIdSet.has(state.itemId),
-                )
-                  ? 'undercut-refresh-spin 0.9s linear infinite'
-                  : undefined,
+          <button
+            type="button"
+            disabled={
+              !watchContext.hasInput ||
+              watchContext.itemIds.length === 0 ||
+              watchContext.itemIds.every((itemId) =>
+                refreshingItemIdSet.has(itemId),
+              )
+            }
+            onClick={() => {
+              refreshAllTrackedItems()
             }}
+            onMouseEnter={(event) => {
+              showLiveTooltip(
+                {
+                  kind: 'refresh',
+                },
+                event,
+              )
+            }}
+            onMouseMove={(event) => {
+              updateLiveTooltipPosition(event)
+            }}
+            onMouseLeave={() => {
+              hideLiveTooltip()
+            }}
+            style={{
+              ...styles.refreshButton,
+            }}
+            aria-label="Refresh all tracked items"
           >
-            {'↻'}
-          </span>
-        </button>
-      </div>
+            <span>Refresh Listings</span>
+            <span
+              aria-hidden="true"
+              style={{
+                ...styles.refreshGlyph,
+                animation:
+                  itemStates.length > 0 &&
+                  itemStates.every((state) =>
+                    refreshingItemIdSet.has(state.itemId),
+                  )
+                    ? 'undercut-refresh-spin 0.9s linear infinite'
+                    : undefined,
+              }}
+            >
+              {'↻'}
+            </span>
+          </button>
+        </div>
 
-      <div style={styles.tableWrap}>
-        {visibleItemRows.length === 0 ? (
-          <article style={styles.card}>
-            <p style={{ margin: 0 }}>
-              Add a world and retainers, then discover listings to start
-              tracking.
-            </p>
-          </article>
-        ) : (
-          <table style={styles.table}>
-            <colgroup>
-              {/* ponytail: outer competitor cols must stay proportional to competitor subtable colgroup widths below */}
-              <col style={{ width: '2.5rem' }} />
-              <col style={{ width: itemColumnWidth }} />
-              <col style={{ width: '4rem' }} />
-              <col style={{ width: listingQuantityColumnWidth }} />
-              <col style={{ width: listingPriceColumnWidth }} />
-              <col style={{ width: listingRetainerColumnWidth }} />
-              <col style={{ width: '4rem' }} />
-              <col style={{ width: competitorQuantityColumnWidth }} />
-              <col style={{ width: competitorPriceColumnWidth }} />
-              <col style={{ width: competitorRetainerColumnWidth }} />
-              <col style={{ width: '2.5rem' }} />
-              <col style={{ width: '4rem' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={styles.tableCellCenter} rowSpan={2} />
-                <th style={styles.tableCellCenter} rowSpan={2}>
-                  Item
-                </th>
-                <th
-                  style={{
-                    ...styles.tableCellCenter,
-                    ...SUBTABLE_LEFT_DIVIDER,
-                    ...SUBTABLE_RIGHT_DIVIDER,
-                  }}
-                  colSpan={4}
-                >
-                  Your Listings
-                </th>
-                <th
-                  style={{
-                    ...styles.tableCellCenter,
-                    ...SUBTABLE_LEFT_DIVIDER,
-                    ...SUBTABLE_RIGHT_DIVIDER,
-                  }}
-                  colSpan={5}
-                >
-                  Competitor Listings
-                </th>
-                <th style={styles.tableCellCenter} rowSpan={2} colSpan={1}>
-                  Last Updated
-                </th>
-              </tr>
-              <tr>
-                <th
-                  style={{
-                    ...styles.tableCellCenter,
-                    ...SUBTABLE_LEFT_DIVIDER,
-                  }}
-                >
-                  HQ
-                </th>
-                <th style={styles.tableCellCenter}>Quantity</th>
-                <th style={styles.tableCellCenter}>Price</th>
-                <th
-                  style={{
-                    ...styles.tableCellCenter,
-                    ...SUBTABLE_RIGHT_DIVIDER,
-                  }}
-                >
-                  Retainer
-                </th>
-                <th
-                  style={{
-                    ...styles.tableCellCenter,
-                    ...SUBTABLE_LEFT_DIVIDER,
-                  }}
-                >
-                  HQ
-                </th>
-                <th style={styles.tableCellCenter}>Quantity</th>
-                <th style={styles.tableCellCenter}>Price</th>
-                <th style={styles.tableCellCenter}>Retainer</th>
-                <th
-                  style={{
-                    ...styles.tableCellCenter,
-                    ...SUBTABLE_RIGHT_DIVIDER,
-                  }}
-                  aria-label="Competitor details"
-                />
-              </tr>
-            </thead>
-            <tbody>
-              {visibleItemRows.map(({ item, state }, itemIndex) => {
-                const iconId = String(item.iconId).padStart(6, '0')
-                const iconUrl = `https://v2.xivapi.com/api/asset?path=ui/icon/${iconId.slice(0, 3)}000/${iconId}.tex&format=png`
-                const isRefreshing = refreshingItemIdSet.has(item.id)
-                const isPendingRediscovery = rediscoveryPendingItemIdSet.has(
-                  item.id,
-                )
-                const isRowLoading =
-                  state === null || isRefreshing || isPendingRediscovery
-                const listingRows = isRowLoading ? [] : state.ownedListings
-                const competitorRows = isRowLoading
-                  ? []
-                  : state.competitorListings
-                const showCompetitorInfoButton = competitorRows.length > 1
-                const maxSubtableRows = Math.max(
-                  listingRows.length,
-                  competitorRows.length,
-                  1,
-                )
-                const BASE_SUBTABLE_PADDING_REM = 0.25
-                const EXTRA_SPREAD_REM = 0.6
-                const MAX_SUBTABLE_PADDING_REM = 0.85
-                const listingRowRatio =
-                  maxSubtableRows / Math.max(listingRows.length, 1)
-                const competitorRowRatio =
-                  maxSubtableRows / Math.max(competitorRows.length, 1)
-                const listingRowPadding = `${Math.min(
-                  BASE_SUBTABLE_PADDING_REM +
-                    EXTRA_SPREAD_REM * (listingRowRatio - 1),
-                  MAX_SUBTABLE_PADDING_REM,
-                ).toString()}rem`
-                const competitorRowPadding = `${Math.min(
-                  BASE_SUBTABLE_PADDING_REM +
-                    EXTRA_SPREAD_REM * (competitorRowRatio - 1),
-                  MAX_SUBTABLE_PADDING_REM,
-                ).toString()}rem`
-                const renderSkeleton = (
-                  width: string,
-                  height = '0.9rem',
-                ): ReactNode => (
-                  <span
-                    aria-hidden="true"
+        <div style={styles.tableWrap}>
+          {visibleItemRows.length === 0 ? (
+            <article style={styles.card}>
+              <p style={{ margin: 0 }}>
+                Add a world and retainers, then discover listings to start
+                tracking.
+              </p>
+            </article>
+          ) : (
+            <table style={styles.table}>
+              <colgroup>
+                {/* ponytail: outer competitor cols must stay proportional to competitor subtable colgroup widths below */}
+                <col style={{ width: '2.5rem' }} />
+                <col style={{ width: itemColumnWidth }} />
+                <col style={{ width: '4rem' }} />
+                <col style={{ width: listingQuantityColumnWidth }} />
+                <col style={{ width: listingPriceColumnWidth }} />
+                <col style={{ width: listingRetainerColumnWidth }} />
+                <col style={{ width: '4rem' }} />
+                <col style={{ width: competitorQuantityColumnWidth }} />
+                <col style={{ width: competitorPriceColumnWidth }} />
+                <col style={{ width: competitorRetainerColumnWidth }} />
+                <col style={{ width: '2.5rem' }} />
+                <col style={{ width: '4rem' }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={styles.tableCellCenter} rowSpan={2} />
+                  <th style={styles.tableCellCenter} rowSpan={2}>
+                    Item
+                  </th>
+                  <th
                     style={{
-                      ...styles.skeletonBar,
-                      width,
-                      height,
+                      ...styles.tableCellCenter,
+                      ...SUBTABLE_LEFT_DIVIDER,
+                      ...SUBTABLE_RIGHT_DIVIDER,
                     }}
-                  />
-                )
-
-                return (
-                  <tr
-                    key={item.id.toString()}
-                    aria-busy={isRowLoading}
+                    colSpan={4}
+                  >
+                    Your Listings
+                  </th>
+                  <th
                     style={{
-                      backgroundColor: itemIndex % 2 === 0 ? '#fff' : '#f1f5f9',
+                      ...styles.tableCellCenter,
+                      ...SUBTABLE_LEFT_DIVIDER,
+                      ...SUBTABLE_RIGHT_DIVIDER,
+                    }}
+                    colSpan={5}
+                  >
+                    Competitor Listings
+                  </th>
+                  <th style={styles.tableCellCenter} rowSpan={2} colSpan={1}>
+                    Last Updated
+                  </th>
+                </tr>
+                <tr>
+                  <th
+                    style={{
+                      ...styles.tableCellCenter,
+                      ...SUBTABLE_LEFT_DIVIDER,
                     }}
                   >
-                    <td style={{ ...styles.tableCell, ...styles.iconCell }}>
-                      <img
-                        src={iconUrl}
-                        alt={`${item.name} icon`}
-                        width={24}
-                        height={24}
-                        style={styles.icon}
-                      />
-                    </td>
-                    <td style={{ ...styles.tableCell, whiteSpace: 'nowrap' }}>
-                      <a href={`${itemBasePath}${item.id.toString()}`}>
-                        {item.name}
-                      </a>
-                      {isRowLoading ? (
-                        <span style={styles.visuallyHidden}>
-                          Loading row data
-                        </span>
-                      ) : null}
-                    </td>
-                    <td
-                      colSpan={4}
+                    HQ
+                  </th>
+                  <th style={styles.tableCellCenter}>Quantity</th>
+                  <th style={styles.tableCellCenter}>Price</th>
+                  <th
+                    style={{
+                      ...styles.tableCellCenter,
+                      ...SUBTABLE_RIGHT_DIVIDER,
+                    }}
+                  >
+                    Retainer
+                  </th>
+                  <th
+                    style={{
+                      ...styles.tableCellCenter,
+                      ...SUBTABLE_LEFT_DIVIDER,
+                    }}
+                  >
+                    HQ
+                  </th>
+                  <th style={styles.tableCellCenter}>Quantity</th>
+                  <th style={styles.tableCellCenter}>Price</th>
+                  <th style={styles.tableCellCenter}>Retainer</th>
+                  <th
+                    style={{
+                      ...styles.tableCellCenter,
+                      ...SUBTABLE_RIGHT_DIVIDER,
+                    }}
+                    aria-label="Competitor details"
+                  />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleItemRows.map(({ item, state }, itemIndex) => {
+                  const iconId = String(item.iconId).padStart(6, '0')
+                  const iconUrl = `https://v2.xivapi.com/api/asset?path=ui/icon/${iconId.slice(0, 3)}000/${iconId}.tex&format=png`
+                  const isRefreshing = refreshingItemIdSet.has(item.id)
+                  const isPendingRediscovery = rediscoveryPendingItemIdSet.has(
+                    item.id,
+                  )
+                  const isRowLoading =
+                    state === null || isRefreshing || isPendingRediscovery
+                  const listingRows = isRowLoading ? [] : state.ownedListings
+                  const competitorRows = isRowLoading
+                    ? []
+                    : state.competitorListings
+                  const showCompetitorInfoButton = competitorRows.length > 1
+                  const maxSubtableRows = Math.max(
+                    listingRows.length,
+                    competitorRows.length,
+                    1,
+                  )
+                  const BASE_SUBTABLE_PADDING_REM = 0.25
+                  const EXTRA_SPREAD_REM = 0.6
+                  const MAX_SUBTABLE_PADDING_REM = 0.85
+                  const listingRowRatio =
+                    maxSubtableRows / Math.max(listingRows.length, 1)
+                  const competitorRowRatio =
+                    maxSubtableRows / Math.max(competitorRows.length, 1)
+                  const listingRowPadding = `${Math.min(
+                    BASE_SUBTABLE_PADDING_REM +
+                      EXTRA_SPREAD_REM * (listingRowRatio - 1),
+                    MAX_SUBTABLE_PADDING_REM,
+                  ).toString()}rem`
+                  const competitorRowPadding = `${Math.min(
+                    BASE_SUBTABLE_PADDING_REM +
+                      EXTRA_SPREAD_REM * (competitorRowRatio - 1),
+                    MAX_SUBTABLE_PADDING_REM,
+                  ).toString()}rem`
+                  const renderSkeleton = (
+                    width: string,
+                    height = '0.9rem',
+                  ): ReactNode => (
+                    <span
+                      aria-hidden="true"
                       style={{
-                        ...styles.tableCell,
-                        ...SUBTABLE_LEFT_DIVIDER,
-                        ...SUBTABLE_RIGHT_DIVIDER,
-                        padding: 0,
+                        ...styles.skeletonBar,
+                        width,
+                        height,
+                      }}
+                    />
+                  )
+
+                  return (
+                    <tr
+                      key={item.id.toString()}
+                      aria-busy={isRowLoading}
+                      style={{
+                        backgroundColor:
+                          itemIndex % 2 === 0 ? '#fff' : '#f1f5f9',
                       }}
                     >
-                      <table
+                      <td style={{ ...styles.tableCell, ...styles.iconCell }}>
+                        <img
+                          src={iconUrl}
+                          alt={`${item.name} icon`}
+                          width={24}
+                          height={24}
+                          style={styles.icon}
+                        />
+                      </td>
+                      <td style={{ ...styles.tableCell, whiteSpace: 'nowrap' }}>
+                        <a href={`${itemBasePath}${item.id.toString()}`}>
+                          {item.name}
+                        </a>
+                        {isRowLoading ? (
+                          <span style={styles.visuallyHidden}>
+                            Loading row data
+                          </span>
+                        ) : null}
+                      </td>
+                      <td
+                        colSpan={4}
                         style={{
-                          width: 'max-content',
-                          borderCollapse: 'collapse',
+                          ...styles.tableCell,
+                          ...SUBTABLE_LEFT_DIVIDER,
+                          ...SUBTABLE_RIGHT_DIVIDER,
+                          padding: 0,
                         }}
                       >
-                        <colgroup>
-                          <col style={{ width: '4rem' }} />
-                          <col style={{ width: listingQuantityColumnWidth }} />
-                          <col style={{ width: listingPriceColumnWidth }} />
-                          <col style={{ width: listingRetainerColumnWidth }} />
-                        </colgroup>
-                        <tbody>
-                          {listingRows.length === 0 && !isRowLoading ? (
-                            <tr>
-                              <td
-                                colSpan={4}
-                                style={{
-                                  ...styles.tableCellCenter,
-                                  padding: '1rem',
-                                }}
-                              >
-                                <span
+                        <table
+                          style={{
+                            width: 'max-content',
+                            borderCollapse: 'collapse',
+                          }}
+                        >
+                          <colgroup>
+                            <col style={{ width: '4rem' }} />
+                            <col
+                              style={{ width: listingQuantityColumnWidth }}
+                            />
+                            <col style={{ width: listingPriceColumnWidth }} />
+                            <col
+                              style={{ width: listingRetainerColumnWidth }}
+                            />
+                          </colgroup>
+                          <tbody>
+                            {listingRows.length === 0 && !isRowLoading ? (
+                              <tr>
+                                <td
+                                  colSpan={4}
                                   style={{
-                                    color: '#64748b',
-                                    textDecoration: 'underline dotted',
-                                    textDecorationColor: '#cbd5e1',
-                                    textUnderlineOffset: '0.2rem',
-                                    cursor: 'help',
+                                    ...styles.tableCellCenter,
+                                    padding: '1rem',
                                   }}
-                                  title="Universalis data may be out of date. Visit universalis.app/contribute to help update market data."
                                 >
-                                  No listings found for your retainers
-                                </span>
-                              </td>
-                            </tr>
-                          ) : (
-                            (listingRows.length === 0
-                              ? [null]
-                              : listingRows
-                            ).map((listing, listingIndex, source) => {
-                              const marketCity =
-                                listing?.retainerCity !== undefined
-                                  ? RETAINER_CITY_BY_ID[listing.retainerCity]
-                                  : undefined
-                              const taxRate =
-                                marketCity === undefined
-                                  ? undefined
-                                  : taxRatesByCity[marketCity.name]
-                              const isHigherTaxThanLowest =
-                                typeof taxRate === 'number' &&
-                                lowestTaxRate !== null &&
-                                taxRate > lowestTaxRate
-                              const hasDivider =
-                                listingIndex < source.length - 1
+                                  <span
+                                    style={{
+                                      color: '#64748b',
+                                      textDecoration: 'underline dotted',
+                                      textDecorationColor: '#cbd5e1',
+                                      textUnderlineOffset: '0.2rem',
+                                      cursor: 'help',
+                                    }}
+                                    title="Universalis data may be out of date. Visit universalis.app/contribute to help update market data."
+                                  >
+                                    No listings found for your retainers
+                                  </span>
+                                </td>
+                              </tr>
+                            ) : (
+                              (listingRows.length === 0
+                                ? [null]
+                                : listingRows
+                              ).map((listing, listingIndex, source) => {
+                                const marketCity =
+                                  listing?.retainerCity !== undefined
+                                    ? RETAINER_CITY_BY_ID[listing.retainerCity]
+                                    : undefined
+                                const taxRate =
+                                  marketCity === undefined
+                                    ? undefined
+                                    : taxRatesByCity[marketCity.name]
+                                const isHigherTaxThanLowest =
+                                  typeof taxRate === 'number' &&
+                                  lowestTaxRate !== null &&
+                                  taxRate > lowestTaxRate
+                                const hasDivider =
+                                  listingIndex < source.length - 1
 
-                              return (
-                                <tr
-                                  key={
-                                    listing?.listingId ??
-                                    `owned-${item.id.toString()}-${listingIndex.toString()}`
-                                  }
-                                >
-                                  <td
-                                    style={{
-                                      ...styles.tableCellCenter,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: listingRowPadding,
-                                      paddingBottom: listingRowPadding,
-                                    }}
+                                return (
+                                  <tr
+                                    key={
+                                      listing?.listingId ??
+                                      `owned-${item.id.toString()}-${listingIndex.toString()}`
+                                    }
                                   >
-                                    <span
-                                      aria-label={
-                                        listing?.quality === 'HQ'
-                                          ? 'High Quality'
-                                          : undefined
-                                      }
-                                      style={
-                                        listing?.quality === 'HQ'
-                                          ? styles.qualitySymbol
-                                          : undefined
-                                      }
+                                    <td
+                                      style={{
+                                        ...styles.tableCellCenter,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: listingRowPadding,
+                                        paddingBottom: listingRowPadding,
+                                      }}
                                     >
-                                      {listing === null && isRowLoading
-                                        ? renderSkeleton('0.95rem')
-                                        : formatQuality(
-                                            listing?.quality ?? null,
-                                          )}
-                                    </span>
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCellRight,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: listingRowPadding,
-                                      paddingBottom: listingRowPadding,
-                                    }}
-                                  >
-                                    {listing === null
-                                      ? isRowLoading
-                                        ? renderSkeleton('2.4rem')
-                                        : ''
-                                      : formatQuantity(listing.quantity)}
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCellRight,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: listingRowPadding,
-                                      paddingBottom: listingRowPadding,
-                                    }}
-                                  >
-                                    {listing === null
-                                      ? isRowLoading
-                                        ? renderSkeleton('5.4rem')
-                                        : ''
-                                      : formatGil(listing.sellingPrice)}
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCell,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: listingRowPadding,
-                                      paddingBottom: listingRowPadding,
-                                    }}
-                                  >
-                                    {listing === null ? (
-                                      isRowLoading ? (
-                                        renderSkeleton('7.2rem')
-                                      ) : (
-                                        ''
-                                      )
-                                    ) : (
-                                      <span style={styles.retainerCell}>
-                                        {marketCity === undefined ? null : (
-                                          <img
-                                            src={toXivIconUrl(
-                                              marketCity.iconId,
+                                      <span
+                                        aria-label={
+                                          listing?.quality === 'HQ'
+                                            ? 'High Quality'
+                                            : undefined
+                                        }
+                                        style={
+                                          listing?.quality === 'HQ'
+                                            ? styles.qualitySymbol
+                                            : undefined
+                                        }
+                                      >
+                                        {listing === null && isRowLoading
+                                          ? renderSkeleton('0.95rem')
+                                          : formatQuality(
+                                              listing?.quality ?? null,
                                             )}
-                                            alt={`${marketCity.name} market icon`}
-                                            title={
-                                              typeof taxRate === 'number'
-                                                ? `${marketCity.name} (${taxRate.toString()}% tax)`
-                                                : marketCity.name
-                                            }
-                                            width={16}
-                                            height={16}
-                                            style={styles.marketIcon}
-                                          />
-                                        )}
-                                        <span>{listing.retainerName}</span>
-                                        {isHigherTaxThanLowest ? (
-                                          <span
-                                            style={styles.taxWarningBadge}
-                                            title={`Current: ${taxRate.toString()}% | Lowest: ${lowestTaxRate.toString()}% (${lowestTaxCities.join(', ')})`}
-                                          >
-                                            Tax High
-                                          </span>
-                                        ) : null}
                                       </span>
-                                    )}
-                                  </td>
-                                </tr>
-                              )
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </td>
-                    <td
-                      colSpan={5}
-                      style={{
-                        ...styles.tableCell,
-                        ...SUBTABLE_LEFT_DIVIDER,
-                        ...SUBTABLE_RIGHT_DIVIDER,
-                        padding: 0,
-                      }}
-                    >
-                      <table
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCellRight,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: listingRowPadding,
+                                        paddingBottom: listingRowPadding,
+                                      }}
+                                    >
+                                      {listing === null
+                                        ? isRowLoading
+                                          ? renderSkeleton('2.4rem')
+                                          : ''
+                                        : formatQuantity(listing.quantity)}
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCellRight,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: listingRowPadding,
+                                        paddingBottom: listingRowPadding,
+                                      }}
+                                    >
+                                      {listing === null
+                                        ? isRowLoading
+                                          ? renderSkeleton('5.4rem')
+                                          : ''
+                                        : formatGil(listing.sellingPrice)}
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCell,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: listingRowPadding,
+                                        paddingBottom: listingRowPadding,
+                                      }}
+                                    >
+                                      {listing === null ? (
+                                        isRowLoading ? (
+                                          renderSkeleton('7.2rem')
+                                        ) : (
+                                          ''
+                                        )
+                                      ) : (
+                                        <span style={styles.retainerCell}>
+                                          {marketCity === undefined ? null : (
+                                            <img
+                                              src={toXivIconUrl(
+                                                marketCity.iconId,
+                                              )}
+                                              alt={`${marketCity.name} market icon`}
+                                              title={
+                                                typeof taxRate === 'number'
+                                                  ? `${marketCity.name} (${taxRate.toString()}% tax)`
+                                                  : marketCity.name
+                                              }
+                                              width={16}
+                                              height={16}
+                                              style={styles.marketIcon}
+                                            />
+                                          )}
+                                          <span>{listing.retainerName}</span>
+                                          {isHigherTaxThanLowest ? (
+                                            <span
+                                              style={styles.taxWarningBadge}
+                                              title={`Current: ${taxRate.toString()}% | Lowest: ${lowestTaxRate.toString()}% (${lowestTaxCities.join(', ')})`}
+                                            >
+                                              Tax High
+                                            </span>
+                                          ) : null}
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </td>
+                      <td
+                        colSpan={5}
                         style={{
-                          width: 'max-content',
-                          borderCollapse: 'collapse',
+                          ...styles.tableCell,
+                          ...SUBTABLE_LEFT_DIVIDER,
+                          ...SUBTABLE_RIGHT_DIVIDER,
+                          padding: 0,
                         }}
                       >
-                        <colgroup>
-                          <col style={{ width: '4rem' }} />
-                          <col
-                            style={{ width: competitorQuantityColumnWidth }}
-                          />
-                          <col style={{ width: competitorPriceColumnWidth }} />
-                          <col
-                            style={{ width: competitorRetainerColumnWidth }}
-                          />
-                          <col style={{ width: '2.5rem' }} />
-                        </colgroup>
-                        <tbody>
-                          {competitorRows.length === 0 && !isRowLoading ? (
-                            <tr>
-                              <td
-                                colSpan={5}
-                                style={{
-                                  ...styles.tableCellCenter,
-                                  padding: '1rem',
-                                  color: '#64748b',
-                                }}
-                              >
-                                No competition on {selectedWorld}
-                              </td>
-                            </tr>
-                          ) : (
-                            (competitorRows.length === 0
-                              ? [null]
-                              : competitorRows
-                            ).map((competitor, competitorIndex, source) => {
-                              const competitorCity =
-                                competitor?.retainerCity !== undefined
-                                  ? RETAINER_CITY_BY_ID[competitor.retainerCity]
-                                  : undefined
-                              const hasDivider =
-                                competitorIndex < source.length - 1
+                        <table
+                          style={{
+                            width: 'max-content',
+                            borderCollapse: 'collapse',
+                          }}
+                        >
+                          <colgroup>
+                            <col style={{ width: '4rem' }} />
+                            <col
+                              style={{ width: competitorQuantityColumnWidth }}
+                            />
+                            <col
+                              style={{ width: competitorPriceColumnWidth }}
+                            />
+                            <col
+                              style={{ width: competitorRetainerColumnWidth }}
+                            />
+                            <col style={{ width: '2.5rem' }} />
+                          </colgroup>
+                          <tbody>
+                            {competitorRows.length === 0 && !isRowLoading ? (
+                              <tr>
+                                <td
+                                  colSpan={5}
+                                  style={{
+                                    ...styles.tableCellCenter,
+                                    padding: '1rem',
+                                    color: '#64748b',
+                                  }}
+                                >
+                                  No competition on {selectedWorld}
+                                </td>
+                              </tr>
+                            ) : (
+                              (competitorRows.length === 0
+                                ? [null]
+                                : competitorRows
+                              ).map((competitor, competitorIndex, source) => {
+                                const competitorCity =
+                                  competitor?.retainerCity !== undefined
+                                    ? RETAINER_CITY_BY_ID[
+                                        competitor.retainerCity
+                                      ]
+                                    : undefined
+                                const hasDivider =
+                                  competitorIndex < source.length - 1
+
+                                return (
+                                  <tr
+                                    key={
+                                      competitor?.listingId ??
+                                      `competitor-${item.id.toString()}-${competitorIndex.toString()}`
+                                    }
+                                  >
+                                    <td
+                                      style={{
+                                        ...styles.tableCellCenter,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: competitorRowPadding,
+                                        paddingBottom: competitorRowPadding,
+                                      }}
+                                    >
+                                      <span
+                                        aria-label={
+                                          competitor?.quality === 'HQ'
+                                            ? 'High Quality'
+                                            : undefined
+                                        }
+                                        style={
+                                          competitor?.quality === 'HQ'
+                                            ? styles.qualitySymbol
+                                            : undefined
+                                        }
+                                      >
+                                        {competitor === null && isRowLoading
+                                          ? renderSkeleton('0.95rem')
+                                          : formatQuality(
+                                              competitor?.quality ?? null,
+                                            )}
+                                      </span>
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCellRight,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: competitorRowPadding,
+                                        paddingBottom: competitorRowPadding,
+                                      }}
+                                    >
+                                      {competitor === null
+                                        ? isRowLoading
+                                          ? renderSkeleton('2.4rem')
+                                          : ''
+                                        : formatQuantity(competitor.quantity)}
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCellRight,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: competitorRowPadding,
+                                        paddingBottom: competitorRowPadding,
+                                      }}
+                                    >
+                                      {competitor === null
+                                        ? isRowLoading
+                                          ? renderSkeleton('5.4rem')
+                                          : ''
+                                        : formatGil(competitor.sellingPrice)}
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCell,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: competitorRowPadding,
+                                        paddingBottom: competitorRowPadding,
+                                      }}
+                                    >
+                                      {competitor === null ? (
+                                        isRowLoading ? (
+                                          renderSkeleton('7.2rem')
+                                        ) : (
+                                          ''
+                                        )
+                                      ) : (
+                                        <span style={styles.retainerCell}>
+                                          {competitorCity ===
+                                          undefined ? null : (
+                                            <img
+                                              src={toXivIconUrl(
+                                                competitorCity.iconId,
+                                              )}
+                                              alt={`${competitorCity.name} market icon`}
+                                              title={competitorCity.name}
+                                              width={16}
+                                              height={16}
+                                              style={styles.marketIcon}
+                                            />
+                                          )}
+                                          <span>{competitor.retainerName}</span>
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td
+                                      style={{
+                                        ...styles.tableCell,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: competitorRowPadding,
+                                        paddingBottom: competitorRowPadding,
+                                      }}
+                                    >
+                                      {competitor === null ? (
+                                        isRowLoading ? (
+                                          renderSkeleton('1.35rem', '1.35rem')
+                                        ) : (
+                                          ''
+                                        )
+                                      ) : showCompetitorInfoButton ? (
+                                        <button
+                                          type="button"
+                                          style={styles.rankInfo}
+                                          title={competitor.reasons.join(' | ')}
+                                          aria-label={`Competitor details: ${competitor.reasons.join(', ')}`}
+                                        >
+                                          i
+                                        </button>
+                                      ) : (
+                                        ''
+                                      )}
+                                    </td>
+                                  </tr>
+                                )
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </td>
+                      <td style={styles.tableCellCenter}>
+                        {isRowLoading
+                          ? renderSkeleton('2.5rem', '1.35rem')
+                          : (() => {
+                              const oldestListingReviewAt =
+                                state.oldestListingReviewAt
+                              const ageMs =
+                                oldestListingReviewAt === null
+                                  ? null
+                                  : Math.max(0, nowMs - oldestListingReviewAt)
+                              const ageText =
+                                oldestListingReviewAt === null
+                                  ? 'Age unknown'
+                                  : formatAgeTooltip(
+                                      oldestListingReviewAt,
+                                      nowMs,
+                                    )
+                              const hasTimestampWarning =
+                                state.hasWorldTimestampDeltaWarning
+                              const warningDelta = formatDuration(
+                                state.maxWorldTimestampDeltaMs,
+                              )
+                              const warningText = hasTimestampWarning
+                                ? `Warning: listing timestamps differ by up to ${warningDelta} inside at least one world (threshold: 1 minute).`
+                                : ''
 
                               return (
-                                <tr
-                                  key={
-                                    competitor?.listingId ??
-                                    `competitor-${item.id.toString()}-${competitorIndex.toString()}`
-                                  }
+                                <a
+                                  href="https://universalis.app/contribute"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.3rem',
+                                    color: 'inherit',
+                                    textDecoration: 'none',
+                                  }}
+                                  onMouseEnter={(event) => {
+                                    showLiveTooltip(
+                                      {
+                                        kind: 'age',
+                                        itemId: item.id,
+                                      },
+                                      event,
+                                    )
+                                  }}
+                                  onMouseMove={(event) => {
+                                    updateLiveTooltipPosition(event)
+                                  }}
+                                  onMouseLeave={() => {
+                                    hideLiveTooltip()
+                                  }}
                                 >
-                                  <td
-                                    style={{
-                                      ...styles.tableCellCenter,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: competitorRowPadding,
-                                      paddingBottom: competitorRowPadding,
-                                    }}
-                                  >
-                                    <span
-                                      aria-label={
-                                        competitor?.quality === 'HQ'
-                                          ? 'High Quality'
-                                          : undefined
-                                      }
-                                      style={
-                                        competitor?.quality === 'HQ'
-                                          ? styles.qualitySymbol
-                                          : undefined
-                                      }
-                                    >
-                                      {competitor === null && isRowLoading
-                                        ? renderSkeleton('0.95rem')
-                                        : formatQuality(
-                                            competitor?.quality ?? null,
-                                          )}
-                                    </span>
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCellRight,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: competitorRowPadding,
-                                      paddingBottom: competitorRowPadding,
-                                    }}
-                                  >
-                                    {competitor === null
-                                      ? isRowLoading
-                                        ? renderSkeleton('2.4rem')
-                                        : ''
-                                      : formatQuantity(competitor.quantity)}
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCellRight,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: competitorRowPadding,
-                                      paddingBottom: competitorRowPadding,
-                                    }}
-                                  >
-                                    {competitor === null
-                                      ? isRowLoading
-                                        ? renderSkeleton('5.4rem')
-                                        : ''
-                                      : formatGil(competitor.sellingPrice)}
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCell,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: competitorRowPadding,
-                                      paddingBottom: competitorRowPadding,
-                                    }}
-                                  >
-                                    {competitor === null ? (
-                                      isRowLoading ? (
-                                        renderSkeleton('7.2rem')
-                                      ) : (
-                                        ''
-                                      )
-                                    ) : (
-                                      <span style={styles.retainerCell}>
-                                        {competitorCity === undefined ? null : (
-                                          <img
-                                            src={toXivIconUrl(
-                                              competitorCity.iconId,
-                                            )}
-                                            alt={`${competitorCity.name} market icon`}
-                                            title={competitorCity.name}
-                                            width={16}
-                                            height={16}
-                                            style={styles.marketIcon}
-                                          />
-                                        )}
-                                        <span>{competitor.retainerName}</span>
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td
-                                    style={{
-                                      ...styles.tableCell,
-                                      borderBottom: hasDivider
-                                        ? '1px solid #e2e8f0'
-                                        : 'none',
-                                      paddingTop: competitorRowPadding,
-                                      paddingBottom: competitorRowPadding,
-                                    }}
-                                  >
-                                    {competitor === null ? (
-                                      isRowLoading ? (
-                                        renderSkeleton('1.35rem', '1.35rem')
-                                      ) : (
-                                        ''
-                                      )
-                                    ) : showCompetitorInfoButton ? (
-                                      <button
-                                        type="button"
-                                        style={styles.rankInfo}
-                                        title={competitor.reasons.join(' | ')}
-                                        aria-label={`Competitor details: ${competitor.reasons.join(', ')}`}
-                                      >
-                                        i
-                                      </button>
-                                    ) : (
-                                      ''
-                                    )}
-                                  </td>
-                                </tr>
-                              )
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </td>
-                    <td style={styles.tableCellCenter}>
-                      {isRowLoading
-                        ? renderSkeleton('2.5rem', '1.35rem')
-                        : (() => {
-                            const oldestListingReviewAt =
-                              state.oldestListingReviewAt
-                            const ageMs =
-                              oldestListingReviewAt === null
-                                ? null
-                                : Math.max(0, nowMs - oldestListingReviewAt)
-                            const ageText =
-                              oldestListingReviewAt === null
-                                ? 'Age unknown'
-                                : formatAgeTooltip(oldestListingReviewAt, nowMs)
-                            const hasTimestampWarning =
-                              state.hasWorldTimestampDeltaWarning
-                            const warningDelta = formatDuration(
-                              state.maxWorldTimestampDeltaMs,
-                            )
-                            const warningText = hasTimestampWarning
-                              ? `Warning: listing timestamps differ by up to ${warningDelta} inside at least one world (threshold: 1 minute).`
-                              : ''
-
-                            return (
-                              <a
-                                href="https://universalis.app/contribute"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.3rem',
-                                  color: 'inherit',
-                                  textDecoration: 'none',
-                                }}
-                                onMouseEnter={(event) => {
-                                  showLiveTooltip(
-                                    {
-                                      kind: 'age',
-                                      itemId: item.id,
-                                    },
-                                    event,
-                                  )
-                                }}
-                                onMouseMove={(event) => {
-                                  updateLiveTooltipPosition(event)
-                                }}
-                                onMouseLeave={() => {
-                                  hideLiveTooltip()
-                                }}
-                              >
-                                <span
-                                  role="img"
-                                  aria-label={`Listing age: ${ageText}`}
-                                  style={ageBadgeStyle(ageMs)}
-                                >
-                                  {'\u23F1'}
-                                </span>
-                                {hasTimestampWarning ? (
                                   <span
                                     role="img"
-                                    aria-label={warningText}
-                                    style={styles.ageWarningIcon}
+                                    aria-label={`Listing age: ${ageText}`}
+                                    style={ageBadgeStyle(ageMs)}
                                   >
-                                    {'\u26A0'}
+                                    {'\u23F1'}
                                   </span>
-                                ) : null}
-                              </a>
-                            )
-                          })()}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
+                                  {hasTimestampWarning ? (
+                                    <span
+                                      role="img"
+                                      aria-label={warningText}
+                                      style={styles.ageWarningIcon}
+                                    >
+                                      {'\u26A0'}
+                                    </span>
+                                  ) : null}
+                                </a>
+                              )
+                            })()}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       {liveTooltipTarget !== null && liveTooltipText.length > 0 ? (
