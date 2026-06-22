@@ -300,7 +300,7 @@ const RETAINER_CITY_BY_ID: Partial<
 
 function toXivIconUrl(iconId: number): string {
   const normalizedId = iconId.toString().padStart(6, '0')
-  return `https://xivapi.com/i/${normalizedId.slice(0, 3)}000/${normalizedId}.png`
+  return `https://v2.xivapi.com/api/asset?path=ui/icon/${normalizedId.slice(0, 3)}000/${normalizedId}.tex&format=png`
 }
 
 function loadStoredConfig(): StoredConfig {
@@ -1175,250 +1175,382 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
               </tr>
             </thead>
             <tbody>
-              {visibleItemRows.flatMap(({ item, state }) => {
+              {visibleItemRows.map(({ item, state }) => {
                 const iconId = String(
                   itemById.get(item.id)?.iconId ?? item.iconId,
                 ).padStart(6, '0')
-                const iconUrl = `https://xivapi.com/i/${iconId.slice(0, 3)}000/${iconId}.png`
-                const listingRows =
-                  state?.ownedListings.length !== undefined &&
-                  state.ownedListings.length > 0
-                    ? state.ownedListings
-                    : [null]
-                const competitorRows =
-                  state?.competitorListings.length !== undefined &&
-                  state.competitorListings.length > 0
-                    ? state.competitorListings
-                    : [null]
-                const competitorListingCount =
-                  state?.competitorListings.length ?? 0
-                const showCompetitorInfoButton = competitorListingCount > 1
-                const rowSpan = Math.max(
+                const iconUrl = `https://v2.xivapi.com/api/asset?path=ui/icon/${iconId.slice(0, 3)}000/${iconId}.tex&format=png`
+                const listingRows = state?.ownedListings ?? []
+                const competitorRows = state?.competitorListings ?? []
+                const showCompetitorInfoButton = competitorRows.length > 1
+                const maxSubtableRows = Math.max(
                   listingRows.length,
                   competitorRows.length,
+                  1,
                 )
+                const BASE_SUBTABLE_PADDING_REM = 0.5
+                const EXTRA_SPREAD_REM = 1.2
+                const listingRowRatio =
+                  maxSubtableRows / Math.max(listingRows.length, 1)
+                const competitorRowRatio =
+                  maxSubtableRows / Math.max(competitorRows.length, 1)
+                const listingRowPadding = `${(
+                  BASE_SUBTABLE_PADDING_REM +
+                  EXTRA_SPREAD_REM * (listingRowRatio - 1)
+                ).toString()}rem`
+                const competitorRowPadding = `${(
+                  BASE_SUBTABLE_PADDING_REM +
+                  EXTRA_SPREAD_REM * (competitorRowRatio - 1)
+                ).toString()}rem`
 
-                return Array.from({ length: rowSpan }, (_, index) => {
-                  const listing = listingRows[index] ?? null
-                  const competitor = competitorRows[index] ?? null
-                  const rowKey =
-                    listing?.listingId ??
-                    competitor?.listingId ??
-                    `${item.id.toString()}-${index.toString()}`
-                  const marketCity =
-                    listing?.retainerCity !== undefined
-                      ? RETAINER_CITY_BY_ID[listing.retainerCity]
-                      : undefined
-                  const taxRate =
-                    marketCity === undefined
-                      ? undefined
-                      : taxRatesByCity[marketCity.name]
-                  const isHigherTaxThanLowest =
-                    typeof taxRate === 'number' &&
-                    lowestTaxRate !== null &&
-                    taxRate > lowestTaxRate
-                  const competitorCity =
-                    competitor?.retainerCity !== undefined
-                      ? RETAINER_CITY_BY_ID[competitor.retainerCity]
-                      : undefined
-
-                  return (
-                    <tr key={rowKey}>
-                      {index === 0 ? (
-                        <>
-                          <td style={styles.tableCell} rowSpan={rowSpan}>
-                            <button
-                              type="button"
-                              aria-label={`Remove ${item.name}`}
-                              style={styles.removeButton}
-                              onClick={() => {
-                                setConfig((current) => ({
-                                  ...current,
-                                  itemInput: parseWatchTokens(current.itemInput)
-                                    .filter(
-                                      (token) => token !== item.id.toString(),
-                                    )
-                                    .join('\n'),
-                                }))
-                              }}
-                            >
-                              X
-                            </button>
-                          </td>
-                          <td
-                            style={{ ...styles.tableCell, ...styles.iconCell }}
-                            rowSpan={rowSpan}
-                          >
-                            <img
-                              src={iconUrl}
-                              alt={`${item.name} icon`}
-                              width={24}
-                              height={24}
-                              style={styles.icon}
-                            />
-                          </td>
-                          <td style={styles.tableCell} rowSpan={rowSpan}>
-                            <a href={`${itemBasePath}${item.id.toString()}`}>
-                              {item.name}
-                            </a>
-                          </td>
-                        </>
-                      ) : null}
-                      <td
-                        style={{
-                          ...styles.tableCell,
-                          ...SUBTABLE_LEFT_DIVIDER,
+                return (
+                  <tr key={item.id.toString()}>
+                    <td style={styles.tableCell}>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${item.name}`}
+                        style={styles.removeButton}
+                        onClick={() => {
+                          setConfig((current) => ({
+                            ...current,
+                            itemInput: parseWatchTokens(current.itemInput)
+                              .filter((token) => token !== item.id.toString())
+                              .join('\n'),
+                          }))
                         }}
                       >
-                        <span
-                          aria-label={
-                            listing?.quality === 'HQ'
-                              ? 'High Quality'
-                              : undefined
-                          }
-                          style={
-                            listing?.quality === 'HQ'
-                              ? styles.qualitySymbol
-                              : undefined
-                          }
-                        >
-                          {formatQuality(listing?.quality ?? null)}
-                        </span>
-                      </td>
-                      <td style={styles.tableCell}>
-                        {listing === null
-                          ? ''
-                          : formatQuantity(listing.quantity)}
-                      </td>
-                      <td style={styles.tableCell}>
-                        {listing === null
-                          ? ''
-                          : formatGil(listing.sellingPrice)}
-                      </td>
-                      <td
-                        style={{
-                          ...styles.tableCell,
-                          ...SUBTABLE_RIGHT_DIVIDER,
-                        }}
+                        X
+                      </button>
+                    </td>
+                    <td style={{ ...styles.tableCell, ...styles.iconCell }}>
+                      <img
+                        src={iconUrl}
+                        alt={`${item.name} icon`}
+                        width={24}
+                        height={24}
+                        style={styles.icon}
+                      />
+                    </td>
+                    <td style={styles.tableCell}>
+                      <a href={`${itemBasePath}${item.id.toString()}`}>
+                        {item.name}
+                      </a>
+                    </td>
+                    <td
+                      colSpan={4}
+                      style={{
+                        ...styles.tableCell,
+                        ...SUBTABLE_LEFT_DIVIDER,
+                        ...SUBTABLE_RIGHT_DIVIDER,
+                        padding: 0,
+                      }}
+                    >
+                      <table
+                        style={{ width: '100%', borderCollapse: 'collapse' }}
                       >
-                        {listing === null ? (
-                          ''
-                        ) : (
-                          <span style={styles.retainerCell}>
-                            <span>{listing.retainerName}</span>
-                            {marketCity === undefined ? null : (
-                              <img
-                                src={toXivIconUrl(marketCity.iconId)}
-                                alt={`${marketCity.name} market icon`}
-                                title={
-                                  typeof taxRate === 'number'
-                                    ? `${marketCity.name} (${taxRate.toString()}% tax)`
-                                    : marketCity.name
+                        <colgroup>
+                          <col style={{ width: '18%' }} />
+                          <col style={{ width: '18%' }} />
+                          <col style={{ width: '24%' }} />
+                          <col style={{ width: '40%' }} />
+                        </colgroup>
+                        <tbody>
+                          {(listingRows.length === 0
+                            ? [null]
+                            : listingRows
+                          ).map((listing, listingIndex, source) => {
+                            const marketCity =
+                              listing?.retainerCity !== undefined
+                                ? RETAINER_CITY_BY_ID[listing.retainerCity]
+                                : undefined
+                            const taxRate =
+                              marketCity === undefined
+                                ? undefined
+                                : taxRatesByCity[marketCity.name]
+                            const isHigherTaxThanLowest =
+                              typeof taxRate === 'number' &&
+                              lowestTaxRate !== null &&
+                              taxRate > lowestTaxRate
+                            const hasDivider = listingIndex < source.length - 1
+
+                            return (
+                              <tr
+                                key={
+                                  listing?.listingId ??
+                                  `owned-${item.id.toString()}-${listingIndex.toString()}`
                                 }
-                                width={16}
-                                height={16}
-                                style={styles.marketIcon}
-                              />
-                            )}
-                            {isHigherTaxThanLowest ? (
-                              <span
-                                style={styles.taxWarningBadge}
-                                title={`Current: ${taxRate.toString()}% | Lowest: ${lowestTaxRate.toString()}% (${lowestTaxCities.join(', ')})`}
                               >
-                                Tax High
-                              </span>
-                            ) : null}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          ...styles.tableCell,
-                          ...SUBTABLE_LEFT_DIVIDER,
-                        }}
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: listingRowPadding,
+                                    paddingBottom: listingRowPadding,
+                                  }}
+                                >
+                                  <span
+                                    aria-label={
+                                      listing?.quality === 'HQ'
+                                        ? 'High Quality'
+                                        : undefined
+                                    }
+                                    style={
+                                      listing?.quality === 'HQ'
+                                        ? styles.qualitySymbol
+                                        : undefined
+                                    }
+                                  >
+                                    {formatQuality(listing?.quality ?? null)}
+                                  </span>
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: listingRowPadding,
+                                    paddingBottom: listingRowPadding,
+                                  }}
+                                >
+                                  {listing === null
+                                    ? ''
+                                    : formatQuantity(listing.quantity)}
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: listingRowPadding,
+                                    paddingBottom: listingRowPadding,
+                                  }}
+                                >
+                                  {listing === null
+                                    ? ''
+                                    : formatGil(listing.sellingPrice)}
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: listingRowPadding,
+                                    paddingBottom: listingRowPadding,
+                                  }}
+                                >
+                                  {listing === null ? (
+                                    ''
+                                  ) : (
+                                    <span style={styles.retainerCell}>
+                                      <span>{listing.retainerName}</span>
+                                      {marketCity === undefined ? null : (
+                                        <img
+                                          src={toXivIconUrl(marketCity.iconId)}
+                                          alt={`${marketCity.name} market icon`}
+                                          title={
+                                            typeof taxRate === 'number'
+                                              ? `${marketCity.name} (${taxRate.toString()}% tax)`
+                                              : marketCity.name
+                                          }
+                                          width={16}
+                                          height={16}
+                                          style={styles.marketIcon}
+                                        />
+                                      )}
+                                      {isHigherTaxThanLowest ? (
+                                        <span
+                                          style={styles.taxWarningBadge}
+                                          title={`Current: ${taxRate.toString()}% | Lowest: ${lowestTaxRate.toString()}% (${lowestTaxCities.join(', ')})`}
+                                        >
+                                          Tax High
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </td>
+                    <td
+                      colSpan={6}
+                      style={{
+                        ...styles.tableCell,
+                        ...SUBTABLE_LEFT_DIVIDER,
+                        ...SUBTABLE_RIGHT_DIVIDER,
+                        padding: 0,
+                      }}
+                    >
+                      <table
+                        style={{ width: '100%', borderCollapse: 'collapse' }}
                       >
-                        <span
-                          aria-label={
-                            competitor?.quality === 'HQ'
-                              ? 'High Quality'
-                              : undefined
-                          }
-                          style={
-                            competitor?.quality === 'HQ'
-                              ? styles.qualitySymbol
-                              : undefined
-                          }
-                        >
-                          {formatQuality(competitor?.quality ?? null)}
-                        </span>
-                      </td>
-                      <td style={styles.tableCell}>
-                        {competitor === null
-                          ? ''
-                          : formatQuantity(competitor.quantity)}
-                      </td>
-                      <td style={styles.tableCell}>
-                        {competitor === null
-                          ? ''
-                          : formatGil(competitor.sellingPrice)}
-                      </td>
-                      <td style={styles.tableCell}>
-                        {competitor === null
-                          ? ''
-                          : formatGil(competitor.totalCost)}
-                      </td>
-                      <td
-                        style={{
-                          ...styles.tableCell,
-                        }}
-                      >
-                        {competitor === null ? (
-                          ''
-                        ) : (
-                          <span style={styles.retainerCell}>
-                            <span>{competitor.retainerName}</span>
-                            {competitorCity === undefined ? null : (
-                              <img
-                                src={toXivIconUrl(competitorCity.iconId)}
-                                alt={`${competitorCity.name} market icon`}
-                                title={competitorCity.name}
-                                width={16}
-                                height={16}
-                                style={styles.marketIcon}
-                              />
-                            )}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          ...styles.tableCell,
-                          ...SUBTABLE_RIGHT_DIVIDER,
-                        }}
-                      >
-                        {competitor === null ? (
-                          ''
-                        ) : showCompetitorInfoButton ? (
-                          <button
-                            type="button"
-                            style={styles.rankInfo}
-                            title={competitor.reasons.join(' | ')}
-                            aria-label={`Competitor details: ${competitor.reasons.join(', ')}`}
-                          >
-                            i
-                          </button>
-                        ) : (
-                          ''
-                        )}
-                      </td>
-                      {index === 0 ? (
-                        <td style={styles.tableCell} rowSpan={rowSpan}>
-                          {formatDate(state?.lastSyncedAt ?? Number.NaN)}
-                        </td>
-                      ) : null}
-                    </tr>
-                  )
-                })
+                        <colgroup>
+                          <col style={{ width: '12%' }} />
+                          <col style={{ width: '12%' }} />
+                          <col style={{ width: '16%' }} />
+                          <col style={{ width: '16%' }} />
+                          <col style={{ width: '34%' }} />
+                          <col style={{ width: '10%' }} />
+                        </colgroup>
+                        <tbody>
+                          {(competitorRows.length === 0
+                            ? [null]
+                            : competitorRows
+                          ).map((competitor, competitorIndex, source) => {
+                            const competitorCity =
+                              competitor?.retainerCity !== undefined
+                                ? RETAINER_CITY_BY_ID[competitor.retainerCity]
+                                : undefined
+                            const hasDivider =
+                              competitorIndex < source.length - 1
+
+                            return (
+                              <tr
+                                key={
+                                  competitor?.listingId ??
+                                  `competitor-${item.id.toString()}-${competitorIndex.toString()}`
+                                }
+                              >
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: competitorRowPadding,
+                                    paddingBottom: competitorRowPadding,
+                                  }}
+                                >
+                                  <span
+                                    aria-label={
+                                      competitor?.quality === 'HQ'
+                                        ? 'High Quality'
+                                        : undefined
+                                    }
+                                    style={
+                                      competitor?.quality === 'HQ'
+                                        ? styles.qualitySymbol
+                                        : undefined
+                                    }
+                                  >
+                                    {formatQuality(competitor?.quality ?? null)}
+                                  </span>
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: competitorRowPadding,
+                                    paddingBottom: competitorRowPadding,
+                                  }}
+                                >
+                                  {competitor === null
+                                    ? ''
+                                    : formatQuantity(competitor.quantity)}
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: competitorRowPadding,
+                                    paddingBottom: competitorRowPadding,
+                                  }}
+                                >
+                                  {competitor === null
+                                    ? ''
+                                    : formatGil(competitor.sellingPrice)}
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: competitorRowPadding,
+                                    paddingBottom: competitorRowPadding,
+                                  }}
+                                >
+                                  {competitor === null
+                                    ? ''
+                                    : formatGil(competitor.totalCost)}
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: competitorRowPadding,
+                                    paddingBottom: competitorRowPadding,
+                                  }}
+                                >
+                                  {competitor === null ? (
+                                    ''
+                                  ) : (
+                                    <span style={styles.retainerCell}>
+                                      <span>{competitor.retainerName}</span>
+                                      {competitorCity === undefined ? null : (
+                                        <img
+                                          src={toXivIconUrl(
+                                            competitorCity.iconId,
+                                          )}
+                                          alt={`${competitorCity.name} market icon`}
+                                          title={competitorCity.name}
+                                          width={16}
+                                          height={16}
+                                          style={styles.marketIcon}
+                                        />
+                                      )}
+                                    </span>
+                                  )}
+                                </td>
+                                <td
+                                  style={{
+                                    ...styles.tableCell,
+                                    borderBottom: hasDivider
+                                      ? '1px solid #e2e8f0'
+                                      : 'none',
+                                    paddingTop: competitorRowPadding,
+                                    paddingBottom: competitorRowPadding,
+                                  }}
+                                >
+                                  {competitor === null ? (
+                                    ''
+                                  ) : showCompetitorInfoButton ? (
+                                    <button
+                                      type="button"
+                                      style={styles.rankInfo}
+                                      title={competitor.reasons.join(' | ')}
+                                      aria-label={`Competitor details: ${competitor.reasons.join(', ')}`}
+                                    >
+                                      i
+                                    </button>
+                                  ) : (
+                                    ''
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </td>
+                    <td style={styles.tableCell}>
+                      {formatDate(state?.lastSyncedAt ?? Number.NaN)}
+                    </td>
+                  </tr>
+                )
               })}
             </tbody>
           </table>
