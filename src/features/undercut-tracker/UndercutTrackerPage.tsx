@@ -133,7 +133,6 @@ const styles: Record<
     border: '1px solid #cbd5e1',
     borderRadius: '0.5rem',
     overflow: 'hidden',
-    backgroundColor: '#fff',
   },
   tableCell: {
     borderBottom: '1px solid #e2e8f0',
@@ -1672,7 +1671,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
               </tr>
             </thead>
             <tbody>
-              {visibleItemRows.map(({ item, state }) => {
+              {visibleItemRows.map(({ item, state }, itemIndex) => {
                 const iconId = String(item.iconId).padStart(6, '0')
                 const iconUrl = `https://v2.xivapi.com/api/asset?path=ui/icon/${iconId.slice(0, 3)}000/${iconId}.tex&format=png`
                 const isRefreshing = refreshingItemIdSet.has(item.id)
@@ -1721,7 +1720,13 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 )
 
                 return (
-                  <tr key={item.id.toString()} aria-busy={isRowLoading}>
+                  <tr
+                    key={item.id.toString()}
+                    aria-busy={isRowLoading}
+                    style={{
+                      backgroundColor: itemIndex % 2 === 0 ? '#fff' : '#f1f5f9',
+                    }}
+                  >
                     <td style={styles.tableCell}>
                       <button
                         type="button"
