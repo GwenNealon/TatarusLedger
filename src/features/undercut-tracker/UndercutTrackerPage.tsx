@@ -1849,6 +1849,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           itemIndex % 2 === 0 ? '#fff' : '#f1f5f9',
                       }}
                     >
+                      {/* Column: Item Icon */}
                       <td style={{ ...styles.tableCell, ...styles.iconCell }}>
                         <img
                           src={iconUrl}
@@ -1858,6 +1859,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           style={styles.icon}
                         />
                       </td>
+                      {/* Column: Item Name */}
                       <td style={{ ...styles.tableCell, whiteSpace: 'nowrap' }}>
                         <a href={`${itemBasePath}${item.id.toString()}`}>
                           {item.name}
@@ -1868,6 +1870,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           </span>
                         ) : null}
                       </td>
+                      {/* Column Group: Your Listings (Subtable Container) */}
                       <td
                         colSpan={4}
                         style={{
@@ -1896,6 +1899,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           <tbody>
                             {listingRows.length === 0 && !isRowLoading ? (
                               <tr>
+                                {/* Column: Your Listings Empty State */}
                                 <td
                                   colSpan={4}
                                   style={{
@@ -1944,6 +1948,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                       `owned-${item.id.toString()}-${listingIndex.toString()}`
                                     }
                                   >
+                                    {/* Column: Your Listing HQ */}
                                     <td
                                       style={{
                                         ...styles.tableCellCenter,
@@ -1973,6 +1978,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                             )}
                                       </span>
                                     </td>
+                                    {/* Column: Your Listing Quantity */}
                                     <td
                                       style={{
                                         ...styles.tableCellRight,
@@ -1989,6 +1995,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           : ''
                                         : formatQuantity(listing.quantity)}
                                     </td>
+                                    {/* Column: Your Listing Price */}
                                     <td
                                       style={{
                                         ...styles.tableCellRight,
@@ -2005,6 +2012,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           : ''
                                         : formatGil(listing.sellingPrice)}
                                     </td>
+                                    {/* Column: Your Listing Retainer */}
                                     <td
                                       style={{
                                         ...styles.tableCell,
@@ -2017,7 +2025,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                     >
                                       {listing === null ? (
                                         isRowLoading ? (
-                                          renderSkeleton('7.2rem')
+                                          renderSkeleton('5rem')
                                         ) : (
                                           ''
                                         )
@@ -2058,6 +2066,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           </tbody>
                         </table>
                       </td>
+                      {/* Column Group: Competitor Listings (Subtable Container) */}
                       <td
                         colSpan={5}
                         style={{
@@ -2089,6 +2098,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           <tbody>
                             {competitorRows.length === 0 && !isRowLoading ? (
                               <tr>
+                                {/* Column: Competitor Listings Empty State */}
                                 <td
                                   colSpan={5}
                                   style={{
@@ -2121,6 +2131,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                       `competitor-${item.id.toString()}-${competitorIndex.toString()}`
                                     }
                                   >
+                                    {/* Column: Competitor HQ */}
                                     <td
                                       style={{
                                         ...styles.tableCellCenter,
@@ -2150,6 +2161,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                             )}
                                       </span>
                                     </td>
+                                    {/* Column: Competitor Quantity */}
                                     <td
                                       style={{
                                         ...styles.tableCellRight,
@@ -2166,6 +2178,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           : ''
                                         : formatQuantity(competitor.quantity)}
                                     </td>
+                                    {/* Column: Competitor Price */}
                                     <td
                                       style={{
                                         ...styles.tableCellRight,
@@ -2182,6 +2195,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           : ''
                                         : formatGil(competitor.sellingPrice)}
                                     </td>
+                                    {/* Column: Competitor Retainer */}
                                     <td
                                       style={{
                                         ...styles.tableCell,
@@ -2194,7 +2208,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                     >
                                       {competitor === null ? (
                                         isRowLoading ? (
-                                          renderSkeleton('7.2rem')
+                                          renderSkeleton('5rem')
                                         ) : (
                                           ''
                                         )
@@ -2217,6 +2231,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                         </span>
                                       )}
                                     </td>
+                                    {/* Column: Competitor Details */}
                                     <td
                                       style={{
                                         ...styles.tableCell,
@@ -2253,6 +2268,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           </tbody>
                         </table>
                       </td>
+                      {/* Column: Last Updated */}
                       <td style={styles.tableCellCenter}>
                         {isRowLoading
                           ? renderSkeleton('2.5rem', '1.35rem')
