@@ -38,6 +38,11 @@ const STORAGE_KEY = 'undercut-tracker-config'
 const WS_URL = 'wss://universalis.app/api/ws'
 const POLL_INTERVAL_MS = 5 * 60 * 1_000
 const GIL_SYMBOL = '\uE049'
+const COMPETITOR_SUBTABLE_WIDTHS = [14, 18, 24, 32, 12] as const
+const COMPETITOR_GROUP_WIDTH_PERCENT = 34
+const COMPETITOR_MAIN_WIDTHS = COMPETITOR_SUBTABLE_WIDTHS.map(
+  (width) => `${((COMPETITOR_GROUP_WIDTH_PERCENT * width) / 100).toFixed(2)}%`,
+)
 
 const styles: Record<
   | 'section'
@@ -1592,49 +1597,43 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
               <col style={{ width: '6%' }} />
               <col style={{ width: '7%' }} />
               <col style={{ width: '10%' }} />
-              <col style={{ width: '4%' }} />
-              <col style={{ width: '5%' }} />
-              <col style={{ width: '7%' }} />
-              <col style={{ width: '7%' }} />
+              {COMPETITOR_MAIN_WIDTHS.map((width, index) => (
+                <col
+                  key={`competitor-main-col-${index.toString()}`}
+                  style={{ width }}
+                />
+              ))}
               <col style={{ width: '10%' }} />
-              <col style={{ width: '8%' }} />
-              <col style={{ width: '3%' }} />
               <col style={{ width: '5%' }} />
             </colgroup>
             <thead>
               <tr>
-                <th style={styles.tableCell} rowSpan={2} />
-                <th style={styles.tableCell} rowSpan={2} />
-                <th style={styles.tableCell} rowSpan={2}>
-                  Item Name
+                <th style={styles.tableCellCenter} rowSpan={2} />
+                <th style={styles.tableCellCenter} rowSpan={2} />
+                <th style={styles.tableCellCenter} rowSpan={2}>
+                  Item
                 </th>
                 <th
                   style={{
-                    ...styles.tableCell,
+                    ...styles.tableCellCenter,
                     ...SUBTABLE_LEFT_DIVIDER,
                     ...SUBTABLE_RIGHT_DIVIDER,
-                    textAlign: 'center',
                   }}
                   colSpan={4}
                 >
-                  Your listings
+                  Your Listings
                 </th>
                 <th
                   style={{
-                    ...styles.tableCell,
+                    ...styles.tableCellCenter,
                     ...SUBTABLE_LEFT_DIVIDER,
                     ...SUBTABLE_RIGHT_DIVIDER,
-                    textAlign: 'center',
                   }}
-                  colSpan={6}
+                  colSpan={5}
                 >
-                  Competitor listings
+                  Competitor Listings
                 </th>
-                <th
-                  style={{ ...styles.tableCell, textAlign: 'center' }}
-                  rowSpan={2}
-                  colSpan={2}
-                >
+                <th style={styles.tableCellCenter} rowSpan={2} colSpan={2}>
                   Last Updated
                 </th>
               </tr>
@@ -1645,12 +1644,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     ...SUBTABLE_LEFT_DIVIDER,
                   }}
                 >
-                  Quality
+                  HQ
                 </th>
-                <th style={styles.tableCellRight}>Quantity</th>
-                <th style={styles.tableCellRight}>Selling Price</th>
-                <th style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}>
-                  Retainer Name
+                <th style={styles.tableCellCenter}>Quantity</th>
+                <th style={styles.tableCellCenter}>Price</th>
+                <th
+                  style={{
+                    ...styles.tableCellCenter,
+                    ...SUBTABLE_RIGHT_DIVIDER,
+                  }}
+                >
+                  Retainer
                 </th>
                 <th
                   style={{
@@ -1658,14 +1662,16 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     ...SUBTABLE_LEFT_DIVIDER,
                   }}
                 >
-                  Quality
+                  HQ
                 </th>
-                <th style={styles.tableCellRight}>Quantity</th>
-                <th style={styles.tableCellRight}>Selling Price</th>
-                <th style={styles.tableCellRight}>Total Cost</th>
-                <th style={styles.tableCell}>Retainer Name</th>
+                <th style={styles.tableCellCenter}>Quantity</th>
+                <th style={styles.tableCellCenter}>Price</th>
+                <th style={styles.tableCellCenter}>Retainer</th>
                 <th
-                  style={{ ...styles.tableCell, ...SUBTABLE_RIGHT_DIVIDER }}
+                  style={{
+                    ...styles.tableCellCenter,
+                    ...SUBTABLE_RIGHT_DIVIDER,
+                  }}
                   aria-label="Competitor details"
                 />
               </tr>
@@ -1915,7 +1921,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       </table>
                     </td>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       style={{
                         ...styles.tableCell,
                         ...SUBTABLE_LEFT_DIVIDER,
@@ -1931,12 +1937,12 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                         }}
                       >
                         <colgroup>
-                          <col style={{ width: '12%' }} />
-                          <col style={{ width: '14%' }} />
-                          <col style={{ width: '20%' }} />
-                          <col style={{ width: '20%' }} />
-                          <col style={{ width: '24%' }} />
-                          <col style={{ width: '10%' }} />
+                          {COMPETITOR_SUBTABLE_WIDTHS.map((width, index) => (
+                            <col
+                              key={`competitor-subtable-col-${index.toString()}`}
+                              style={{ width: `${width.toString()}%` }}
+                            />
+                          ))}
                         </colgroup>
                         <tbody>
                           {(competitorRows.length === 0
@@ -2017,22 +2023,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                       ? renderSkeleton('5.4rem')
                                       : ''
                                     : formatGil(competitor.sellingPrice)}
-                                </td>
-                                <td
-                                  style={{
-                                    ...styles.tableCell,
-                                    borderBottom: hasDivider
-                                      ? '1px solid #e2e8f0'
-                                      : 'none',
-                                    paddingTop: competitorRowPadding,
-                                    paddingBottom: competitorRowPadding,
-                                  }}
-                                >
-                                  {competitor === null
-                                    ? isRowLoading
-                                      ? renderSkeleton('5.4rem')
-                                      : ''
-                                    : formatGil(competitor.totalCost)}
                                 </td>
                                 <td
                                   style={{
