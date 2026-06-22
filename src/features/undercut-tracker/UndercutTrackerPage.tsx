@@ -849,6 +849,76 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     setLiveTooltipTarget(null)
   }
 
+  const startRefreshingItems = (itemIdsToRefresh: number[]): void => {
+    setRefreshingItemIds((current) => {
+      const next = new Set(current)
+      for (const itemId of itemIdsToRefresh) {
+        next.add(itemId)
+      }
+      return [...next]
+    })
+  }
+
+  const stopRefreshingItems = (itemIdsToRefresh: number[]): void => {
+    setRefreshingItemIds((current) =>
+      current.filter((itemId) => !itemIdsToRefresh.includes(itemId)),
+    )
+  }
+
+  const refreshAllTrackedItems = (): void => {
+    if (!watchContext.hasInput || watchContext.itemIds.length === 0) {
+      return
+    }
+
+    const refreshingIds = [...watchContext.itemIds]
+    startRefreshingItems(refreshingIds)
+
+    void fetchMarketBoard(watchContext.world, watchContext.itemIds, {
+      listings: 100,
+      entries: 5,
+    })
+      .then((marketData) => {
+        setItemStates((currentStates) => {
+          const result = reconcileMarketData({
+            marketData,
+            watchContext,
+            currentStates,
+          })
+
+          for (const nextState of result.newlyUndercut) {
+            if (permission === 'granted') {
+              try {
+                new Notification('Undercut detected', {
+                  body: `${nextState.itemName} dropped below your price`,
+                })
+              } catch {
+                /* ignore notification failures */
+              }
+            }
+
+            try {
+              playTone()
+            } catch {
+              /* ignore audio failures */
+            }
+          }
+
+          return result.nextStates
+        })
+        setRefreshStatus('Reconciled with REST snapshot')
+      })
+      .catch((error: unknown) => {
+        setRefreshStatus(
+          error instanceof Error
+            ? error.message
+            : 'Unable to refresh market data',
+        )
+      })
+      .finally(() => {
+        stopRefreshingItems(refreshingIds)
+      })
+  }
+
   useEffect(() => {
     const interval = window.setInterval(() => {
       setNowMs(Date.now())
@@ -974,6 +1044,12 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     }
 
     let cancelled = false
+    const refreshingIds = [...watchContext.itemIds]
+    const startRefreshTimeout = window.setTimeout(() => {
+      if (!cancelled) {
+        startRefreshingItems(refreshingIds)
+      }
+    }, 0)
 
     void fetchMarketBoard(watchContext.world, watchContext.itemIds, {
       listings: 100,
@@ -1002,9 +1078,16 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           )
         }
       })
+      .finally(() => {
+        if (!cancelled) {
+          stopRefreshingItems(refreshingIds)
+        }
+      })
 
     return () => {
       cancelled = true
+      window.clearTimeout(startRefreshTimeout)
+      stopRefreshingItems(refreshingIds)
     }
   }, [watchContext, watchedItemIdsKey, retainerNamesKey])
 
@@ -1079,6 +1162,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
           eventName === 'listings/remove' ||
           eventName === 'sales/add'
         ) {
+          const refreshingIds = [...watchContext.itemIds]
+          startRefreshingItems(refreshingIds)
+
           void fetchMarketBoard(watchContext.world, watchContext.itemIds, {
             listings: 100,
             entries: 5,
@@ -1115,6 +1201,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
             .catch(() => {
               /* ignore websocket-triggered reconciliation failures */
             })
+            .finally(() => {
+              stopRefreshingItems(refreshingIds)
+            })
         }
       } catch {
         /* ignore malformed websocket messages */
@@ -1140,6 +1229,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     }
 
     const interval = window.setInterval(() => {
+      const refreshingIds = [...watchContext.itemIds]
+      startRefreshingItems(refreshingIds)
+
       void fetchMarketBoard(watchContext.world, watchContext.itemIds, {
         listings: 100,
         entries: 5,
@@ -1180,6 +1272,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
               ? error.message
               : 'Unable to refresh market data',
           )
+        })
+        .finally(() => {
+          stopRefreshingItems(refreshingIds)
         })
     }, POLL_INTERVAL_MS)
 
@@ -1456,6 +1551,30 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         <p role="alert">{`Could not resolve: ${resolvedItems.unresolvedTokens.join(', ')}`}</p>
       ) : null}
 
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: '0.5rem',
+        }}
+      >
+        <button
+          type="button"
+          disabled={
+            !watchContext.hasInput ||
+            watchContext.itemIds.length === 0 ||
+            watchContext.itemIds.every((itemId) =>
+              refreshingItemIdSet.has(itemId),
+            )
+          }
+          onClick={() => {
+            refreshAllTrackedItems()
+          }}
+        >
+          Refresh all
+        </button>
+      </div>
+
       <div style={styles.tableWrap}>
         {visibleItemRows.length === 0 ? (
           <article style={styles.card}>
@@ -1511,16 +1630,12 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 >
                   Competitor listings
                 </th>
-                <th style={styles.tableCell} rowSpan={2}>
-                  Age
-                </th>
                 <th
                   style={{ ...styles.tableCell, textAlign: 'center' }}
                   rowSpan={2}
-                  aria-label="Refresh"
-                  title="Refresh"
+                  colSpan={2}
                 >
-                  {'\u21BB'}
+                  Last Updated
                 </th>
               </tr>
               <tr>
