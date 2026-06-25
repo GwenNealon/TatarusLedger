@@ -1079,6 +1079,70 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
       })
   }
 
+  const refreshTrackedItem = (itemId: number): void => {
+    if (!watchContext.hasInput || !watchContext.itemIds.includes(itemId)) {
+      return
+    }
+
+    setPollResetToken((current) => current + 1)
+
+    startRefreshingItems([itemId])
+
+    void fetchMarketBoard(watchContext.world, [itemId], {
+      listings: 100,
+      entries: 5,
+    })
+      .then((marketData) => {
+        setItemStates((currentStates) => {
+          const result = reconcileMarketData({
+            marketData,
+            watchContext,
+            currentStates,
+          })
+
+          for (const nextState of result.newlyUndercut) {
+            if (permission === 'granted') {
+              try {
+                new Notification('Undercut detected', {
+                  body: `${nextState.itemName} dropped below your price`,
+                })
+              } catch {
+                /* ignore notification failures */
+              }
+            }
+
+            try {
+              playTone()
+            } catch {
+              /* ignore audio failures */
+            }
+          }
+
+          const nextStateById = new Map(
+            currentStates.map((state) => [state.itemId, state]),
+          )
+          for (const nextState of result.nextStates) {
+            nextStateById.set(nextState.itemId, nextState)
+          }
+
+          return watchContext.itemIds
+            .map((currentItemId) => nextStateById.get(currentItemId))
+            .filter((state): state is UndercutItemState => state !== undefined)
+        })
+        setRefreshStatus('Reconciled with REST snapshot')
+      })
+      .catch((error: unknown) => {
+        setRefreshStatus(
+          error instanceof Error
+            ? error.message
+            : 'Unable to refresh market data',
+        )
+      })
+      .finally(() => {
+        stopRefreshingItems([itemId])
+      })
+  }
+
   useEffect(() => {
     const interval = window.setInterval(() => {
       setNowMs(Date.now())
@@ -2377,17 +2441,21 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                 : ''
 
                               return (
-                                <a
-                                  href="https://universalis.app/contribute"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    refreshTrackedItem(item.id)
+                                  }}
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: '0.3rem',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    padding: 0,
                                     color: 'inherit',
-                                    textDecoration: 'none',
+                                    cursor: 'pointer',
                                   }}
                                   onMouseEnter={(event) => {
                                     showLiveTooltip(
@@ -2404,6 +2472,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   onMouseLeave={() => {
                                     hideLiveTooltip()
                                   }}
+                                  aria-label={`Refresh ${item.name} listing data`}
                                 >
                                   <span
                                     role="img"
@@ -2421,7 +2490,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                       {'\u26A0'}
                                     </span>
                                   ) : null}
-                                </a>
+                                </button>
                               )
                             })()}
                       </td>
