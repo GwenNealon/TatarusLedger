@@ -2205,17 +2205,27 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                                   beatsByPrice &&
                                                   beatsByComparableTotal
                                                 ) {
-                                                  return 'More competitive in all respects.'
+                                                  return '\u2757 More competitive in all respects'
                                                 }
                                                 if (
                                                   beatsByPrice ||
                                                   beatsByComparableTotal
                                                 ) {
-                                                  return 'More competitive in one respect.'
+                                                  return '\u26A0\uFE0F More competitive in one respect'
                                                 }
 
-                                                return 'Not more competitive than your listings.'
+                                                return ''
                                               })()
+                                            const reasonsSummary =
+                                              competitor.reasons.join(' | ')
+                                            const titleText =
+                                              competitivenessSummary.length > 0
+                                                ? `${competitivenessSummary}\n${reasonsSummary}`
+                                                : reasonsSummary
+                                            const ariaSummary =
+                                              competitivenessSummary.length > 0
+                                                ? `${competitivenessSummary}. `
+                                                : ''
 
                                             return (
                                               <button
@@ -2224,8 +2234,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                                   beatsByPrice,
                                                   beatsByComparableTotal,
                                                 })}
-                                                title={`${competitor.reasons.join(' | ')} | ${competitivenessSummary}`}
-                                                aria-label={`Competitor details: ${competitor.reasons.join(', ')}. ${competitivenessSummary}`}
+                                                title={titleText}
+                                                aria-label={`Competitor details: ${ariaSummary}${competitor.reasons.join(', ')}`}
                                               >
                                                 i
                                               </button>
