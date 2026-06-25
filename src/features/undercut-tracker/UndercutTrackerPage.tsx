@@ -1843,8 +1843,24 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   >
                     Competitor Listings
                   </th>
-                  <th style={styles.tableCellCenter} rowSpan={2} colSpan={1}>
-                    Last Updated
+                  <th
+                    style={styles.tableCellCenter}
+                    rowSpan={2}
+                    colSpan={1}
+                    title={
+                      'Universalis data may be out of date.\nVisit universalis.app/contribute to help update market data.'
+                    }
+                  >
+                    <span
+                      style={{
+                        textDecoration: 'underline dotted',
+                        textDecorationColor: '#cbd5e1',
+                        textUnderlineOffset: '0.2rem',
+                        cursor: 'help',
+                      }}
+                    >
+                      Last Updated
+                    </span>
                   </th>
                 </tr>
                 <tr>
