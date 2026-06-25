@@ -522,8 +522,9 @@ function formatQuantity(value: number): string {
 function competitorInfoStyle(params: {
   beatsByPrice: boolean
   beatsByComparableTotal: boolean
+  allOneRespect: boolean
 }): CSSProperties {
-  const { beatsByPrice, beatsByComparableTotal } = params
+  const { beatsByPrice, beatsByComparableTotal, allOneRespect } = params
   if (beatsByPrice && beatsByComparableTotal) {
     return {
       ...styles.rankInfo,
@@ -534,12 +535,11 @@ function competitorInfoStyle(params: {
   }
 
   if (beatsByPrice || beatsByComparableTotal) {
-    return {
-      ...styles.rankInfo,
-      borderColor: '#f59e0b',
-      backgroundColor: '#fffbeb',
-      color: '#92400e',
-    }
+    // ponytail: if every competitor is only one-respect competitive, treat as red (same urgency as all-respects)
+    const color = allOneRespect
+      ? { borderColor: '#dc2626', backgroundColor: '#fef2f2', color: '#b91c1c' }
+      : { borderColor: '#f59e0b', backgroundColor: '#fffbeb', color: '#92400e' }
+    return { ...styles.rankInfo, ...color }
   }
 
   return styles.rankInfo
@@ -1922,6 +1922,19 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   const competitorRows = isRowLoading
                     ? []
                     : state.competitorListings
+                  const allCompetitorsOneRespect =
+                    competitorRows.length > 0 &&
+                    competitorRows.every((competitor) => {
+                      const bp = listingRows.some(
+                        (l) => competitor.sellingPrice < l.sellingPrice,
+                      )
+                      const bt = listingRows.some(
+                        (l) =>
+                          competitor.quantity >= l.quantity &&
+                          competitor.totalCost < l.totalCost,
+                      )
+                      return (bp || bt) && !(bp && bt)
+                    })
                   const BASE_SUBTABLE_PADDING_REM = 0.15
                   const MAX_SUBTABLE_PADDING_REM = 0.45
                   const listingRowPadding = `${Math.min(
@@ -2303,6 +2316,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                                 style={competitorInfoStyle({
                                                   beatsByPrice,
                                                   beatsByComparableTotal,
+                                                  allOneRespect:
+                                                    allCompetitorsOneRespect,
                                                 })}
                                                 title={titleText}
                                                 aria-label={`Competitor details: ${ariaSummary}${competitor.reasons.join(', ')}`}
