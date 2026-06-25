@@ -1922,26 +1922,14 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   const competitorRows = isRowLoading
                     ? []
                     : state.competitorListings
-                  const maxSubtableRows = Math.max(
-                    listingRows.length,
-                    competitorRows.length,
-                    1,
-                  )
-                  const BASE_SUBTABLE_PADDING_REM = 0.25
-                  const EXTRA_SPREAD_REM = 0.6
-                  const MAX_SUBTABLE_PADDING_REM = 0.85
-                  const listingRowRatio =
-                    maxSubtableRows / Math.max(listingRows.length, 1)
-                  const competitorRowRatio =
-                    maxSubtableRows / Math.max(competitorRows.length, 1)
+                  const BASE_SUBTABLE_PADDING_REM = 0.15
+                  const MAX_SUBTABLE_PADDING_REM = 0.45
                   const listingRowPadding = `${Math.min(
-                    BASE_SUBTABLE_PADDING_REM +
-                      EXTRA_SPREAD_REM * (listingRowRatio - 1),
+                    BASE_SUBTABLE_PADDING_REM,
                     MAX_SUBTABLE_PADDING_REM,
                   ).toString()}rem`
                   const competitorRowPadding = `${Math.min(
-                    BASE_SUBTABLE_PADDING_REM +
-                      EXTRA_SPREAD_REM * (competitorRowRatio - 1),
+                    BASE_SUBTABLE_PADDING_REM,
                     MAX_SUBTABLE_PADDING_REM,
                   ).toString()}rem`
                   const renderSkeleton = (
@@ -2022,7 +2010,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   colSpan={4}
                                   style={{
                                     ...styles.tableCellCenter,
-                                    padding: '1rem',
+                                    padding: '0.25rem',
+                                    borderBottom: 'none',
                                   }}
                                 >
                                   <span
@@ -2221,7 +2210,8 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                   colSpan={5}
                                   style={{
                                     ...styles.tableCellCenter,
-                                    padding: '1rem',
+                                    padding: '0.25rem',
+                                    borderBottom: 'none',
                                     color: '#64748b',
                                   }}
                                 >
