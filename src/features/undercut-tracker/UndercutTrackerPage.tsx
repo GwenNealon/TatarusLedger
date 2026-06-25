@@ -519,6 +519,32 @@ function formatQuantity(value: number): string {
   return value.toLocaleString()
 }
 
+function competitorInfoStyle(params: {
+  beatsByPrice: boolean
+  beatsByComparableTotal: boolean
+}): CSSProperties {
+  const { beatsByPrice, beatsByComparableTotal } = params
+  if (beatsByPrice && beatsByComparableTotal) {
+    return {
+      ...styles.rankInfo,
+      borderColor: '#dc2626',
+      backgroundColor: '#fef2f2',
+      color: '#b91c1c',
+    }
+  }
+
+  if (beatsByPrice || beatsByComparableTotal) {
+    return {
+      ...styles.rankInfo,
+      borderColor: '#f59e0b',
+      backgroundColor: '#fffbeb',
+      color: '#92400e',
+    }
+  }
+
+  return styles.rankInfo
+}
+
 function formatCountdownMmSs(remainingMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(remainingMs / 1_000))
   const minutes = Math.floor(totalSeconds / 60)
@@ -1115,9 +1141,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
     }
 
     let cancelled = false
+    let refreshStarted = false
     const refreshingIds = [...watchContext.itemIds]
     const startRefreshTimeout = window.setTimeout(() => {
       if (!cancelled) {
+        refreshStarted = true
         startRefreshingItems(refreshingIds)
       }
     }, 0)
@@ -1150,15 +1178,20 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
         }
       })
       .finally(() => {
+        window.clearTimeout(startRefreshTimeout)
         if (!cancelled) {
-          stopRefreshingItems(refreshingIds)
+          if (refreshStarted) {
+            stopRefreshingItems(refreshingIds)
+          }
         }
       })
 
     return () => {
       cancelled = true
       window.clearTimeout(startRefreshTimeout)
-      stopRefreshingItems(refreshingIds)
+      if (refreshStarted) {
+        stopRefreshingItems(refreshingIds)
+      }
     }
   }, [watchContext, watchedItemIdsKey, retainerNamesKey])
 
@@ -1713,11 +1746,11 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 <col style={{ width: listingQuantityColumnWidth }} />
                 <col style={{ width: listingPriceColumnWidth }} />
                 <col style={{ width: listingRetainerColumnWidth }} />
+                <col style={{ width: '2.5rem' }} />
                 <col style={{ width: '4rem' }} />
                 <col style={{ width: competitorQuantityColumnWidth }} />
                 <col style={{ width: competitorPriceColumnWidth }} />
                 <col style={{ width: competitorRetainerColumnWidth }} />
-                <col style={{ width: '2.5rem' }} />
                 <col style={{ width: '4rem' }} />
               </colgroup>
               <thead>
@@ -1774,19 +1807,25 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       ...styles.tableCellCenter,
                       ...SUBTABLE_LEFT_DIVIDER,
                     }}
+                    aria-label="Competitor details"
+                  />
+                  <th
+                    style={{
+                      ...styles.tableCellCenter,
+                    }}
                   >
                     HQ
                   </th>
                   <th style={styles.tableCellCenter}>Quantity</th>
                   <th style={styles.tableCellCenter}>Price</th>
-                  <th style={styles.tableCellCenter}>Retainer</th>
                   <th
                     style={{
                       ...styles.tableCellCenter,
                       ...SUBTABLE_RIGHT_DIVIDER,
                     }}
-                    aria-label="Competitor details"
-                  />
+                  >
+                    Retainer
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1803,7 +1842,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   const competitorRows = isRowLoading
                     ? []
                     : state.competitorListings
-                  const showCompetitorInfoButton = competitorRows.length > 1
                   const maxSubtableRows = Math.max(
                     listingRows.length,
                     competitorRows.length,
@@ -2083,6 +2121,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           }}
                         >
                           <colgroup>
+                            <col style={{ width: '2.5rem' }} />
                             <col style={{ width: '4rem' }} />
                             <col
                               style={{ width: competitorQuantityColumnWidth }}
@@ -2093,7 +2132,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                             <col
                               style={{ width: competitorRetainerColumnWidth }}
                             />
-                            <col style={{ width: '2.5rem' }} />
                           </colgroup>
                           <tbody>
                             {competitorRows.length === 0 && !isRowLoading ? (
@@ -2131,6 +2169,69 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                       `competitor-${item.id.toString()}-${competitorIndex.toString()}`
                                     }
                                   >
+                                    {/* Column: Competitor Details */}
+                                    <td
+                                      style={{
+                                        ...styles.tableCellCenter,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: competitorRowPadding,
+                                        paddingBottom: competitorRowPadding,
+                                      }}
+                                    >
+                                      {competitor === null
+                                        ? isRowLoading
+                                          ? renderSkeleton('1.35rem', '1.35rem')
+                                          : ''
+                                        : (() => {
+                                            const beatsByPrice =
+                                              listingRows.some(
+                                                (listing) =>
+                                                  competitor.sellingPrice <
+                                                  listing.sellingPrice,
+                                              )
+                                            const beatsByComparableTotal =
+                                              listingRows.some(
+                                                (listing) =>
+                                                  competitor.quantity >=
+                                                    listing.quantity &&
+                                                  competitor.totalCost <
+                                                    listing.totalCost,
+                                              )
+                                            const competitivenessSummary =
+                                              (() => {
+                                                if (
+                                                  beatsByPrice &&
+                                                  beatsByComparableTotal
+                                                ) {
+                                                  return 'More competitive in all respects.'
+                                                }
+                                                if (
+                                                  beatsByPrice ||
+                                                  beatsByComparableTotal
+                                                ) {
+                                                  return 'More competitive in one respect.'
+                                                }
+
+                                                return 'Not more competitive than your listings.'
+                                              })()
+
+                                            return (
+                                              <button
+                                                type="button"
+                                                style={competitorInfoStyle({
+                                                  beatsByPrice,
+                                                  beatsByComparableTotal,
+                                                })}
+                                                title={`${competitor.reasons.join(' | ')} | ${competitivenessSummary}`}
+                                                aria-label={`Competitor details: ${competitor.reasons.join(', ')}. ${competitivenessSummary}`}
+                                              >
+                                                i
+                                              </button>
+                                            )
+                                          })()}
+                                    </td>
                                     {/* Column: Competitor HQ */}
                                     <td
                                       style={{
@@ -2229,36 +2330,6 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           )}
                                           <span>{competitor.retainerName}</span>
                                         </span>
-                                      )}
-                                    </td>
-                                    {/* Column: Competitor Details */}
-                                    <td
-                                      style={{
-                                        ...styles.tableCell,
-                                        borderBottom: hasDivider
-                                          ? '1px solid #e2e8f0'
-                                          : 'none',
-                                        paddingTop: competitorRowPadding,
-                                        paddingBottom: competitorRowPadding,
-                                      }}
-                                    >
-                                      {competitor === null ? (
-                                        isRowLoading ? (
-                                          renderSkeleton('1.35rem', '1.35rem')
-                                        ) : (
-                                          ''
-                                        )
-                                      ) : showCompetitorInfoButton ? (
-                                        <button
-                                          type="button"
-                                          style={styles.rankInfo}
-                                          title={competitor.reasons.join(' | ')}
-                                          aria-label={`Competitor details: ${competitor.reasons.join(', ')}`}
-                                        >
-                                          i
-                                        </button>
-                                      ) : (
-                                        ''
                                       )}
                                     </td>
                                   </tr>
@@ -2368,7 +2439,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
 
       <p>
         Notifications: {permission}. The tracker only alerts on a transition
-        from Competitive to Undercut.
+        from a non-Undercut tier to Undercut.
       </p>
     </section>
   )

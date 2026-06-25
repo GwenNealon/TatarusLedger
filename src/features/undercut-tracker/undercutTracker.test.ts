@@ -88,6 +88,7 @@ describe('deriveItemState', () => {
     })
 
     expect(state.undercut).toBe(true)
+    expect(state.listingStatusTier).toBe('Undercut')
     expect(state.lowestOwnedPrice).toBe(1_000)
     expect(state.lowestCompetitorPrice).toBe(900)
     expect(state.ownedQuantity).toBe(1)
@@ -248,7 +249,7 @@ describe('deriveItemState', () => {
     expect(state.ownedQuality).toBe('Mixed')
   })
 
-  it('stays competitive when owned listings are cheapest', () => {
+  it('marks DC best when owned listings are cheapest', () => {
     const state = deriveItemState({
       marketData: makeMarketData([
         {
@@ -281,6 +282,103 @@ describe('deriveItemState', () => {
     })
 
     expect(state.undercut).toBe(false)
+    expect(state.listingStatusTier).toBe('DC Best')
+  })
+
+  it('marks world best when own world is cheapest but data center is not', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 10,
+          total: 10_000,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_100,
+          retainerName: 'World Competitor',
+          hq: false,
+          quantity: 10,
+          total: 11_000,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: 'world-competitor',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 900,
+          retainerName: 'DC Competitor',
+          hq: false,
+          quantity: 10,
+          total: 9_000,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: 'dc-competitor',
+          worldId: 74,
+          worldName: 'Zalera',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(state.undercut).toBe(false)
+    expect(state.listingStatusTier).toBe('World Best')
+  })
+
+  it('marks competitive when only one competitiveness metric loses', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 10,
+          total: 10_000,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 900,
+          retainerName: 'Fast Seller',
+          hq: false,
+          quantity: 5,
+          total: 4_500,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: 'fast-seller',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_200,
+          retainerName: 'Large Stack',
+          hq: false,
+          quantity: 10,
+          total: 12_000,
+          tax: 0,
+          lastReviewTime: new Date(),
+          listingId: 'large-stack',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(state.undercut).toBe(false)
+    expect(state.listingStatusTier).toBe('Competitive')
   })
 
   it('dedupes duplicate owned listings with the same listing id', () => {

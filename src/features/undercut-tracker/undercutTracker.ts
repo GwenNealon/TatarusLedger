@@ -1,6 +1,12 @@
 import type { MarketData } from '../../api/types.ts'
 import type { NormalizedItem } from '../../data/types.ts'
 
+export type ListingStatusTier =
+  | 'DC Best'
+  | 'World Best'
+  | 'Competitive'
+  | 'Undercut'
+
 export interface UndercutItemState {
   itemId: number
   itemName: string
@@ -30,6 +36,7 @@ export interface UndercutItemState {
   ownedQuality: 'HQ' | 'NQ' | 'Mixed' | null
   lowestOwnedPrice: number | null
   lowestCompetitorPrice: number | null
+  listingStatusTier: ListingStatusTier
   undercut: boolean
   oldestListingReviewAt: number | null
   maxWorldTimestampDeltaMs: number
@@ -169,6 +176,26 @@ export function deriveItemState(params: {
   const highestOwnedTotal = ownedMarketListings.reduce(
     (highest, listing) => Math.max(highest, listing.total),
     0,
+  )
+  const toWorldKey = (
+    listing: MarketData['listings'][number],
+  ): string | null => {
+    if (typeof listing.worldId === 'number') {
+      return listing.worldId.toString()
+    }
+
+    return typeof listing.worldName === 'string' ? listing.worldName : null
+  }
+  const ownedWorldKeys = new Set(
+    ownedMarketListings
+      .map((listing) => toWorldKey(listing))
+      .filter((worldKey): worldKey is string => worldKey !== null),
+  )
+  const competitorsOnOwnedWorlds = competitorMarketListings.filter(
+    (listing) => {
+      const worldKey = toWorldKey(listing)
+      return worldKey !== null && ownedWorldKeys.has(worldKey)
+    },
   )
 
   const candidateByKey = new Map<
@@ -326,6 +353,78 @@ export function deriveItemState(params: {
     0,
   )
   const hasWorldTimestampDeltaWarning = maxWorldTimestampDeltaMs > 60_000
+  const scopedCompetitorListings =
+    ownedWorldKeys.size > 0
+      ? competitorsOnOwnedWorlds
+      : competitorMarketListings
+  const lowestComparableCompetitorTotal = pick(
+    competitorMarketListings.filter(
+      (listing) => listing.quantity >= highestOwnedQuantity,
+    ),
+    byTotal,
+  )?.total
+  const lowestComparableScopedCompetitorTotal = pick(
+    scopedCompetitorListings.filter(
+      (listing) => listing.quantity >= highestOwnedQuantity,
+    ),
+    byTotal,
+  )?.total
+  const lowestComparableWorldCompetitorTotal = pick(
+    competitorsOnOwnedWorlds.filter(
+      (listing) => listing.quantity >= highestOwnedQuantity,
+    ),
+    byTotal,
+  )?.total
+  const lowestScopedCompetitorPrice = pick(
+    scopedCompetitorListings,
+    byPrice,
+  )?.pricePerUnit
+  const lowestWorldCompetitorPrice = pick(
+    competitorsOnOwnedWorlds,
+    byPrice,
+  )?.pricePerUnit
+  const scopedBestByPrice =
+    lowestOwnedPrice !== null &&
+    (lowestScopedCompetitorPrice === undefined ||
+      lowestOwnedPrice <= lowestScopedCompetitorPrice)
+  const scopedBestByComparableTotal =
+    highestOwnedQuantity <= 0 ||
+    highestOwnedTotal <= 0 ||
+    lowestComparableScopedCompetitorTotal === undefined ||
+    highestOwnedTotal <= lowestComparableScopedCompetitorTotal
+  const undercut = !scopedBestByPrice && !scopedBestByComparableTotal
+  const dcBestByPrice =
+    lowestOwnedPrice !== null &&
+    (lowestCompetitorPrice === null ||
+      lowestOwnedPrice <= lowestCompetitorPrice)
+  const dcBestByComparableTotal =
+    highestOwnedQuantity <= 0 ||
+    highestOwnedTotal <= 0 ||
+    lowestComparableCompetitorTotal === undefined ||
+    highestOwnedTotal <= lowestComparableCompetitorTotal
+  const isDcBest = !undercut && dcBestByPrice && dcBestByComparableTotal
+  const worldBestByPrice =
+    lowestOwnedPrice !== null &&
+    (lowestWorldCompetitorPrice === undefined ||
+      lowestOwnedPrice <= lowestWorldCompetitorPrice)
+  const worldBestByComparableTotal =
+    highestOwnedQuantity <= 0 ||
+    highestOwnedTotal <= 0 ||
+    lowestComparableWorldCompetitorTotal === undefined ||
+    highestOwnedTotal <= lowestComparableWorldCompetitorTotal
+  const isWorldBest =
+    !undercut &&
+    !isDcBest &&
+    ownedWorldKeys.size > 0 &&
+    worldBestByPrice &&
+    worldBestByComparableTotal
+  const listingStatusTier: ListingStatusTier = undercut
+    ? 'Undercut'
+    : isDcBest
+      ? 'DC Best'
+      : isWorldBest
+        ? 'World Best'
+        : 'Competitive'
 
   return {
     itemId: marketData.itemId,
@@ -344,10 +443,8 @@ export function deriveItemState(params: {
             : null,
     lowestOwnedPrice,
     lowestCompetitorPrice,
-    undercut:
-      lowestOwnedPrice !== null &&
-      lowestCompetitorPrice !== null &&
-      lowestCompetitorPrice < lowestOwnedPrice,
+    listingStatusTier,
+    undercut,
     oldestListingReviewAt,
     maxWorldTimestampDeltaMs,
     hasWorldTimestampDeltaWarning,
