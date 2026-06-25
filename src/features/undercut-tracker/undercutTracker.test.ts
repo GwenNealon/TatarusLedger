@@ -168,6 +168,10 @@ describe('deriveItemState', () => {
         'Cheaper total than your highest stack',
       ]),
     )
+    expect(competitorA?.beatsByPrice).toBe(true)
+    expect(competitorA?.beatsByComparableTotal).toBe(false)
+    expect(competitorA?.competitivenessSummary).toBe('one-respect')
+    expect(state.allCompetitorsOneRespect).toBe(true)
     expect(state.oldestListingReviewAt).toBe(
       new Date('2026-06-21T12:00:00Z').getTime(),
     )
@@ -420,5 +424,69 @@ describe('deriveItemState', () => {
 
     expect(state.ownedListings).toHaveLength(1)
     expect(state.ownedQuantity).toBe(40)
+  })
+
+  it('computes competitor competitiveness summary and aggregate one-respect flag', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 10,
+          total: 10_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 900,
+          retainerName: 'Aggressive',
+          hq: false,
+          quantity: 10,
+          total: 9_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'aggressive',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 950,
+          retainerName: 'Small Stack',
+          hq: false,
+          quantity: 5,
+          total: 4_750,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'small-stack',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    const byRetainer = new Map(
+      state.competitorListings.map((listing) => [
+        listing.retainerName,
+        listing,
+      ]),
+    )
+    const aggressive = byRetainer.get('Aggressive')
+    const smallStack = byRetainer.get('Small Stack')
+
+    expect(aggressive?.beatsByPrice).toBe(true)
+    expect(aggressive?.beatsByComparableTotal).toBe(true)
+    expect(aggressive?.competitivenessSummary).toBe('all-respects')
+
+    expect(smallStack?.beatsByPrice).toBe(true)
+    expect(smallStack?.beatsByComparableTotal).toBe(false)
+    expect(smallStack?.competitivenessSummary).toBe('one-respect')
+
+    expect(state.allCompetitorsOneRespect).toBe(false)
   })
 })

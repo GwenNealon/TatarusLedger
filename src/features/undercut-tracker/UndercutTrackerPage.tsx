@@ -1922,19 +1922,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   const competitorRows = isRowLoading
                     ? []
                     : state.competitorListings
-                  const allCompetitorsOneRespect =
-                    competitorRows.length > 0 &&
-                    competitorRows.every((competitor) => {
-                      const bp = listingRows.some(
-                        (l) => competitor.sellingPrice < l.sellingPrice,
-                      )
-                      const bt = listingRows.some(
-                        (l) =>
-                          competitor.quantity >= l.quantity &&
-                          competitor.totalCost < l.totalCost,
-                      )
-                      return (bp || bt) && !(bp && bt)
-                    })
+                  const allCompetitorsOneRespect = isRowLoading
+                    ? false
+                    : state.allCompetitorsOneRespect
                   const BASE_SUBTABLE_PADDING_REM = 0.15
                   const MAX_SUBTABLE_PADDING_REM = 0.45
                   const listingRowPadding = `${Math.min(
@@ -2269,19 +2259,9 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           : ''
                                         : (() => {
                                             const beatsByPrice =
-                                              listingRows.some(
-                                                (listing) =>
-                                                  competitor.sellingPrice <
-                                                  listing.sellingPrice,
-                                              )
+                                              competitor.beatsByPrice
                                             const beatsByComparableTotal =
-                                              listingRows.some(
-                                                (listing) =>
-                                                  competitor.quantity >=
-                                                    listing.quantity &&
-                                                  competitor.totalCost <
-                                                    listing.totalCost,
-                                              )
+                                              competitor.beatsByComparableTotal
                                             const competitivenessSummary =
                                               (() => {
                                                 if (

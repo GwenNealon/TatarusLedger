@@ -7,6 +7,8 @@ export type ListingStatusTier =
   | 'Competitive'
   | 'Undercut'
 
+export type CompetitivenessSummary = 'all-respects' | 'one-respect' | 'none'
+
 export interface UndercutItemState {
   itemId: number
   itemName: string
@@ -30,8 +32,12 @@ export interface UndercutItemState {
     retainerName: string
     retainerCity?: number
     lastReviewAt: number
+    beatsByPrice: boolean
+    beatsByComparableTotal: boolean
+    competitivenessSummary: CompetitivenessSummary
     reasons: string[]
   }[]
+  allCompetitorsOneRespect: boolean
   ownedQuantity: number
   ownedQuality: 'HQ' | 'NQ' | 'Mixed' | null
   lowestOwnedPrice: number | null
@@ -106,6 +112,22 @@ export function appendUniqueTokens(existing: string, tokens: string[]): string {
   }
 
   return [...nextTokens].join('\n')
+}
+
+function summarizeCompetitiveness(params: {
+  beatsByPrice: boolean
+  beatsByComparableTotal: boolean
+}): CompetitivenessSummary {
+  const { beatsByPrice, beatsByComparableTotal } = params
+  if (beatsByPrice && beatsByComparableTotal) {
+    return 'all-respects'
+  }
+
+  if (beatsByPrice || beatsByComparableTotal) {
+    return 'one-respect'
+  }
+
+  return 'none'
 }
 
 export function deriveItemState(params: {
@@ -219,6 +241,15 @@ export function deriveItemState(params: {
       return
     }
 
+    const beatsByPrice = ownedMarketListings.some(
+      (ownedListing) => listing.pricePerUnit < ownedListing.pricePerUnit,
+    )
+    const beatsByComparableTotal = ownedMarketListings.some(
+      (ownedListing) =>
+        listing.quantity >= ownedListing.quantity &&
+        listing.total < ownedListing.total,
+    )
+
     candidateByKey.set(key, {
       listingId: listing.listingId,
       quality: listing.hq ? 'HQ' : 'NQ',
@@ -228,6 +259,12 @@ export function deriveItemState(params: {
       retainerName: listing.retainerName ?? '—',
       retainerCity: listing.retainerCity,
       lastReviewAt: listing.lastReviewTime.getTime(),
+      beatsByPrice,
+      beatsByComparableTotal,
+      competitivenessSummary: summarizeCompetitiveness({
+        beatsByPrice,
+        beatsByComparableTotal,
+      }),
       reasons: [reason],
     })
   }
@@ -325,6 +362,11 @@ export function deriveItemState(params: {
       )
     },
   )
+  const allCompetitorsOneRespect =
+    competitorListings.length > 0 &&
+    competitorListings.every(
+      (competitor) => competitor.competitivenessSummary === 'one-respect',
+    )
 
   let oldestListingReviewAt: number | null = null
   const worldTimestampBounds = new Map<string, { min: number; max: number }>()
@@ -432,6 +474,7 @@ export function deriveItemState(params: {
     listingCount: marketData.listings.length,
     ownedListings,
     competitorListings,
+    allCompetitorsOneRespect,
     ownedQuantity,
     ownedQuality:
       hasOwnedHq && hasOwnedNq
