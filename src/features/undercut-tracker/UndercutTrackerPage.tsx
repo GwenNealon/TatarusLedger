@@ -2086,7 +2086,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       </td>
                       {/* Column Group: Your Listings (Subtable Container) */}
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         style={{
                           ...styles.tableCell,
                           ...SUBTABLE_LEFT_DIVIDER,
