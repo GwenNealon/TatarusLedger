@@ -7,7 +7,18 @@ export type ListingStatusTier =
   | 'Competitive'
   | 'Undercut'
 
-export type CompetitivenessSummary = 'all-respects' | 'one-respect' | 'none'
+export type CompetitiveNiche =
+  | 'Lowest price per unit overall'
+  | 'Lowest price per unit HQ'
+  | 'Lowest total price for quantity'
+  | 'Lowest total price for HQ quantity'
+
+const NICHE_ORDER: CompetitiveNiche[] = [
+  'Lowest price per unit overall',
+  'Lowest price per unit HQ',
+  'Lowest total price for quantity',
+  'Lowest total price for HQ quantity',
+]
 
 export interface UndercutItemState {
   itemId: number
@@ -22,6 +33,7 @@ export interface UndercutItemState {
     retainerName: string
     retainerCity?: number
     lastReviewAt: number
+    niches: CompetitiveNiche[]
   }[]
   competitorListings: {
     listingId?: string
@@ -32,12 +44,8 @@ export interface UndercutItemState {
     retainerName: string
     retainerCity?: number
     lastReviewAt: number
-    beatsByPrice: boolean
-    beatsByComparableTotal: boolean
-    competitivenessSummary: CompetitivenessSummary
-    reasons: string[]
+    niches: CompetitiveNiche[]
   }[]
-  allCompetitorsOneRespect: boolean
   ownedQuantity: number
   ownedQuality: 'HQ' | 'NQ' | 'Mixed' | null
   lowestOwnedPrice: number | null
@@ -114,22 +122,6 @@ export function appendUniqueTokens(existing: string, tokens: string[]): string {
   return [...nextTokens].join('\n')
 }
 
-function summarizeCompetitiveness(params: {
-  beatsByPrice: boolean
-  beatsByComparableTotal: boolean
-}): CompetitivenessSummary {
-  const { beatsByPrice, beatsByComparableTotal } = params
-  if (beatsByPrice && beatsByComparableTotal) {
-    return 'all-respects'
-  }
-
-  if (beatsByPrice || beatsByComparableTotal) {
-    return 'one-respect'
-  }
-
-  return 'none'
-}
-
 export function deriveItemState(params: {
   marketData: MarketData
   itemName: string
@@ -138,26 +130,37 @@ export function deriveItemState(params: {
   const { marketData, itemName, retainerNames } = params
   const ownedNames = new Set(retainerNames.map((name) => name.toLowerCase()))
   const seenListingKeys = new Set<string>()
+  const listingDedupeKey = (listing: MarketData['listings'][number]): string =>
+    listing.listingId ??
+    [
+      listing.worldId?.toString() ?? listing.worldName ?? 'unknown-world',
+      listing.retainerName ?? 'unknown-retainer',
+      listing.retainerCity?.toString() ?? 'unknown-city',
+      listing.hq ? 'hq' : 'nq',
+      listing.quantity.toString(),
+      listing.pricePerUnit.toString(),
+      listing.total.toString(),
+    ].join('|')
 
   let lowestOwnedPrice: number | null = null
   let lowestCompetitorPrice: number | null = null
   let ownedQuantity = 0
   let hasOwnedHq = false
   let hasOwnedNq = false
-  const ownedListings: UndercutItemState['ownedListings'] = []
   const ownedMarketListings: MarketData['listings'] = []
   const competitorMarketListings: MarketData['listings'] = []
+  const allMarketListings: MarketData['listings'] = []
 
   for (const listing of marketData.listings) {
-    if (listing.listingId !== undefined) {
-      if (seenListingKeys.has(listing.listingId)) {
-        continue
-      }
-      seenListingKeys.add(listing.listingId)
+    const dedupeKey = listingDedupeKey(listing)
+    if (seenListingKeys.has(dedupeKey)) {
+      continue
     }
+    seenListingKeys.add(dedupeKey)
 
     const ownerName = listing.retainerName?.toLowerCase()
     const isOwned = ownerName !== undefined && ownedNames.has(ownerName)
+    allMarketListings.push(listing)
 
     if (isOwned) {
       ownedQuantity += listing.quantity
@@ -166,16 +169,6 @@ export function deriveItemState(params: {
       } else {
         hasOwnedNq = true
       }
-      ownedListings.push({
-        listingId: listing.listingId,
-        quality: listing.hq ? 'HQ' : 'NQ',
-        quantity: listing.quantity,
-        sellingPrice: listing.pricePerUnit,
-        totalCost: listing.total,
-        retainerName: listing.retainerName ?? '—',
-        retainerCity: listing.retainerCity,
-        lastReviewAt: listing.lastReviewTime.getTime(),
-      })
       ownedMarketListings.push(listing)
       lowestOwnedPrice =
         lowestOwnedPrice === null
@@ -220,54 +213,6 @@ export function deriveItemState(params: {
     },
   )
 
-  const candidateByKey = new Map<
-    string,
-    UndercutItemState['competitorListings'][number]
-  >()
-  const makeKey = (listing: MarketData['listings'][number]): string =>
-    listing.listingId ??
-    `${listing.retainerName ?? 'unknown'}:${listing.pricePerUnit.toString()}:${listing.quantity.toString()}:${listing.total.toString()}:${listing.worldId?.toString() ?? 'unknown'}`
-  const toCandidate = (
-    listing: MarketData['listings'][number],
-    reason: string,
-  ): void => {
-    const key = makeKey(listing)
-    const existing = candidateByKey.get(key)
-    if (existing !== undefined) {
-      if (!existing.reasons.includes(reason)) {
-        existing.reasons.push(reason)
-      }
-
-      return
-    }
-
-    const beatsByPrice = ownedMarketListings.some(
-      (ownedListing) => listing.pricePerUnit < ownedListing.pricePerUnit,
-    )
-    const beatsByComparableTotal = ownedMarketListings.some(
-      (ownedListing) =>
-        listing.quantity >= ownedListing.quantity &&
-        listing.total < ownedListing.total,
-    )
-
-    candidateByKey.set(key, {
-      listingId: listing.listingId,
-      quality: listing.hq ? 'HQ' : 'NQ',
-      quantity: listing.quantity,
-      sellingPrice: listing.pricePerUnit,
-      totalCost: listing.total,
-      retainerName: listing.retainerName ?? '—',
-      retainerCity: listing.retainerCity,
-      lastReviewAt: listing.lastReviewTime.getTime(),
-      beatsByPrice,
-      beatsByComparableTotal,
-      competitivenessSummary: summarizeCompetitiveness({
-        beatsByPrice,
-        beatsByComparableTotal,
-      }),
-      reasons: [reason],
-    })
-  }
   const byPrice = (
     left: MarketData['listings'][number],
     right: MarketData['listings'][number],
@@ -290,83 +235,288 @@ export function deriveItemState(params: {
   ): MarketData['listings'][number] | undefined =>
     [...listings].sort(compare)[0]
 
-  const lowestHq = pick(
-    competitorMarketListings.filter((listing) => listing.hq),
+  const lowestPricePerUnitOverall = pick(
+    allMarketListings,
     byPrice,
-  )
-  if (lowestHq !== undefined) {
-    toCandidate(lowestHq, 'Lowest HQ')
-  }
+  )?.pricePerUnit
+  const lowestPricePerUnitHq = pick(
+    allMarketListings.filter((listing) => listing.hq),
+    byPrice,
+  )?.pricePerUnit
+  const uniqueQuantities = [
+    ...new Set(allMarketListings.map((l) => l.quantity)),
+  ]
+  const lowestTotalByQuantity = new Map<number, number>()
+  const lowestHqTotalByQuantity = new Map<number, number>()
 
-  const lowestPrice = pick(competitorMarketListings, byPrice)
-  if (lowestPrice !== undefined) {
-    toCandidate(lowestPrice, 'Lowest price')
-  }
-
-  if (highestOwnedQuantity > 0) {
-    const lowestSmallerStack = pick(
-      competitorMarketListings.filter(
-        (listing) => listing.quantity < highestOwnedQuantity,
-      ),
-      byPrice,
-    )
-    if (lowestSmallerStack !== undefined) {
-      toCandidate(lowestSmallerStack, 'Lowest smaller stack')
+  for (const targetQuantity of uniqueQuantities) {
+    const lowestTotal = pick(
+      allMarketListings.filter((listing) => listing.quantity >= targetQuantity),
+      byTotal,
+    )?.total
+    if (lowestTotal !== undefined) {
+      lowestTotalByQuantity.set(targetQuantity, lowestTotal)
     }
 
-    const lowestHqSmallerStack = pick(
-      competitorMarketListings.filter(
-        (listing) => listing.hq && listing.quantity < highestOwnedQuantity,
-      ),
-      byPrice,
-    )
-    if (lowestHqSmallerStack !== undefined) {
-      toCandidate(lowestHqSmallerStack, 'Lowest HQ smaller stack')
-    }
-  }
-
-  if (highestOwnedQuantity > 1 && highestOwnedTotal > 0) {
-    const cheapestLowerTotal = pick(
-      competitorMarketListings.filter(
-        (listing) => listing.total < highestOwnedTotal,
+    const lowestHqTotal = pick(
+      allMarketListings.filter(
+        (listing) => listing.hq && listing.quantity >= targetQuantity,
       ),
       byTotal,
-    )
-    if (cheapestLowerTotal !== undefined) {
-      toCandidate(cheapestLowerTotal, 'Cheaper total than your highest stack')
+    )?.total
+    if (lowestHqTotal !== undefined) {
+      lowestHqTotalByQuantity.set(targetQuantity, lowestHqTotal)
     }
   }
 
-  const reasonWeight: Record<string, number> = {
-    'Lowest price': 6,
-    'Lowest HQ': 5,
-    'Lowest smaller stack': 4,
-    'Lowest HQ smaller stack': 3,
-    'Cheaper total than your highest stack': 3,
+  const deriveNiches = (
+    listing: MarketData['listings'][number],
+  ): CompetitiveNiche[] => {
+    if (
+      lowestPricePerUnitOverall !== undefined &&
+      listing.pricePerUnit === lowestPricePerUnitOverall
+    ) {
+      // ponytail: #1 short-circuits all other categories by request.
+      return ['Lowest price per unit overall']
+    }
+
+    const niches: CompetitiveNiche[] = []
+
+    if (
+      listing.hq &&
+      lowestPricePerUnitHq !== undefined &&
+      listing.pricePerUnit === lowestPricePerUnitHq
+    ) {
+      niches.push('Lowest price per unit HQ')
+      // ponytail: HQ unit-price winner should not also carry the general quantity-total label.
+      return niches
+    }
+
+    const lowestTotalForQuantity = lowestTotalByQuantity.get(listing.quantity)
+    if (
+      lowestTotalForQuantity !== undefined &&
+      listing.total === lowestTotalForQuantity
+    ) {
+      niches.push('Lowest total price for quantity')
+    }
+
+    if (
+      niches.includes('Lowest price per unit HQ') ||
+      niches.includes('Lowest total price for quantity')
+    ) {
+      // ponytail: #2 or #3 short-circuits #4 by request.
+      return niches
+    }
+
+    if (listing.hq) {
+      const lowestHqTotalForQuantity = lowestHqTotalByQuantity.get(
+        listing.quantity,
+      )
+      if (
+        lowestHqTotalForQuantity !== undefined &&
+        listing.total === lowestHqTotalForQuantity
+      ) {
+        niches.push('Lowest total price for HQ quantity')
+      }
+    }
+
+    return niches
   }
-  const competitorListings = [...candidateByKey.values()].sort(
-    (left, right) => {
-      const leftScore = left.reasons.reduce(
-        (score, reason) => score + (reasonWeight[reason] ?? 0),
-        0,
-      )
-      const rightScore = right.reasons.reduce(
-        (score, reason) => score + (reasonWeight[reason] ?? 0),
-        0,
-      )
+
+  const toDerivedListing = (
+    listing: MarketData['listings'][number],
+  ): UndercutItemState['ownedListings'][number] => ({
+    listingId: listing.listingId,
+    quality: listing.hq ? 'HQ' : 'NQ',
+    quantity: listing.quantity,
+    sellingPrice: listing.pricePerUnit,
+    totalCost: listing.total,
+    retainerName: listing.retainerName ?? '—',
+    retainerCity: listing.retainerCity,
+    lastReviewAt: listing.lastReviewTime.getTime(),
+    niches: deriveNiches(listing),
+  })
+
+  const reduceByNiche = (
+    listings: (UndercutItemState['ownedListings'][number] & {
+      isOwned: boolean
+    })[],
+  ): (UndercutItemState['ownedListings'][number] & { isOwned: boolean })[] => {
+    const winnerByNicheAndOwnership = new Map<
+      `${CompetitiveNiche}|owned` | `${CompetitiveNiche}|competitor`,
+      (typeof listings)[number]
+    >()
+    const compareForNiche = (
+      left: (typeof listings)[number],
+      right: (typeof listings)[number],
+      niche: CompetitiveNiche,
+    ): number => {
+      if (
+        niche === 'Lowest total price for quantity' ||
+        niche === 'Lowest total price for HQ quantity'
+      ) {
+        return (
+          left.totalCost - right.totalCost ||
+          left.sellingPrice - right.sellingPrice ||
+          right.lastReviewAt - left.lastReviewAt
+        )
+      }
 
       return (
-        rightScore - leftScore ||
         left.sellingPrice - right.sellingPrice ||
+        left.totalCost - right.totalCost ||
         right.lastReviewAt - left.lastReviewAt
       )
-    },
+    }
+
+    for (const niche of NICHE_ORDER) {
+      const ownedCandidates = listings.filter(
+        (listing) => listing.isOwned && listing.niches.includes(niche),
+      )
+      if (ownedCandidates.length > 0) {
+        const winner = [...ownedCandidates].sort((left, right) =>
+          compareForNiche(left, right, niche),
+        )[0]
+        winnerByNicheAndOwnership.set(`${niche}|owned`, winner)
+      }
+
+      const competitorCandidates = listings.filter(
+        (listing) => !listing.isOwned && listing.niches.includes(niche),
+      )
+      if (competitorCandidates.length > 0) {
+        const winner = [...competitorCandidates].sort((left, right) =>
+          compareForNiche(left, right, niche),
+        )[0]
+        winnerByNicheAndOwnership.set(`${niche}|competitor`, winner)
+      }
+    }
+
+    const assignedNichesByListing = new Map<
+      (typeof listings)[number],
+      CompetitiveNiche[]
+    >()
+    for (const [key, winner] of winnerByNicheAndOwnership.entries()) {
+      const niche = key.split('|')[0] as CompetitiveNiche
+      const assigned = assignedNichesByListing.get(winner)
+      if (assigned === undefined) {
+        assignedNichesByListing.set(winner, [niche])
+      } else {
+        assigned.push(niche)
+      }
+    }
+
+    return listings.flatMap((listing) => {
+      if (listing.niches.length === 0) {
+        return [listing]
+      }
+
+      const assignedNiches = assignedNichesByListing.get(listing)
+      if (assignedNiches === undefined || assignedNiches.length === 0) {
+        return []
+      }
+
+      return [{ ...listing, niches: assignedNiches }]
+    })
+  }
+
+  const reducedListings = reduceByNiche([
+    ...ownedMarketListings.map((listing) => ({
+      ...toDerivedListing(listing),
+      isOwned: true,
+    })),
+    ...competitorMarketListings.map((listing) => ({
+      ...toDerivedListing(listing),
+      isOwned: false,
+    })),
+  ])
+
+  const stripOwnership = (
+    listing: UndercutItemState['ownedListings'][number] & { isOwned: boolean },
+  ): UndercutItemState['ownedListings'][number] => ({
+    listingId: listing.listingId,
+    quality: listing.quality,
+    quantity: listing.quantity,
+    sellingPrice: listing.sellingPrice,
+    totalCost: listing.totalCost,
+    retainerName: listing.retainerName,
+    retainerCity: listing.retainerCity,
+    lastReviewAt: listing.lastReviewAt,
+    niches: listing.niches,
+  })
+
+  const ownedListings: UndercutItemState['ownedListings'] = reducedListings
+    .filter((listing) => listing.isOwned)
+    .map(stripOwnership)
+  const rawCompetitorListings: UndercutItemState['competitorListings'] =
+    reducedListings.filter((listing) => !listing.isOwned).map(stripOwnership)
+  const competitorListingsByMarketShape = new Map<
+    string,
+    UndercutItemState['competitorListings'][number]
+  >()
+
+  for (const listing of rawCompetitorListings) {
+    const shapeKey = [
+      listing.quality,
+      listing.quantity.toString(),
+      listing.sellingPrice.toString(),
+    ].join('|')
+    const existing = competitorListingsByMarketShape.get(shapeKey)
+
+    if (existing === undefined) {
+      competitorListingsByMarketShape.set(shapeKey, listing)
+      continue
+    }
+
+    const mergedNiches = [...new Set([...existing.niches, ...listing.niches])]
+    const preferred =
+      listing.niches.length > existing.niches.length ? listing : existing
+    competitorListingsByMarketShape.set(shapeKey, {
+      ...preferred,
+      niches: mergedNiches,
+    })
+  }
+
+  const competitorListings = [...competitorListingsByMarketShape.values()]
+  const nicheCompetitorListings = competitorListings.filter(
+    (listing) => listing.niches.length > 0,
   )
-  const allCompetitorsOneRespect =
-    competitorListings.length > 0 &&
-    competitorListings.every(
-      (competitor) => competitor.competitivenessSummary === 'one-respect',
+  const hasCompetitiveNicheCompetitor = nicheCompetitorListings.length > 0
+  const baseEffectiveCompetitorListings = hasCompetitiveNicheCompetitor
+    ? nicheCompetitorListings
+    : [...competitorListings]
+        .sort(
+          (left, right) =>
+            left.sellingPrice - right.sellingPrice ||
+            left.totalCost - right.totalCost ||
+            right.lastReviewAt - left.lastReviewAt,
+        )
+        .slice(0, 1)
+  const ownedHasLowestHqUnitPrice = ownedListings.some(
+    (listing) =>
+      listing.quality === 'HQ' &&
+      lowestPricePerUnitHq !== undefined &&
+      listing.sellingPrice === lowestPricePerUnitHq,
+  )
+  const lowestHqUnitPriceCompetitor = [...competitorListings]
+    .filter((listing) => listing.quality === 'HQ')
+    .sort(
+      (left, right) =>
+        left.sellingPrice - right.sellingPrice ||
+        left.totalCost - right.totalCost ||
+        right.lastReviewAt - left.lastReviewAt,
     )
+    .at(0)
+  const effectiveCompetitorListings =
+    ownedHasLowestHqUnitPrice && lowestHqUnitPriceCompetitor !== undefined
+      ? [
+          ...baseEffectiveCompetitorListings,
+          ...(baseEffectiveCompetitorListings.includes(
+            lowestHqUnitPriceCompetitor,
+          )
+            ? []
+            : [lowestHqUnitPriceCompetitor]),
+        ]
+      : baseEffectiveCompetitorListings
 
   let oldestListingReviewAt: number | null = null
   const worldTimestampBounds = new Map<string, { min: number; max: number }>()
@@ -473,8 +623,7 @@ export function deriveItemState(params: {
     itemName,
     listingCount: marketData.listings.length,
     ownedListings,
-    competitorListings,
-    allCompetitorsOneRespect,
+    competitorListings: effectiveCompetitorListings,
     ownedQuantity,
     ownedQuality:
       hasOwnedHq && hasOwnedNq

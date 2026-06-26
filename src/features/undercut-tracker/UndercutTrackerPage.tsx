@@ -42,6 +42,10 @@ const styles: Record<
   | 'section'
   | 'grid'
   | 'card'
+  | 'explainDetails'
+  | 'explainSummary'
+  | 'explainHeading'
+  | 'explainList'
   | 'status'
   | 'controls'
   | 'chip'
@@ -92,6 +96,30 @@ const styles: Record<
     borderRadius: '0.75rem',
     padding: '1rem',
     background: '#f8fafc',
+  },
+  explainDetails: {
+    border: '1px solid #cbd5e1',
+    borderRadius: '0.75rem',
+    padding: '0.65rem 0.85rem',
+    background: '#f8fafc',
+    marginBottom: '0.75rem',
+  },
+  explainSummary: {
+    cursor: 'pointer',
+    fontWeight: 600,
+    color: '#1e293b',
+  },
+  explainHeading: {
+    margin: '0.6rem 0 0.2rem',
+    fontWeight: 600,
+    color: '#1e293b',
+  },
+  explainList: {
+    margin: 0,
+    paddingLeft: '1.1rem',
+    color: '#334155',
+    display: 'grid',
+    gap: '0.25rem',
   },
   status: {
     margin: 0,
@@ -383,6 +411,28 @@ const SUBTABLE_RIGHT_DIVIDER: CSSProperties = {
   borderRight: '1px solid #e2e8f0',
 }
 
+const COMPETITOR_SELECTION_SUMMARY = [
+  'Lowest price per unit listing overall.',
+  'Lowest price per unit HQ listing.',
+  'Lowest total price to purchase their quantity.',
+  'Lowest total price to purchase their HQ quantity.',
+]
+
+const COMPETITIVENESS_SUMMARY = [
+  'A listing with the overall lowest unit price is treated as complete by itself and does not collect extra niche labels.',
+  'A listing that already wins HQ unit price or quantity total price will not also be labeled as HQ quantity-total winner.',
+  'Your listing badge: green when only your listings have niches, yellow when it has at least one niche, red when it has none.',
+  'Competitor badge: red when it is the only listing with any niche, yellow when it has at least one niche, default color when it has none.',
+]
+
+const RELEVANT_COMPETITOR_LISTINGS_TOOLTIP = [
+  'Why listings are shown:',
+  ...COMPETITOR_SELECTION_SUMMARY.map((rule) => `- ${rule}`),
+  '',
+  'Why listings are marked competitive:',
+  ...COMPETITIVENESS_SUMMARY.map((rule) => `- ${rule}`),
+].join('\n')
+
 const RETAINER_CITY_BY_ID: Partial<
   Record<number, { name: keyof TaxRates; iconId: number }>
 > = {
@@ -520,12 +570,11 @@ function formatQuantity(value: number): string {
 }
 
 function competitorInfoStyle(params: {
-  beatsByPrice: boolean
-  beatsByComparableTotal: boolean
-  allOneRespect: boolean
+  nicheCount: number
+  isOnlyNicheListing: boolean
 }): CSSProperties {
-  const { beatsByPrice, beatsByComparableTotal, allOneRespect } = params
-  if (beatsByPrice && beatsByComparableTotal) {
+  const { nicheCount, isOnlyNicheListing } = params
+  if (isOnlyNicheListing) {
     return {
       ...styles.rankInfo,
       borderColor: '#dc2626',
@@ -534,15 +583,47 @@ function competitorInfoStyle(params: {
     }
   }
 
-  if (beatsByPrice || beatsByComparableTotal) {
-    // ponytail: if every competitor is only one-respect competitive, treat as red (same urgency as all-respects)
-    const color = allOneRespect
-      ? { borderColor: '#dc2626', backgroundColor: '#fef2f2', color: '#b91c1c' }
-      : { borderColor: '#f59e0b', backgroundColor: '#fffbeb', color: '#92400e' }
-    return { ...styles.rankInfo, ...color }
+  if (nicheCount > 0) {
+    return {
+      ...styles.rankInfo,
+      borderColor: '#f59e0b',
+      backgroundColor: '#fffbeb',
+      color: '#92400e',
+    }
   }
 
   return styles.rankInfo
+}
+
+function ownedInfoStyle(params: {
+  nicheCount: number
+  ownedControlsNiches: boolean
+}): CSSProperties {
+  const { nicheCount, ownedControlsNiches } = params
+  if (nicheCount === 0) {
+    return {
+      ...styles.rankInfo,
+      borderColor: '#dc2626',
+      backgroundColor: '#fef2f2',
+      color: '#b91c1c',
+    }
+  }
+
+  if (ownedControlsNiches) {
+    return {
+      ...styles.rankInfo,
+      borderColor: '#16a34a',
+      backgroundColor: '#f0fdf4',
+      color: '#166534',
+    }
+  }
+
+  return {
+    ...styles.rankInfo,
+    borderColor: '#f59e0b',
+    backgroundColor: '#fffbeb',
+    color: '#92400e',
+  }
 }
 
 function formatCountdownMmSs(remainingMs: number): string {
@@ -1806,6 +1887,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                 {/* ponytail: outer competitor cols must stay proportional to competitor subtable colgroup widths below */}
                 <col style={{ width: '2.5rem' }} />
                 <col style={{ width: itemColumnWidth }} />
+                <col style={{ width: '2.5rem' }} />
                 <col style={{ width: '4rem' }} />
                 <col style={{ width: listingQuantityColumnWidth }} />
                 <col style={{ width: listingPriceColumnWidth }} />
@@ -1829,7 +1911,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                       ...SUBTABLE_LEFT_DIVIDER,
                       ...SUBTABLE_RIGHT_DIVIDER,
                     }}
-                    colSpan={4}
+                    colSpan={5}
                   >
                     Your Listings
                   </th>
@@ -1841,7 +1923,17 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     }}
                     colSpan={5}
                   >
-                    Competitor Listings
+                    <span
+                      title={RELEVANT_COMPETITOR_LISTINGS_TOOLTIP}
+                      style={{
+                        textDecoration: 'underline dotted',
+                        textDecorationColor: '#cbd5e1',
+                        textUnderlineOffset: '0.2rem',
+                        cursor: 'help',
+                      }}
+                    >
+                      Relevant Competitor Listings
+                    </span>
                   </th>
                   <th
                     style={styles.tableCellCenter}
@@ -1868,6 +1960,12 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                     style={{
                       ...styles.tableCellCenter,
                       ...SUBTABLE_LEFT_DIVIDER,
+                    }}
+                    aria-label="Your listing details"
+                  />
+                  <th
+                    style={{
+                      ...styles.tableCellCenter,
                     }}
                   >
                     HQ
@@ -1922,9 +2020,16 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                   const competitorRows = isRowLoading
                     ? []
                     : state.competitorListings
-                  const allCompetitorsOneRespect = isRowLoading
-                    ? false
-                    : state.allCompetitorsOneRespect
+                  const allOwnedNicheCount = listingRows.filter(
+                    (listing) => listing.niches.length > 0,
+                  ).length
+                  const allCompetitorNicheCount = competitorRows.filter(
+                    (competitor) => competitor.niches.length > 0,
+                  ).length
+                  const totalNicheListings =
+                    allOwnedNicheCount + allCompetitorNicheCount
+                  const ownedControlsNiches =
+                    allOwnedNicheCount > 0 && allCompetitorNicheCount === 0
                   const BASE_SUBTABLE_PADDING_REM = 0.15
                   const MAX_SUBTABLE_PADDING_REM = 0.45
                   const listingRowPadding = `${Math.min(
@@ -1996,6 +2101,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                           }}
                         >
                           <colgroup>
+                            <col style={{ width: '2.5rem' }} />
                             <col style={{ width: '4rem' }} />
                             <col
                               style={{ width: listingQuantityColumnWidth }}
@@ -2010,7 +2116,7 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                               <tr>
                                 {/* Column: Your Listings Empty State */}
                                 <td
-                                  colSpan={4}
+                                  colSpan={5}
                                   style={{
                                     ...styles.tableCellCenter,
                                     padding: '0.25rem',
@@ -2058,6 +2164,45 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                       `owned-${item.id.toString()}-${listingIndex.toString()}`
                                     }
                                   >
+                                    {/* Column: Your Listing Details */}
+                                    <td
+                                      style={{
+                                        ...styles.tableCellCenter,
+                                        borderBottom: hasDivider
+                                          ? '1px solid #e2e8f0'
+                                          : 'none',
+                                        paddingTop: listingRowPadding,
+                                        paddingBottom: listingRowPadding,
+                                      }}
+                                    >
+                                      {listing === null
+                                        ? isRowLoading
+                                          ? renderSkeleton('1.35rem', '1.35rem')
+                                          : ''
+                                        : (() => {
+                                            const nichesSummary =
+                                              listing.niches.join(' | ')
+                                            const titleText =
+                                              listing.niches.length > 0
+                                                ? nichesSummary
+                                                : 'No competitive niche'
+
+                                            return (
+                                              <button
+                                                type="button"
+                                                style={ownedInfoStyle({
+                                                  nicheCount:
+                                                    listing.niches.length,
+                                                  ownedControlsNiches,
+                                                })}
+                                                title={titleText}
+                                                aria-label={`Your listing details: ${titleText}`}
+                                              >
+                                                i
+                                              </button>
+                                            )
+                                          })()}
+                                    </td>
                                     {/* Column: Your Listing HQ */}
                                     <td
                                       style={{
@@ -2258,49 +2403,24 @@ export function UndercutTrackerPage(props: UndercutTrackerPageProps) {
                                           ? renderSkeleton('1.35rem', '1.35rem')
                                           : ''
                                         : (() => {
-                                            const beatsByPrice =
-                                              competitor.beatsByPrice
-                                            const beatsByComparableTotal =
-                                              competitor.beatsByComparableTotal
-                                            const competitivenessSummary =
-                                              (() => {
-                                                if (
-                                                  beatsByPrice &&
-                                                  beatsByComparableTotal
-                                                ) {
-                                                  return '\u2757 More competitive in all respects'
-                                                }
-                                                if (
-                                                  beatsByPrice ||
-                                                  beatsByComparableTotal
-                                                ) {
-                                                  return '\u26A0\uFE0F More competitive in one respect'
-                                                }
-
-                                                return ''
-                                              })()
-                                            const reasonsSummary =
-                                              competitor.reasons.join(' | ')
                                             const titleText =
-                                              competitivenessSummary.length > 0
-                                                ? `${competitivenessSummary}\n${reasonsSummary}`
-                                                : reasonsSummary
-                                            const ariaSummary =
-                                              competitivenessSummary.length > 0
-                                                ? `${competitivenessSummary}. `
-                                                : ''
+                                              competitor.niches.length > 0
+                                                ? competitor.niches.join(' | ')
+                                                : 'No competitive niche'
 
                                             return (
                                               <button
                                                 type="button"
                                                 style={competitorInfoStyle({
-                                                  beatsByPrice,
-                                                  beatsByComparableTotal,
-                                                  allOneRespect:
-                                                    allCompetitorsOneRespect,
+                                                  nicheCount:
+                                                    competitor.niches.length,
+                                                  isOnlyNicheListing:
+                                                    competitor.niches.length >
+                                                      0 &&
+                                                    totalNicheListings === 1,
                                                 })}
                                                 title={titleText}
-                                                aria-label={`Competitor details: ${ariaSummary}${competitor.reasons.join(', ')}`}
+                                                aria-label={`Competitor details: ${titleText}`}
                                               >
                                                 i
                                               </button>

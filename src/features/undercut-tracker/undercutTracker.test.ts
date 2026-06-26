@@ -103,12 +103,13 @@ describe('deriveItemState', () => {
         retainerName: 'Owned',
         retainerCity: 1,
         lastReviewAt: state.ownedListings[0]?.lastReviewAt ?? 0,
+        niches: [],
       },
     ])
     expect(typeof state.ownedListings[0]?.lastReviewAt).toBe('number')
   })
 
-  it('dedupes competitor listings and aggregates matching reasons', () => {
+  it('assigns niche categories and applies short-circuit priority', () => {
     const state = deriveItemState({
       marketData: makeMarketData([
         {
@@ -159,19 +160,7 @@ describe('deriveItemState', () => {
       (listing) => listing.retainerName === 'Competitor A',
     )
     expect(competitorA).toBeDefined()
-    expect(competitorA?.reasons).toEqual(
-      expect.arrayContaining([
-        'Lowest price',
-        'Lowest HQ',
-        'Lowest smaller stack',
-        'Lowest HQ smaller stack',
-        'Cheaper total than your highest stack',
-      ]),
-    )
-    expect(competitorA?.beatsByPrice).toBe(true)
-    expect(competitorA?.beatsByComparableTotal).toBe(false)
-    expect(competitorA?.competitivenessSummary).toBe('one-respect')
-    expect(state.allCompetitorsOneRespect).toBe(true)
+    expect(competitorA?.niches).toEqual(['Lowest price per unit overall'])
     expect(state.oldestListingReviewAt).toBe(
       new Date('2026-06-21T12:00:00Z').getTime(),
     )
@@ -179,15 +168,15 @@ describe('deriveItemState', () => {
     expect(state.hasWorldTimestampDeltaWarning).toBe(true)
   })
 
-  it('skips cheaper-total rule when owned quantities are all one', () => {
+  it('skips HQ total niche when HQ price or total niche is already assigned', () => {
     const state = deriveItemState({
       marketData: makeMarketData([
         {
-          pricePerUnit: 1_000,
+          pricePerUnit: 980,
           retainerName: 'Owned',
           hq: false,
-          quantity: 1,
-          total: 1_000,
+          quantity: 2,
+          total: 1_960,
           tax: 0,
           lastReviewTime: new Date('2026-06-21T12:00:00Z'),
           listingId: 'owned-1',
@@ -196,13 +185,25 @@ describe('deriveItemState', () => {
         },
         {
           pricePerUnit: 900,
-          retainerName: 'Competitor',
-          hq: false,
-          quantity: 1,
-          total: 900,
+          retainerName: 'Competitor HQ',
+          hq: true,
+          quantity: 2,
+          total: 1_800,
           tax: 0,
           lastReviewTime: new Date('2026-06-21T12:01:00Z'),
           listingId: 'comp-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 950,
+          retainerName: 'Competitor HQ 2',
+          hq: true,
+          quantity: 2,
+          total: 1_900,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'comp-2',
           worldId: 34,
           worldName: 'Brynhildr',
         },
@@ -211,11 +212,13 @@ describe('deriveItemState', () => {
       retainerNames: ['owned'],
     })
 
-    expect(
-      state.competitorListings.some((listing) =>
-        listing.reasons.includes('Cheaper total than your highest stack'),
-      ),
-    ).toBe(false)
+    const competitorHq = state.competitorListings.find(
+      (listing) => listing.retainerName === 'Competitor HQ',
+    )
+    expect(competitorHq?.niches).toContain('Lowest price per unit overall')
+    expect(competitorHq?.niches).not.toContain(
+      'Lowest total price for HQ quantity',
+    )
   })
 
   it('marks quality as mixed when both HQ and NQ owned listings exist', () => {
@@ -426,15 +429,15 @@ describe('deriveItemState', () => {
     expect(state.ownedQuantity).toBe(40)
   })
 
-  it('computes competitor competitiveness summary and aggregate one-respect flag', () => {
+  it('keeps one representative listing per shared niche', () => {
     const state = deriveItemState({
       marketData: makeMarketData([
         {
           pricePerUnit: 1_000,
           retainerName: 'Owned',
           hq: false,
-          quantity: 10,
-          total: 10_000,
+          quantity: 5,
+          total: 5_000,
           tax: 0,
           lastReviewTime: new Date('2026-06-21T12:00:00Z'),
           listingId: 'owned-1',
@@ -442,26 +445,26 @@ describe('deriveItemState', () => {
           worldName: 'Brynhildr',
         },
         {
-          pricePerUnit: 900,
-          retainerName: 'Aggressive',
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
           hq: false,
-          quantity: 10,
-          total: 9_000,
+          quantity: 5,
+          total: 5_000,
           tax: 0,
           lastReviewTime: new Date('2026-06-21T12:01:00Z'),
-          listingId: 'aggressive',
+          listingId: 'owned-2',
           worldId: 34,
           worldName: 'Brynhildr',
         },
         {
-          pricePerUnit: 950,
-          retainerName: 'Small Stack',
+          pricePerUnit: 1_100,
+          retainerName: 'Competitor',
           hq: false,
           quantity: 5,
-          total: 4_750,
+          total: 5_500,
           tax: 0,
           lastReviewTime: new Date('2026-06-21T12:02:00Z'),
-          listingId: 'small-stack',
+          listingId: 'comp-1',
           worldId: 34,
           worldName: 'Brynhildr',
         },
@@ -470,23 +473,385 @@ describe('deriveItemState', () => {
       retainerNames: ['owned'],
     })
 
-    const byRetainer = new Map(
-      state.competitorListings.map((listing) => [
-        listing.retainerName,
-        listing,
-      ]),
+    expect(state.ownedListings).toHaveLength(1)
+    expect(state.ownedListings[0]?.niches).toContain(
+      'Lowest price per unit overall',
     )
-    const aggressive = byRetainer.get('Aggressive')
-    const smallStack = byRetainer.get('Small Stack')
+  })
 
-    expect(aggressive?.beatsByPrice).toBe(true)
-    expect(aggressive?.beatsByComparableTotal).toBe(true)
-    expect(aggressive?.competitivenessSummary).toBe('all-respects')
+  it('collapses competitor rows with matching quality, quantity, and price', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 1_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_300_000,
+          retainerName: 'Competitor A',
+          hq: false,
+          quantity: 1,
+          total: 1_300_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-a',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_300_000,
+          retainerName: 'Competitor B',
+          hq: false,
+          quantity: 1,
+          total: 1_300_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'comp-b',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
 
-    expect(smallStack?.beatsByPrice).toBe(true)
-    expect(smallStack?.beatsByComparableTotal).toBe(false)
-    expect(smallStack?.competitivenessSummary).toBe('one-respect')
+    expect(state.competitorListings).toHaveLength(1)
+    expect(state.competitorListings[0]?.quantity).toBe(1)
+    expect(state.competitorListings[0]?.sellingPrice).toBe(1_300_000)
+  })
 
-    expect(state.allCompetitorsOneRespect).toBe(false)
+  it('shows only the single lowest-price competitor when no competitor has a niche', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 900,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 900,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 900,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 2,
+          total: 1_800,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:30Z'),
+          listingId: 'owned-2',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Competitor A',
+          hq: false,
+          quantity: 1,
+          total: 1_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-a',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_100,
+          retainerName: 'Competitor B',
+          hq: false,
+          quantity: 2,
+          total: 2_200,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'comp-b',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(state.competitorListings).toHaveLength(1)
+    expect(state.competitorListings[0]?.sellingPrice).toBe(1_000)
+    expect(state.competitorListings[0]?.niches).toEqual([])
+  })
+
+  it('shows only niche competitors when at least one niche competitor exists', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 900,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 900,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Niche Competitor',
+          hq: false,
+          quantity: 2,
+          total: 2_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-a',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_300,
+          retainerName: 'Non-Niche Competitor',
+          hq: false,
+          quantity: 1,
+          total: 1_300,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'comp-b',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(state.competitorListings).toHaveLength(1)
+    expect(state.competitorListings[0]?.retainerName).toBe('Niche Competitor')
+    expect(state.competitorListings[0]?.niches.length).toBeGreaterThan(0)
+  })
+
+  it('allows owned and competitor listings to share the same niche', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 1_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 1_000,
+          retainerName: 'Competitor Tie',
+          hq: false,
+          quantity: 1,
+          total: 1_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-tie',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    expect(state.ownedListings[0]?.niches).toContain(
+      'Lowest price per unit overall',
+    )
+    const tiedCompetitor = state.competitorListings.find(
+      (listing) => listing.listingId === 'comp-tie',
+    )
+    expect(tiedCompetitor?.niches).toContain('Lowest price per unit overall')
+  })
+
+  it('keeps lowest HQ-unit competitor visible when owned listing holds HQ-unit niche', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 100,
+          retainerName: 'Owned HQ',
+          hq: true,
+          quantity: 1,
+          total: 100,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-hq',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 150,
+          retainerName: 'Competitor NQ',
+          hq: false,
+          quantity: 1,
+          total: 150,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-nq',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 200,
+          retainerName: 'Competitor HQ',
+          hq: true,
+          quantity: 1,
+          total: 200,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'comp-hq',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned hq'],
+    })
+
+    expect(state.ownedListings[0]?.quality).toBe('HQ')
+    expect(
+      state.competitorListings.some(
+        (listing) => listing.listingId === 'comp-nq',
+      ),
+    ).toBe(true)
+    expect(
+      state.competitorListings.some(
+        (listing) => listing.listingId === 'comp-hq',
+      ),
+    ).toBe(true)
+  })
+
+  it('does not mark a smaller quantity listing as lowest total when a larger stack is cheaper overall', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 40,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 1,
+          total: 40,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 60,
+          retainerName: 'Owned',
+          hq: false,
+          quantity: 2,
+          total: 120,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:30Z'),
+          listingId: 'owned-2',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 500,
+          retainerName: 'Competitor Single',
+          hq: false,
+          quantity: 1,
+          total: 500,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-single',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 50,
+          retainerName: 'Competitor Stack',
+          hq: false,
+          quantity: 2,
+          total: 100,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'comp-stack',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned'],
+    })
+
+    const stack = state.competitorListings.find(
+      (listing) => listing.retainerName === 'Competitor Stack',
+    )
+
+    expect(
+      state.competitorListings.some(
+        (listing) => listing.retainerName === 'Competitor Single',
+      ),
+    ).toBe(false)
+    expect(stack?.niches).toContain('Lowest total price for quantity')
+  })
+
+  it('does not assign total-price-for-quantity when HQ unit-price niche is present', () => {
+    const state = deriveItemState({
+      marketData: makeMarketData([
+        {
+          pricePerUnit: 5_000,
+          retainerName: 'Other Owned',
+          hq: false,
+          quantity: 1,
+          total: 5_000,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:00:00Z'),
+          listingId: 'owned-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 249,
+          retainerName: 'Competitor',
+          hq: false,
+          quantity: 2,
+          total: 499,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:01:00Z'),
+          listingId: 'comp-1',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+        {
+          pricePerUnit: 4_995,
+          retainerName: 'Owned HQ',
+          hq: true,
+          quantity: 3,
+          total: 14_985,
+          tax: 0,
+          lastReviewTime: new Date('2026-06-21T12:02:00Z'),
+          listingId: 'owned-hq',
+          worldId: 34,
+          worldName: 'Brynhildr',
+        },
+      ]),
+      itemName: 'Alpha',
+      retainerNames: ['owned hq', 'other owned'],
+    })
+
+    const ownedHq = state.ownedListings.find(
+      (listing) => listing.listingId === 'owned-hq',
+    )
+    expect(ownedHq?.niches).toContain('Lowest price per unit HQ')
+    expect(ownedHq?.niches).not.toContain('Lowest total price for quantity')
   })
 })
