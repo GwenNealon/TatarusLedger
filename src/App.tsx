@@ -130,7 +130,10 @@ export default function App() {
       <article
         style={{
           ...styles.card,
-          maxWidth: isUndercutTrackerRoute ? '80rem' : styles.card.maxWidth,
+          width: isUndercutTrackerRoute ? 'fit-content' : styles.card.width,
+          maxWidth: isUndercutTrackerRoute
+            ? 'calc(100vw - 2rem)'
+            : styles.card.maxWidth,
         }}
       >
         <h1>Tataru&apos;s Ledger</h1>
